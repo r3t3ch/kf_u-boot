@@ -74,6 +74,7 @@ extern void show_splash();
 extern void show_normalboot_splash();
 extern void show_recovery_splash();
 extern void show_boot2_splash();
+extern void show_booting_splash();
 
 #if (CONFIG_MMC)
 extern int do_mmc(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
@@ -1506,6 +1507,8 @@ int do_fastboot (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 			}
 		}
 	}
+	/* swap to booting splash screen */
+	show_booting_splash();
 
 	/* Reset the board specific support */
 	fastboot_shutdown();
