@@ -248,7 +248,8 @@
 #define CFG_FASTBOOT_TRANSFER_BUFFER_SIZE (SZ_512M - SZ_48M)
 
 #define CONFIG_FREE_LOG_BASE     0x9CAB0000
-#define CFG_FASTBOOT_COUNTDOWN   1000000
+#define CFG_FASTBOOT_COUNTDOWN   500000
+#define CFG_FASTBOOT_COUNTDOWN_RESET	250000
 /*-----------------------------------------------------------------------
  * CFI FLASH driver setup
  */
