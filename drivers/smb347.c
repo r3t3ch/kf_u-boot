@@ -9,13 +9,20 @@
 #include <smb347.h>
 #include <bq27541.h>
 #include <asm/io.h>
+
 #define TEMPERATURE_COLD_LIMIT -19
 #define TEMPERATURE_HOT_LIMIT 59
-#define LOW_BATTERY_CAPACITY_LIMIT 3
+
+#define LOW_BATTERY_CAPACITY_LIMIT 5
 #define LOW_BATTERY_VOLTAGE_LIMIT 3450
 #define LOW_LCD_VOLTAGE_LIMIT 3300
+
+#define LOW_BAT_SCREEN_TICKS 25
+
 #define NO_VBUS -2
+
 #define mdelay(n) ({ unsigned long msec = (n); while (msec--) udelay(1000); })
+
 int get_bat_temperature();
 int get_bat_voltage();
 int get_bat_current();
@@ -96,18 +103,18 @@ static inline int smb347_i2c_read_u8( u8 *val, u8 reg)
 	return i2c_read(SMB347_ADDRESS, reg, 1, val, 1);
 }
 /*
-It is a 0.5 sec loop.
+It is a 0.2 sec loop.
 work_index	second	function
 0		0	voltage,capacity
-1		0.5	power_button
-2		1	vbus
-3		1.5	power_button
-4		2	temperature
-5		2.5	power_button
-6		3	vbus
-7		3.5	power_button
-8		4	current
-9		4.5	power_button
+1		0.2	power_button
+2		0.4	vbus
+3		0.6	power_button
+4		0.8	temperature
+5		1	power_button
+6		1.2	vbus
+7		1.4	power_button
+8		1.6	current
+9		1.8	power_button
 */
 static int low_bat_charge()
 {
@@ -135,15 +142,10 @@ static int low_bat_charge()
                     result=1;
                     break;
                 }
-                if( show_low_bat==1){ 
-                    show_low_bat=2;
-                    turn_off_lcd();
-                 
-                }
-                if((voltage > LOW_LCD_VOLTAGE_LIMIT) && (show_low_bat==0)){
+                if ((voltage > LOW_LCD_VOLTAGE_LIMIT) && (show_low_bat == 0)) {
                    show_low_bat=1;
                    initialize_lcd(OTTER_LCD_DISPLAY_LOW_BATT_SCREEN);
-                }
+		}
                 printf("Battery voltage=%d capacity=%d \n",voltage,capacity);
                 break;
             case 4:
@@ -161,7 +163,7 @@ static int low_bat_charge()
 	 	 * Shutdown if there is drain current, and we've displayed the LCD
 	 	 * and shut it down after 10 seconds
 	 	 */
-                if(current<0 && (show_low_bat<1 || show_low_bat>15)){
+                if(current<0 && (show_low_bat<1 || show_low_bat>30)){
                     printf("shutdown due to there is discharge %d mA\n",current);
                     twl6030_shutdown();
                 }
@@ -175,26 +177,40 @@ static int low_bat_charge()
                     twl6030_shutdown();
                 }
                 break;
-            default :
-                power_button=twl6030_get_power_button_status(); 
-                if( (power_button ==0 )&& (voltage > LOW_LCD_VOLTAGE_LIMIT) && (show_low_bat==2)&& (show_low_bat_ptw==0)){
-                    show_low_bat_ptw=1;
+            default:
+                power_button=twl6030_get_power_button_status();
+                if ((power_button == 0 ) && (voltage > LOW_LCD_VOLTAGE_LIMIT) && (show_low_bat >= LOW_BAT_SCREEN_TICKS) && (show_low_bat_ptw == 0)) {
+                    show_low_bat_ptw = 1;
                     initialize_lcd(OTTER_LCD_DISPLAY_LOW_BATT_SCREEN);
-                }
-                if((power_button ==1)&& (show_low_bat_ptw==1)){
-                    show_low_bat_ptw=0;
-                    turn_off_lcd();           
                 }
                 break;
         }
+
+	// handle initial screen off
+        if ((show_low_bat >= 1) && (show_low_bat < (LOW_BAT_SCREEN_TICKS-1))) { 
+            show_low_bat+=1;
+        }
+        else if ((show_low_bat >= 1) && (show_low_bat < LOW_BAT_SCREEN_TICKS)) {
+            show_low_bat+=1;
+            turn_off_lcd();
+        }
+
+	// handle screen off from power button
+        if ((power_button == 1) && (show_low_bat_ptw >= 1) && (show_low_bat_ptw < LOW_BAT_SCREEN_TICKS)) {
+            show_low_bat_ptw += 1;
+        } else if ((power_button == 1) && (show_low_bat_ptw >= LOW_BAT_SCREEN_TICKS)) {
+            show_low_bat_ptw = 0;
+            turn_off_lcd();
+        }
+
         //software time protect
-        if(sec > 3600){ //30 min
+        if (sec > 9000) { //30 min
             result=0;
             printf("shutdown due to the charge time out\n");
             twl6030_shutdown();
             break;
         }
-        //delay 0.5s
+        //delay 0.2s
         sec++;
         mdelay(200);
     }
@@ -243,7 +259,7 @@ void check_low_bat()
         run_command("lbtinit", 0);
         if(twl6030_get_vbus_status()){
             run_command("setgreenled 0", 0);
-            run_command("setamberled 5", 0);
+            run_command("setamberled 10", 0);
 
             //enable the VUSB 3.3 V
             twl6030_disable_vusb();
@@ -303,7 +319,7 @@ void check_low_bat()
                             goto LOW_BAT_TURN_OFF;
                         printf("Power:AICL=%d mA\n",input_limit);
                         /* Enter low battery charge loop */
-                        if(input_limit>0 && input_limit<=900)
+//                        if(input_limit>0 && input_limit<=900)
                            low_bat_charge();
                     }
                 }
