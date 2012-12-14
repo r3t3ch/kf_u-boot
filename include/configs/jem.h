@@ -318,7 +318,9 @@ extern unsigned int boot_flash_type;
 #define CONFIG_ENABLE_IDME
 
 /* enable to support : POWER_KEY + VOL_UP to enter FTM mode */
-#define ENABLE_DIAG_KEY
+//#define ENABLE_DIAG_KEY
+#define ENABLE_RECOVERY_KEY
+//#define ENABLE_FASTBOOT_KEY
 #if 0
 /* Bowser uses the BQ27200 gas gauge */
 #define CONFIG_BQ27200 1

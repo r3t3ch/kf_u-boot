@@ -590,7 +590,7 @@ static int idme_write(
 int idme_update_vars_ex(void)
 {
         /* update from user idme is allowed only in engineering build */
-#if (defined (UBOOT_ENG_BUILD) || defined (UBOOT_FTM))
+//#if (defined (UBOOT_ENG_BUILD) || defined (UBOOT_FTM))
         int i;
         unsigned char buffer[CONFIG_IDME_SIZE];
         unsigned char *pidme_data = NULL, *psig = NULL;
@@ -663,7 +663,7 @@ int idme_update_vars_ex(void)
                         return -1;
                 }
         }
-#endif //(UBOOT_ENG_BUILD)
+//#endif //(UBOOT_ENG_BUILD)
         return 0;
 }
 
@@ -704,16 +704,22 @@ int idme_select_bootmode_by_key(char **ptn)
                __func__, val_vol_up, val_vol_down);
 
 #ifdef ENABLE_DIAG_KEY
+        if (val_vol_up && val_vol_down) {
+                /* button up is pressed only */
+                printf("Tablet: Enter diag mode: ....\n");
+                *ptn = pdkernel;
+        }
+#endif
+
+#ifdef ENABLE_RECOVERY_KEY
         if (!val_vol_up && val_vol_down) {
                 /* button up is pressed only */
-                printf("Tablet: Enter dkernel mode: ....\n");
-                *ptn = pdkernel;
-        } else if (val_vol_up && !val_vol_down) {
-                /* button down is pressed only */
-                printf("Tablet: Enter fastboot: ....\n");
-                do_fastboot(NULL, 0, 0, NULL);
+                printf("Tablet: Enter recovery: ....\n");
+                *ptn = precovery;
         }
-#else
+#endif
+
+#ifdef ENABLE_FASTBOOT_KEY
         if (val_vol_up && !val_vol_down) {
                 /* button down is pressed only */
                 printf("Tablet: Enter fastboot: ....\n");
@@ -826,14 +832,20 @@ int idme_select_boot_image(char **ptn)
                 idme_update_var("bootmode", "2");
                 idme_reboot_usb_boot();
                 break;
+        case '7':
+                // Select recovery but next time, enter android
+                idme_update_var("bootmode", "1");
+                printf("Select Recovery image\n");
+                *ptn = precovery;
+                break;
         default:
                 printf("Unknown bootmode\n");
                 break;
         }
-#if defined (UBOOT_ENG_BUILD)
+//#if defined (UBOOT_ENG_BUILD)
         // Select boot mode by combination key
         idme_select_bootmode_by_key(ptn);
-#endif
+//#endif
         return 0;
 }
 

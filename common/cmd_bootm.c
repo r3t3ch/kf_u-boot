@@ -36,6 +36,9 @@
 #include <asm/byteorder.h>
 #include <mmc.h>
 
+#define SIGNATURE_BYPASS
+#define DEBUG_OUTPUT
+
  /*cmd_boot.c*/
  extern int do_reset (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
 
@@ -155,6 +158,16 @@ ulong load_addr = CFG_LOAD_ADDR;		/* Default Load Address */
 #include <asm/arch-omap4/rom_public_api_func.h>
 #endif
 
+// DEBUG OUT
+void debug_printf(char *str)
+{
+#ifdef DEBUG_OUTPUT
+	fastboot_printf(str);
+#else
+	printf(str);
+#endif
+}
+
 #ifdef SIGNATURE_AUTHENTICATION
 int certificate_signature_verify(u8* Certificate_Ptr)
 {
@@ -228,10 +241,14 @@ int do_bootm (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	}
 
 #ifdef SIGNATURE_AUTHENTICATION
+#ifdef SIGNATURE_BYPASS
+	printf("BYPASS Kernel Signature Authentication!\n");
+#else
 	printf("Kernel Signature Authentication...\n");
 	if (certificate_signature_verify((u8*)addr) != 0)
 		hang();
 	printf("Kernel Signature Authentication passed \n");
+#endif
 	addr = (u8*)addr+ISW_CERTIFICATE_LENGTH_FULL;
 #endif
 
@@ -1504,8 +1521,6 @@ int authentify_image(int mmcc, int start_sector)
 	CERT_Hashes        *ISW_hash_struct_ptr = (CERT_Hashes*)((u8*)load_addr + 52);
 
 
-// We don't really need any signature checks here.
-#if 0
 	/* load first fragment to determine image size thanks to the certificate  */
 	if (mmc_read(mmcc, sector, addr, FIRST_FRAGMENT_SIZE_IN_BLOCKS*512) != 1) {
 		printf("booti: mmc failed to read certificate\n");
@@ -1513,13 +1528,10 @@ int authentify_image(int mmcc, int start_sector)
 	}
 	addr   += FIRST_FRAGMENT_SIZE_IN_BLOCKS*512;
 	sector += FIRST_FRAGMENT_SIZE_IN_BLOCKS;
-#endif
-
-	// The bootimg image is at offset 0x400 from partition start.
-	sector += 2;
 
 	/* Load image */
-        nb_bytes    = 6082720; /* XXX: Superhack for known Amazon kernel */
+        nb_bytes    = ISW_hash_struct_ptr->length + ISW_hash_struct_ptr->start_offset;
+        nb_bytes   -= FIRST_FRAGMENT_SIZE_IN_BLOCKS*512; // removed block which have been already loaded
 
 	if (mmc_read(mmcc, sector, addr, nb_bytes) != 1) {
 		printf("booti: failed to load image\n");
@@ -1562,8 +1574,7 @@ extern int gnUSBAttached;
 /* booti <addr> [ mmc0 | mmc1 [ <partition> ] ] */
 int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 {
-
-        unsigned addr;
+	unsigned addr;
 	char *ptn = "boot";
 	int mmcc = -1;
 	boot_img_hdr *hdr;
@@ -1576,7 +1587,7 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	  do_fastboot(NULL, 3, 0, NULL);
 	}
 #endif
-        printf("booting %s partition\n", ptn);
+	printf("booting %s partition\n", ptn);
 	if (argc < 2)
 		return -1;
 
@@ -1612,24 +1623,54 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		 * 0x80008000. With this trick we don't have to move kernel
 		 * again
 		 */
+
+#ifdef SIGNATURE_BYPASS
+		load_addr = KERNEL_PHY_LOAD_ADDRESS - CFG_FASTBOOT_MKBOOTIMAGE_PAGE_SIZE;
+		unsigned char      *addr      = (unsigned char*)load_addr;
+
+		/* new kernels should skip the first 2 sectors */
+		if (mmc_read(mmcc, pte->start + 2, addr, CFG_FASTBOOT_MKBOOTIMAGE_PAGE_SIZE) != 1) {
+			debug_printf("booti: mmc failed to read bootimg header\n");
+			goto fail;
+		}
+		hdr = load_addr;
+#else
 		load_addr = KERNEL_PHY_LOAD_ADDRESS -
-			(/*ISW_CERTIFICATE_LENGTH_FULL + */CFG_FASTBOOT_MKBOOTIMAGE_PAGE_SIZE);
+			(ISW_CERTIFICATE_LENGTH_FULL + CFG_FASTBOOT_MKBOOTIMAGE_PAGE_SIZE);
 
 		if(authentify_image(mmcc, pte->start) != 0) {
-			printf("booti: Authentification failure\n");
+			debug_printf("booti: Authentification failure\n");
 			goto fail;
 		}
 
 		/* set the boot.img header */
-		hdr = (unsigned char *)load_addr/*+ ISW_CERTIFICATE_LENGTH_FULL*/;
+		hdr = (unsigned char *)load_addr + ISW_CERTIFICATE_LENGTH_FULL;
+#endif
+		bootimg_print_image_hdr(hdr);
 
 		if (memcmp(hdr->magic, BOOT_MAGIC, 8)) {
-			printf("booti: bad boot image magic\n");
+			debug_printf("booti: bad boot image magic\n");
 			goto fail;
 		}
 
+#ifdef SIGNATURE_BYPASS
+		sector = pte->start + 2 + (hdr->page_size / 512);
+		if (mmc_read(mmcc, sector, (void*) hdr->kernel_addr,
+			     hdr->kernel_size) != 1) {
+			debug_printf("booti: failed to read kernel\n");
+			goto fail;
+		}
+
+		sector += ALIGN(hdr->kernel_size, hdr->page_size) / 512;
+		if (mmc_read(mmcc, sector, (void*) hdr->ramdisk_addr,
+			     hdr->ramdisk_size) != 1) {
+			debug_printf("booti: failed to read ramdisk\n");
+			goto fail;
+		}
+#else
 		rdisk_src_addr = KERNEL_PHY_LOAD_ADDRESS + ALIGN(hdr->kernel_size, hdr->page_size);
 		memmove((void*) hdr->ramdisk_addr, rdisk_src_addr, hdr->ramdisk_size);
+#endif
 #else
 		return -1;
 #endif
@@ -1640,7 +1681,7 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		memcpy(hdr, (void*) addr, sizeof(*hdr));
 
 		if (memcmp(hdr->magic, BOOT_MAGIC, 8)) {
-			printf("booti: bad boot image magic\n");
+			debug_printf("booti: bad boot image magic\n");
 			return 1;
 		}
 
@@ -1655,8 +1696,14 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 
 	printf("kernel   @ %08x (%d)\n", hdr->kernel_addr, hdr->kernel_size);
 	printf("ramdisk  @ %08x (%d)\n", hdr->ramdisk_addr, hdr->ramdisk_size);
+
+	/* Start MPU wdt for 60 second timeout */
+//	watchdog_start(60);
 	
 	do_booti_linux(hdr);
+
+	/* Stop wdt in case kernel boot failed */
+//	watchdog_init();
 
 	puts ("booti: Control returned to monitor - resetting...\n");
 	do_reset (cmdtp, flag, argc, argv);

@@ -563,7 +563,7 @@ unsigned char omap_mmc_read_sect(unsigned int start_sec, unsigned int num_bytes,
 							argument, resp);
 		if (err != 1) {
 			printf("mmc read cmd sector 0x%x error  0x%x\n",argument, mmc_stat_last);
-		    printf("OMAP_HSMMC_SYSCTL(mmc_cont_cur->base)= 0x%x\n",OMAP_HSMMC_SYSCTL(mmc_cont_cur->base));
+			printf("OMAP_HSMMC_SYSCTL(mmc_cont_cur->base)= 0x%x\n",OMAP_HSMMC_SYSCTL(mmc_cont_cur->base));
 			printf("OMAP_HSMMC_CAPA(mmc_cont_cur->base) = 0x%x\n", OMAP_HSMMC_CAPA(mmc_cont_cur->base));
 
 			return err;
@@ -573,7 +573,7 @@ unsigned char omap_mmc_read_sect(unsigned int start_sec, unsigned int num_bytes,
 		err = mmc_read_data(mmc_cont_cur->base, output_buf);
 		if (err != 1) {
 			printf("mmc read data  sector 0x%x error  0x%x\n",argument, mmc_stat_last);
-		    printf("OMAP_HSMMC_SYSCTL(mmc_cont_cur->base)= 0x%x\n",OMAP_HSMMC_SYSCTL(mmc_cont_cur->base));
+			printf("OMAP_HSMMC_SYSCTL(mmc_cont_cur->base)= 0x%x\n",OMAP_HSMMC_SYSCTL(mmc_cont_cur->base));
 			printf("OMAP_HSMMC_CAPA(mmc_cont_cur->base) = 0x%x\n", OMAP_HSMMC_CAPA(mmc_cont_cur->base));
 			return err;
 		}
