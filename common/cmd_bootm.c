@@ -38,6 +38,7 @@
 
 #define SIGNATURE_BYPASS
 #define DEBUG_OUTPUT
+//#define WATCHDOG_ENABLE
 
  /*cmd_boot.c*/
  extern int do_reset (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
@@ -1698,13 +1699,15 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	printf("ramdisk  @ %08x (%d)\n", hdr->ramdisk_addr, hdr->ramdisk_size);
 
 	/* Start MPU wdt for 60 second timeout */
-//	watchdog_start(60);
-	
+#ifdef WATCHDOG_ENABLE
+	watchdog_start(60);
+#endif	
 	do_booti_linux(hdr);
 
 	/* Stop wdt in case kernel boot failed */
-//	watchdog_init();
-
+#ifdef WATCHDOG_ENABLE
+	watchdog_init();
+#endif
 	puts ("booti: Control returned to monitor - resetting...\n");
 	do_reset (cmdtp, flag, argc, argv);
 	return 1;
