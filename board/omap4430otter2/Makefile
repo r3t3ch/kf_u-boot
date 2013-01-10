@@ -27,27 +27,30 @@ include $(TOPDIR)/config.mk
 
 LIB	= lib$(BOARD).a
 
-OBJS	:= omap4430otter2.o mmc.o splash.o authfailed.o lowbattery.o lowbattery_charging.o fastboot_logo.o
+OBJS	:= omap4430otter2.o mmc.o splash.o fastboot_logo.o normalboot.o recoveryboot.o boot2.o
+# removed due to size
+# booting.o
 
 $(LIB):	$(OBJS)
 	$(AR) crv $@ $^
 
 splash.o:
-	ln -s $(INITLOGO) .
 	$(OBJCOPY) -I binary -O elf32-littlearm -B arm initlogo.rle $@
-	rm -f initlogo.rle
-
-lowbattery.o:
-	$(OBJCOPY) -I binary -O elf32-littlearm -B arm lowbattery.gz $@
-
-lowbattery_charging.o:
-	$(OBJCOPY) -I binary -O elf32-littlearm -B arm lowbattery_charging.gz $@
-
-authfailed.o:
-	$(OBJCOPY) -I binary -O elf32-littlearm -B arm authfailed.gz $@
 
 fastboot_logo.o:
 	$(OBJCOPY) -I binary -O elf32-littlearm -B arm fastboot_logo.gz $@
+
+normalboot.o:
+	$(OBJCOPY) -I binary -O elf32-littlearm -B arm normalboot.rle $@
+
+recoveryboot.o:
+	$(OBJCOPY) -I binary -O elf32-littlearm -B arm recoveryboot.rle $@
+
+boot2.o:
+	$(OBJCOPY) -I binary -O elf32-littlearm -B arm boot2.rle $@
+
+#booting.o:
+#	$(OBJCOPY) -I binary -O elf32-littlearm -B arm booting.rle $@
 
 clean:
 	rm -f $(OBJS)
