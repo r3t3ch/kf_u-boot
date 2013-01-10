@@ -39,6 +39,8 @@
 
 #include <omap4_lcd.h>
 
+#define SIGNATURE_BYPASS
+
  /*cmd_boot.c*/
  extern int do_reset (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
 
@@ -184,7 +186,7 @@ int certificate_signature_verify(u8* Certificate_Ptr)
 		printf(">>>> Signature verification passed!\n");              
 	} else {
 		printf(">>>> Signature verification failed!(lv_Return=0x%08X)\n",lv_Return);
-		return lv_Return;   
+		return 0;
 	}
 	hash_sha1.out = (u32*)&sha1_hash[0];
 	hash_sha1.in = (u32*)((u8*)Certificate_Ptr + ISW_hash_struct_ptr->start_offset);
@@ -195,7 +197,7 @@ int certificate_signature_verify(u8* Certificate_Ptr)
                                        										
 	if (lv_Return != API_HAL_RET_VALUE_OK) {
 		printf(">>>> SHA verification PPA call failed!(lv_Return=0x%08X)\n",lv_Return);
-		return lv_Return;        
+		return 0;
 	}
 
 	lv_Return = memcmp(ISW_hash_ptr, &sha1_hash[0], 20);
@@ -204,7 +206,7 @@ int certificate_signature_verify(u8* Certificate_Ptr)
 	} else {
 		printf(">>>> SHA verification failed!(lv_Return=0x%08X)\n",lv_Return);
 	}
-	return lv_Return;
+	return 0;
 }
 #endif
 
@@ -242,6 +244,9 @@ int do_bootm (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	}
 
 #ifdef CONFIG_OTTER2
+#ifdef SIGNATURE_BYPASS
+	printf("BYPASS Kernel Signature Authentication!\n");
+#else
 	printf("Kernel Signature Authentication...\n");
 	if (certificate_signature_verify((u8*)addr) != 0) {
 		show_authfailed();
@@ -249,6 +254,7 @@ int do_bootm (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		/* NOT REACHED */
 	}
 	printf("Kernel Signature Authentication passed \n");
+#endif
 	addr = (u8*)addr+ISW_CERTIFICATE_LENGTH_FULL;
 #endif
 
@@ -1531,6 +1537,10 @@ static unsigned char boothdr[512];
 #define IMAGE_COARSE_OFFSET            (ISW_CERTIFICATE_LENGTH_FULL/512)
 #define IMAGE_FINE_OFFSET              (ISW_CERTIFICATE_LENGTH_FULL%512)
 
+#endif
+
+#ifdef SIGNATURE_AUTHENTICATION
+
 int authentify_image(int mmcc, int start_sector)
 {
 #if (CONFIG_MMC)
@@ -1556,7 +1566,7 @@ int authentify_image(int mmcc, int start_sector)
 		return -1;
 	}
 
-        return certificate_signature_verify((unsigned char*)load_addr);
+        return 0; //certificate_signature_verify((unsigned char*)load_addr);
 
 #else /* CONFIG_MMC */
 	return 0;
@@ -1591,7 +1601,7 @@ int load_fragment(int mmcc, unsigned int sector, unsigned int offset, char* dest
 int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 {
 
-        unsigned addr;
+	unsigned addr;
 	char *ptn = "boot";
 	int mmcc = -1;
 	boot_img_hdr *hdr = (void*) boothdr;
@@ -1636,6 +1646,18 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		 * 0x80008000. With this trick we don't have to move kernel
 		 * again
 		 */
+
+#ifdef SIGNATURE_BYPASS
+		load_addr = KERNEL_PHY_LOAD_ADDRESS - CFG_FASTBOOT_MKBOOTIMAGE_PAGE_SIZE;
+		unsigned char      *addr      = (unsigned char*)load_addr;
+
+		/* new kernels should skip the first 2 sectors */
+		if (mmc_read(mmcc, pte->start + 2, addr, CFG_FASTBOOT_MKBOOTIMAGE_PAGE_SIZE) != 1) {
+			printf("booti: mmc failed to read bootimg header\n");
+			goto fail;
+		}
+		hdr = load_addr;
+#else
 		load_addr = KERNEL_PHY_LOAD_ADDRESS -
 			(ISW_CERTIFICATE_LENGTH_FULL + CFG_FASTBOOT_MKBOOTIMAGE_PAGE_SIZE);
 
@@ -1647,6 +1669,7 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 			/* NOT REACHED */
 		}
 #endif
+#endif
 
 		/* set the boot.img header */
 		hdr = (unsigned char *)load_addr + ISW_CERTIFICATE_LENGTH_FULL;
@@ -1656,8 +1679,24 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 			goto fail;
 		}
 
+#ifdef SIGNATURE_BYPASS
+		sector = pte->start + 2 + (hdr->page_size / 512);
+		if (mmc_read(mmcc, sector, (void*) hdr->kernel_addr,
+			     hdr->kernel_size) != 1) {
+			printf("booti: failed to read kernel\n");
+			goto fail;
+		}
+
+		sector += ALIGN(hdr->kernel_size, hdr->page_size) / 512;
+		if (mmc_read(mmcc, sector, (void*) hdr->ramdisk_addr,
+			     hdr->ramdisk_size) != 1) {
+			printf("booti: failed to read ramdisk\n");
+			goto fail;
+		}
+#else
 		rdisk_src_addr = KERNEL_PHY_LOAD_ADDRESS + ALIGN(hdr->kernel_size, hdr->page_size);
 		memmove((void*) hdr->ramdisk_addr, rdisk_src_addr, hdr->ramdisk_size);
+#endif
 #else
 		return -1;
 #endif
