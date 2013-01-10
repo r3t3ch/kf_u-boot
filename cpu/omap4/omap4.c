@@ -233,7 +233,8 @@ int misc_init_r(void)
 //   omap_gpio_set_output(134,GPIO_LOW);
 #ifdef CONFIG_DRIVER_OMAP44XX_I2C
     i2c_init(CFG_I2C_SPEED, CFG_I2C_SLAVE);
-	check_low_bat();
+	// XXX Battery check disabled as troublesome.
+	// check_low_bat();
 #endif
 
     /*
