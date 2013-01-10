@@ -220,7 +220,8 @@ int misc_init_r(void)
 
 #if defined(CONFIG_BQ27541) && defined(CONFIG_MACH_BOWSER_SUBTYPE_TATE)
 	/* Only boot into system if battery is in an acceptable condition */
-	check_battery_condition(wall_charger);
+	// XXX Battery check disabled as troublesome.
+	// check_battery_condition(wall_charger);
 #endif
 
 done:

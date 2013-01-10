@@ -1051,6 +1051,7 @@ void Power_on_LCD(void)
 //**************************************************************************************
 void Power_off_LCD(void)
 {
+	return 0;
 	/* FIXME: This just turns off the backlight, not the LCD panel */
 	configure_pad_mode(GPIO_BACKLIGHT_CABC_EN);
 	configure_gpio_output(GPIO_BACKLIGHT_CABC_EN);
@@ -1371,11 +1372,15 @@ void Init_LCD(void)
 	//Set DPLL for DSI
 	dsi_set_dpll();
 
+#if 0
+// These two are disabled for the second boot as otherwise display
+// does not come alive.
 	//set DSI Phy
 	dsi_set_phy();
 
 	//set DSI protocol engine
 	dsi_set_protocol_engine();
+#endif
 
 	//set to Videomode
 	dsi_video_preinit();
