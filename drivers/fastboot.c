@@ -58,6 +58,8 @@
 #define OTG_SYSCONFIG 0x4A0AB404
 #define OTG_SYSSTATUS 0x4A0AB408
 
+unsigned int fastboot_wait_power_button_abort = 0;
+
 #include "usb_debug_macros.h"
 
 #define CONFUSED() printf ("How did we get here %s %d ? \n", __FILE__, __LINE__)
@@ -93,10 +95,12 @@ static volatile u32 *peri_dma_count	= (volatile u32 *) OMAP_USB_DMA_COUNT_CH(DMA
 /* This is the TI USB vendor id */
 //#define DEVICE_VENDOR_ID  0x0451
 /* This is the Lab USB vendor id */
-#define DEVICE_VENDOR_ID  0x1949
+//#define DEVICE_VENDOR_ID  0x1949
+#define DEVICE_VENDOR_ID	0x18d1
 /* This is just made up.. */
 //#define DEVICE_PRODUCT_ID 0xD022
-#define DEVICE_PRODUCT_ID 0x000a
+//#define DEVICE_PRODUCT_ID 0x000a
+#define DEVICE_PRODUCT_ID 0x0100
 #define DEVICE_BCD        0x0100;
 
 /* This is used to get the serial number */
@@ -1354,6 +1358,7 @@ int fastboot_preboot(void)
 		}
 	}
 #endif /* CONFIG_OMAP44XX */
+    fastboot_wait_power_button_abort = 0;
 	return 0;
 }
 
