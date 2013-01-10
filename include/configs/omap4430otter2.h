@@ -267,7 +267,8 @@
 #define CFG_FRAMBUFFER1           0x82000000
 #define CFG_FRAMBUFFER2           (CFG_FRAMBUFFER1 + 0x200000)
 #define CFG_FRAMBUFFER3           (CFG_FRAMBUFFER2 + 0x400000)
-#define CFG_FASTBOOT_COUNTDOWN   1000000
+#define CFG_FASTBOOT_COUNTDOWN   500000
+#define CFG_FASTBOOT_COUNTDOWN_RESET	500000
 /*-----------------------------------------------------------------------
  * CFI FLASH driver setup
  */
