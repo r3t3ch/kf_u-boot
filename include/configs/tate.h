@@ -337,6 +337,10 @@ extern unsigned int boot_flash_type;
 /* enable to support IDME, disabled by default */
 #define CONFIG_ENABLE_IDME
 
+/* enable to support : POWER_KEY + VOL_UP to enter FTM mode */
+//#define ENABLE_DIAG_KEY
+#define ENABLE_RECOVERY_KEY
+//#define ENABLE_FASTBOOT_KEY
 /*
  * comment in the following flag to enable the command for checking the image's crc on mmc
  * disabled by default
@@ -360,6 +364,7 @@ extern unsigned int boot_flash_type;
 #define CONFIG_ENABLE_USER_ACCESS_IDME 1
 
 //for bootmode 5
-#define CFG_FASTBOOT_COUNTDOWN   1000000
+#define CONFIG_FASTBOOT_COUNTDOWN    1
+#define CFG_FASTBOOT_COUNTDOWN   700000
 
 #endif                           /* __CONFIG_H */

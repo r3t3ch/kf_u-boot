@@ -877,6 +877,21 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 		/* Generic failed response */
 		sprintf(response, "FAIL");
 
+
+		/* continue
+		   Continue booting as normal (if possible) */
+		if(memcmp(cmdbuf, "continue", 8) == 0) {
+			sprintf(response, "OKAY");
+			fastboot_tx_status(response, strlen(response));
+
+			printf ("Booting kernel..\n");
+
+			do_bootd(NULL, 0, 0, NULL);
+
+			sprintf(response, "FAIL: invalid boot image");
+			ret = 0;
+		}
+
 		/* reboot 
 		   Reboot the board. */
 		if(memcmp(cmdbuf, "reboot-bootloader", 17) == 0)
@@ -1469,34 +1484,45 @@ int do_fastboot (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	{
 		printf ("Fastboot entered...\n");
 
-#if defined(CONFIG_MACH_BOWSER_SUBTYPE_TATE)
+#if defined(CONFIG_FASTBOOT_COUNTDOWN)
 		fastboot_countdown = CFG_FASTBOOT_COUNTDOWN;
 #endif
-                //display to LCD
-                show_fastboot();
-
 		/* If we got this far, we are a success */
 		ret = 0;
 #if defined(CONFIG_MACH_BOWSER_SUBTYPE_TATE)
 		val = getbootmode();
 #endif
 		/* On disconnect or error, polling returns non zero */
-#if defined(CONFIG_MACH_BOWSER_SUBTYPE_TATE)
-		if((0x5 == val) ){
-			while (fastboot_countdown)
+#if defined(CONFIG_FASTBOOT_COUNTDOWN)
+		if((3 == flag) ){
+			while (fastboot_countdown--)
 			{
-				if (!fastboot_confirmed) {
-					fastboot_countdown--;
+				if (fastboot_poll()) break;
+				if (fastboot_confirmed == 1) {
+                    show_fastboot();
+                    while (1) {
+                        if (fastboot_poll())
+                                break;
+                    }
+                } else {
+				  if (fastboot_poll()) break;
 				}
-				if (fastboot_poll())
-					break;
 			}
+
 		}else{
+			show_fastboot();
 			while (1)
 			{
 				if (fastboot_poll())
 					break;
 			}
+		}
+#else
+		show_fastboot();
+		while (1)
+		{
+			if (fastboot_poll())
+				break;
 		}
 #endif
 	}
@@ -1504,7 +1530,7 @@ int do_fastboot (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	/* Reset the board specific support */
 	fastboot_shutdown();
 #if defined(CONFIG_MACH_BOWSER_SUBTYPE_TATE)
-	if(0x5 == val){
+	if(0x5 == val) {
 		printf ("setting boot sequence first to USB.\nreboot...\n");
 		set_SWBootingCfg();
 	}

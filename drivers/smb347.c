@@ -29,6 +29,8 @@ extern int select_bus(int bus, int speed);
 extern int bq27541_capacity(u16 *capacity);
 
 static int smb347_addr = 0;
+int gnUSBAttached = 0;
+
 
 static int smb347_i2c_probe()
 {
@@ -649,6 +651,7 @@ int smb347_init(int *wall_charger)
 	int status = -1, apsd = 0;
 	u8 val = 0, mode = 0, vusb = 0, tmp = 0;
 	u32 reg = 0;
+	u8 usb_detect = 0;
 
     int i2c_addr;
 
@@ -668,6 +671,9 @@ int smb347_init(int *wall_charger)
 		SMB347_LOG("Nothing on USB\n");
 		status = 0;
 		goto done;
+	}
+	else {
+		usb_detect = 1;
 	}
 
 	/* Power down USB PHY */
@@ -836,6 +842,10 @@ done:
 	/* Enable USB PHY */
 	reg = __raw_readl(OMAP44XX_CTRL_BASE + CONTROL_DEV_CONF);
 	__raw_writel(reg & ~0x01, OMAP44XX_CTRL_BASE + CONTROL_DEV_CONF);
+
+	if (usb_detect && (*wall_charger != 1)) {
+		gnUSBAttached = 1;
+	}
 
 	return status;
 }

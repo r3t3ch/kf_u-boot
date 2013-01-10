@@ -704,9 +704,17 @@ int idme_select_bootmode_by_key(char **ptn)
 #ifdef ENABLE_DIAG_KEY
         if (!val_vol_up && val_vol_down) {
                 /* button up is pressed only */
-                printf("Tablet: Enter dkernel mode: ....\n");
+                printf("Tablet: Enter diag mode: ....\n");
                 *ptn = pdkernel;
         } 
+#endif
+
+#ifdef ENABLE_RECOVERY_KEY
+        if (!val_vol_up && val_vol_down) {
+                /* button up is pressed only */
+                printf("Tablet: Enter recovery: ....\n");
+                *ptn = precovery;
+        }
 #endif
 
 #ifdef ENABLE_FASTBOOT_KEY
@@ -803,9 +811,15 @@ int idme_select_boot_image(char **ptn)
                 printf("Select Recovery image\n");
                 *ptn = precovery;
                 break;
-	case '6':
+        case '6':
                 printf("Select RMA image\n");
                 *ptn = pdkernel;
+                break;
+        case '7':
+                // Select recovery but next time, enter android
+                idme_update_var("bootmode", "1");
+                printf("Select Recovery image\n");
+                *ptn = precovery;
                 break;
         default:
                 printf("Unknown bootmode\n");

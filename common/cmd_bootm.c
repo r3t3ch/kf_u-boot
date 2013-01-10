@@ -36,6 +36,9 @@
 #include <asm/byteorder.h>
 #include <mmc.h>
 
+#define SIGNATURE_BYPASS
+//#define WATCHDOG_ENABLE
+
  /*cmd_boot.c*/
  extern int do_reset (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
 
@@ -155,6 +158,7 @@ ulong load_addr = CFG_LOAD_ADDR;		/* Default Load Address */
 #include <asm/arch-omap4/rom_public_api_func.h>
 #endif
 
+
 #ifdef SIGNATURE_AUTHENTICATION
 int certificate_signature_verify(u8* Certificate_Ptr)
 {
@@ -178,7 +182,7 @@ int certificate_signature_verify(u8* Certificate_Ptr)
 		printf(">>>> Signature verification failed!(lv_Return=0x%08X)\n",lv_Return);
 		/* Display a boot failure screen when kernel signature verification failed */
 		show_provfailed();
-		return lv_Return;   
+		return 0;
 	}
 	hash_sha1.out = (u32*)&sha1_hash[0];
 	hash_sha1.in = (u32*)((u8*)Certificate_Ptr + ISW_hash_struct_ptr->start_offset);
@@ -191,7 +195,7 @@ int certificate_signature_verify(u8* Certificate_Ptr)
 		printf(">>>> SHA verification PPA call failed!(lv_Return=0x%08X)\n",lv_Return);
 		/* Display a boot failure screen when kernel SHA verification PPA call failed */
 		show_provfailed();
-		return lv_Return;        
+		return 0;
 	}
 
 	lv_Return = memcmp(ISW_hash_ptr, &sha1_hash[0], 20);
@@ -202,7 +206,7 @@ int certificate_signature_verify(u8* Certificate_Ptr)
 		/* Display a boot failure screen when kernel SHA verification failed */
 		show_provfailed();
 	}
-	return lv_Return;
+	return 0;
 }
 #endif
 
@@ -228,10 +232,14 @@ int do_bootm (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	}
 
 #ifdef SIGNATURE_AUTHENTICATION
+#ifdef SIGNATURE_BYPASS
+	printf("BYPASS Kernel Signature Authentication!\n");
+#else
 	printf("Kernel Signature Authentication...\n");
 	if (certificate_signature_verify((u8*)addr) != 0)
 		hang();
 	printf("Kernel Signature Authentication passed \n");
+#endif
 	addr = (u8*)addr+ISW_CERTIFICATE_LENGTH_FULL;
 #endif
 
@@ -1521,7 +1529,7 @@ int authentify_image(int mmcc, int start_sector)
 		return -1;
 	}
 
-        return certificate_signature_verify((unsigned char*)load_addr);
+        return 0; //certificate_signature_verify((unsigned char*)load_addr);
 
 #else /* CONFIG_MMC */
 	return 0;
@@ -1552,17 +1560,25 @@ int load_fragment(int mmcc, unsigned int sector, unsigned int offset, char* dest
 
 #define KERNEL_PHY_LOAD_ADDRESS	0x80008000
 
+extern int gnUSBAttached;
+
 /* booti <addr> [ mmc0 | mmc1 [ <partition> ] ] */
 int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 {
-
-        unsigned addr;
+	unsigned addr;
 	char *ptn = "boot";
 	int mmcc = -1;
 	boot_img_hdr *hdr;
 
-        idme_select_boot_image(&ptn);
-        printf("booting %s partition\n", ptn);
+	idme_select_boot_image(&ptn);
+
+#if defined(CONFIG_FASTBOOT_COUNTDOWN)
+	if (gnUSBAttached){
+	  printf("Tablet: Enter 1s fastboot: ....\n");
+	  do_fastboot(NULL, 3, 0, NULL);
+	}
+#endif
+	printf("booting %s partition\n", ptn);
 	if (argc < 2)
 		return -1;
 
@@ -1598,6 +1614,18 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		 * 0x80008000. With this trick we don't have to move kernel
 		 * again
 		 */
+
+#ifdef SIGNATURE_BYPASS
+		load_addr = KERNEL_PHY_LOAD_ADDRESS - CFG_FASTBOOT_MKBOOTIMAGE_PAGE_SIZE;
+		unsigned char      *addr      = (unsigned char*)load_addr;
+
+		/* new kernels should skip the first 2 sectors */
+		if (mmc_read(mmcc, pte->start + 2, addr, CFG_FASTBOOT_MKBOOTIMAGE_PAGE_SIZE) != 1) {
+			printf("booti: mmc failed to read bootimg header\n");
+			goto fail;
+		}
+		hdr = load_addr;
+#else
 		load_addr = KERNEL_PHY_LOAD_ADDRESS -
 			(ISW_CERTIFICATE_LENGTH_FULL + CFG_FASTBOOT_MKBOOTIMAGE_PAGE_SIZE);
 
@@ -1608,14 +1636,32 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 
 		/* set the boot.img header */
 		hdr = (unsigned char *)load_addr + ISW_CERTIFICATE_LENGTH_FULL;
+#endif
+		bootimg_print_image_hdr(hdr);
 
 		if (memcmp(hdr->magic, BOOT_MAGIC, 8)) {
 			printf("booti: bad boot image magic\n");
 			goto fail;
 		}
 
+#ifdef SIGNATURE_BYPASS
+		sector = pte->start + 2 + (hdr->page_size / 512);
+		if (mmc_read(mmcc, sector, (void*) hdr->kernel_addr,
+			     hdr->kernel_size) != 1) {
+			printf("booti: failed to read kernel\n");
+			goto fail;
+		}
+
+		sector += ALIGN(hdr->kernel_size, hdr->page_size) / 512;
+		if (mmc_read(mmcc, sector, (void*) hdr->ramdisk_addr,
+			     hdr->ramdisk_size) != 1) {
+			printf("booti: failed to read ramdisk\n");
+			goto fail;
+		}
+#else
 		rdisk_src_addr = KERNEL_PHY_LOAD_ADDRESS + ALIGN(hdr->kernel_size, hdr->page_size);
 		memmove((void*) hdr->ramdisk_addr, rdisk_src_addr, hdr->ramdisk_size);
+#endif
 #else
 		return -1;
 #endif
@@ -1643,10 +1689,15 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	printf("ramdisk  @ %08x (%d)\n", hdr->ramdisk_addr, hdr->ramdisk_size);
 
 	/* Start MPU wdt for 60 second timeout */
+#ifdef WATCHDOG_ENABLE
 	watchdog_start(60);
+#endif	
 	do_booti_linux(hdr);
+
 	/* Stop wdt in case kernel boot failed */
+#ifdef WATCHDOG_ENABLE
 	watchdog_init();
+#endif
 	puts ("booti: Control returned to monitor - resetting...\n");
 	do_reset (cmdtp, flag, argc, argv);
 	return 1;
