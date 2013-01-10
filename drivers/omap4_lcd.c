@@ -140,9 +140,11 @@ void set_omap_pwm(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
 enum {
     NONE,
     FASTBOOT_IMG,
+#if 0
     LOWBATTERY_IMG,
     LOWBATTERY_CHARGING_IMG,
     AUTHFAILED_IMG,
+#endif
 };
 
 typedef struct img_t {
@@ -411,7 +413,7 @@ void display_lcd_image(void){
  *  This function configures the LCD
  */
 void lcd_config(void){
-	reset_display_controller();
+	// reset_display_controller();
 
 	/* Enable LCD clocks */
 	enable_lcd_power();
@@ -483,14 +485,6 @@ void turn_off_lcd(void)
 extern char const _binary_fastboot_logo_gz_start[];
 extern char const _binary_fastboot_logo_gz_end[];
 
-extern char const _binary_lowbattery_gz_start[];
-extern char const _binary_lowbattery_gz_end[];
-
-extern char const _binary_lowbattery_charging_gz_start[];
-extern char const _binary_lowbattery_charging_gz_end[];
-
-extern char const _binary_authfailed_gz_start[];
-extern char const _binary_authfailed_gz_end[];
 
 int load_image(int index, void *src_addr)
 {
@@ -510,6 +504,7 @@ int load_image(int index, void *src_addr)
             memset((void *) framebuffer3, 0, dst_len);
             loaded = index;
             break;
+#if 0
         case LOWBATTERY_IMG:
             data = (void *) _binary_lowbattery_gz_start;
             loaded = index;
@@ -522,6 +517,7 @@ int load_image(int index, void *src_addr)
             data = (void *) _binary_authfailed_gz_start;
             loaded = index;
             break;
+#endif
         default:
             return -1;
         }
@@ -567,6 +563,14 @@ void showimage(int type){
 
 extern char const _binary_initlogo_rle_start[];
 extern char const _binary_initlogo_rle_end[];
+extern char const _binary_normalboot_rle_start[];
+extern char const _binary_normalboot_rle_end[];
+extern char const _binary_recoveryboot_rle_start[];
+extern char const _binary_recoveryboot_rle_end[];
+extern char const _binary_boot2_rle_start[];
+extern char const _binary_boot2_rle_end[];
+//extern char const _binary_booting_rle_start[];
+//extern char const _binary_booting_rle_end[];
 
 void show_splash(void)
 {
@@ -592,6 +596,101 @@ void show_splash(void)
 	return;
 }
 
+void show_normalboot_splash(void)
+{
+	u_int16_t *target_addr = (u_int16_t *)framebuffer1;
+	u_int16_t *start = (u_int16_t *)_binary_normalboot_rle_start;
+	u_int16_t *end = (u_int16_t *)_binary_normalboot_rle_end;
+
+	/* Convert the RLE data into RGB565 */
+	for (; start != end; start += 2) {
+		u_int16_t count = start[0];
+
+		while (count--) {
+			*target_addr++ = start[1];
+		}
+	}
+
+	/* Compute position and size of logo */
+	g_LogoX = 0;
+	g_LogoY = 0;
+	g_LogoW = LCD_WIDTH;
+	g_LogoH = LCD_HEIGHT;
+	return;
+}
+
+void show_recovery_splash(void)
+{
+	u_int16_t *target_addr = (u_int16_t *)framebuffer1;
+	u_int16_t *start = (u_int16_t *)_binary_recoveryboot_rle_start;
+	u_int16_t *end = (u_int16_t *)_binary_recoveryboot_rle_end;
+
+	/* Convert the RLE data into RGB565 */
+	for (; start != end; start += 2) {
+		u_int16_t count = start[0];
+
+		while (count--) {
+			*target_addr++ = start[1];
+		}
+	}
+
+	/* Compute position and size of logo */
+	g_LogoX = 0;
+	g_LogoY = 0;
+	g_LogoW = LCD_WIDTH;
+	g_LogoH = LCD_HEIGHT;
+	return;
+}
+
+void show_boot2_splash(void)
+{
+	u_int16_t *target_addr = (u_int16_t *)framebuffer1;
+	u_int16_t *start = (u_int16_t *)_binary_boot2_rle_start;
+	u_int16_t *end = (u_int16_t *)_binary_boot2_rle_end;
+
+	/* Convert the RLE data into RGB565 */
+	for (; start != end; start += 2) {
+		u_int16_t count = start[0];
+
+		while (count--) {
+			*target_addr++ = start[1];
+		}
+	}
+
+	/* Compute position and size of logo */
+	g_LogoX = 0;
+	g_LogoY = 0;
+	g_LogoW = LCD_WIDTH;
+	g_LogoH = LCD_HEIGHT;
+	return;
+}
+
+#if 0
+void show_booting_splash(void)
+{
+	u_int16_t *target_addr = (u_int16_t *)framebuffer1;
+	u_int16_t *start = (u_int16_t *)_binary_booting_rle_start;
+	u_int16_t *end = (u_int16_t *)_binary_booting_rle_end;
+
+	/* Convert the RLE data into RGB565 */
+	for (; start != end; start += 2) {
+		u_int16_t count = start[0];
+
+		while (count--) {
+	        *target_addr++ = start[1];
+		}
+	}
+
+	/* Compute position and size of logo */
+	g_LogoX = 0;
+	g_LogoY = 0;
+	g_LogoW = LCD_WIDTH;
+	g_LogoH = LCD_HEIGHT;
+	return;
+}
+#endif
+
+#if 0
 void show_authfailed(void)
 {
 	show_black_data();
@@ -627,6 +726,7 @@ void show_lowbattery_charging(void)
 
 	return;
 }
+#endif
 
 void set_omap_pwm(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 {
@@ -788,13 +888,16 @@ void initialize_lcd(int show_what)
 	__raw_writew(__raw_readw(0x4805513C) | 0x0020, 0x4805513C);
 
 	show_black_data();
-        if(show_what==OTTER_LCD_DISPLAY_LOW_BATT_SCREEN) {
+#if 0
+    if(show_what==OTTER_LCD_DISPLAY_LOW_BATT_SCREEN) {
 		show_lowbattery();
 	} else if (show_what==OTTER_LCD_DISPLAY_LOW_BATT_CHARGING_SCREEN) {
 		show_lowbattery_charging();
         } else {
 	    show_splash();
 	}
+#endif
+    show_splash();
 	lcd_config();
 	enable_qvx_spreading();
 	/* Turn on backlight */
@@ -827,12 +930,24 @@ int do_lcd (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 			initialize_lcd(OTTER_LCD_DISPLAY_SPLASH);
 		}else if (strncmp(argv[1], "showlogo", strlen("showlogo")) == 0){
 			show_splash();
+		} else if (strncmp(argv[1], "shownormalboot", strlen("shownormalboot")) == 0){
+			show_normalboot_splash();
+		} else if (strncmp(argv[1], "showrecovery", strlen("showrecovery")) == 0) {
+			show_recovery_splash();
+		} else if (strncmp(argv[1], "showboot2", strlen("showboot2")) == 0){
+			show_boot2_splash();
+#if 0
+		} else if (strncmp(argv[1], "showbooting", strlen("showbooting")) == 0){
+			show_booting_splash();
+#endif
+#if 0
 		} else if (strncmp(argv[1], "showauthfailed", strlen("showauthfailed")) == 0){
 			show_authfailed();
 		} else if (strncmp(argv[1], "showlowbatterycharging", strlen("showlowbatterycharging")) == 0) {
 			show_lowbattery_charging();
 		} else if (strncmp(argv[1], "showlowbattery", strlen("showlowbattery")) == 0){
 			show_lowbattery();
+#endif
 		}else{
 			printf ("Usage:\n%s", cmdtp->usage);
 		}

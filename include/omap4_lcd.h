@@ -11,8 +11,5 @@ enum {
 };
 
 void showimage(int type);
-void show_authfailed(void);
-void show_lowbattery(void);
-void show_lowbattery_charging(void);
 
 #endif
