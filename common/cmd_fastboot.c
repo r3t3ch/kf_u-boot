@@ -71,6 +71,11 @@
 
 /* Use do_reset for fastboot's 'reboot' command */
 extern int do_reset (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
+extern void show_splash();
+extern void show_normalboot_splash();
+extern void show_recovery_splash();
+extern void show_boot2_splash();
+//extern void show_booting_splash();
 
 #if (CONFIG_MMC)
 extern int do_mmc(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
@@ -817,6 +822,21 @@ static int rx_handler(const unsigned char *buffer, unsigned int buffer_size)
 		/* Generic failed response */
 		sprintf(response, "FAIL");
 
+
+		/* continue
+		   Continue booting as normal (if possible) */
+		if(memcmp(cmdbuf, "continue", 8) == 0) {
+			sprintf(response, "OKAY");
+			fastboot_tx_status(response, strlen(response));
+
+			printf ("Booting kernel..\n");
+
+			do_bootd(NULL, 0, 0, NULL);
+
+			sprintf(response, "FAIL: invalid boot image");
+			ret = 0;
+		}
+
 		/* reboot 
 		   Reboot the board. */
 		if(memcmp(cmdbuf, "reboot-bootloader", 17) == 0)
@@ -1358,33 +1378,69 @@ int do_fastboot (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 {
 	int ret = 1;
 	unsigned long val;
+	int button_press = 0;
 	/* Initialize the board specific support */
 	if (0 == fastboot_init(&interface))
 	{
 		showimage(FASTBOOT);
 		printf ("Fastboot entered...\n");
+		run_command("setgreenled 50", 0);
 		fastboot_countdown = CFG_FASTBOOT_COUNTDOWN;
 		/* If we got this far, we are a success */
 		ret = 0;
 		val = idme_get_bootmode();
 		/* On disconnect or error, polling returns non zero */
-		if((5 == val) && !(__raw_readl(0x48055138) & 0x00100000)){
-			while (fastboot_countdown)
-			{
-				if (!fastboot_confirmed) {
-					fastboot_countdown--;
-				}
-				if (fastboot_poll())
-					break;
+		/* Always delay for fastboot unless we're in bootmode 4002 
+		 * or using the "factory" cable */
+		int fastbootmode_or_poweredcable = ((5 == val) || (__raw_readl(0x48055138) & 0x00100000));
+
+		while (fastboot_countdown)
+		{
+			if (!fastboot_confirmed) {
+				fastboot_countdown--;
 			}
-		}else{
-			while (1)
-			{
-				if (fastboot_poll())
-					break;
+			if (fastboot_poll())
+				break;
+			/* if we're holding down the button to get into
+			 * recovery, don't wait for the fastboot timeout so we don't
+			 * accidentally power off.  short circuit 49999/50000 times
+			 * through to keep from overwhelming the twl6030 */
+
+			if (!(fastboot_countdown % 50000)) {
+				if (0 == twl6030_get_power_button_status()) {
+					/* user has pressed the power button, so we start the timer (even in fastboot mode) */
+					button_press = 1;
+
+					fastboot_wait_power_button_abort = ((fastboot_wait_power_button_abort + 1) % 3);
+					fastboot_countdown = CFG_FASTBOOT_COUNTDOWN_RESET; //Reset the countdown (2.5 secs)
+				
+					switch (fastboot_wait_power_button_abort)
+					{
+						case 0:
+							show_normalboot_splash();
+							break;
+						case 1:
+							show_recovery_splash();
+							break;
+						case 2:
+							show_boot2_splash();
+							break;
+						default:
+							//??? How did this happen ???
+							show_splash();
+							break;
+					}
+				}
+			}
+			if((!fastboot_countdown) && (fastbootmode_or_poweredcable) && (button_press == 0)){
+				/* reset countdown to hold fastboot */
+				fastboot_countdown = CFG_FASTBOOT_COUNTDOWN_RESET; //Reset the countdown (2.5 secs)
 			}
 		}
 	}
+	/* swap to booting splash screen */
+	// show_booting_splash();
+	show_splash();
 
 	/* Reset the board specific support */
 	fastboot_shutdown();
@@ -1392,6 +1448,12 @@ int do_fastboot (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
         printf ("setting boot sequence first to USB.\nreboot...\n");
         set_SWBootingCfg();		
 	}
+
+	/* if the button was never pressed then handle this by setting the button_abort to a non-used # */
+	if (button_press == 0) {
+		fastboot_wait_power_button_abort = 100;
+	}
+
 	printf ("Fastboot exited...\n");
 	return ret;
 }

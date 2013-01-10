@@ -385,7 +385,8 @@ void main_loop (void)
 			printf(" Bootmode:%d =>Switch booting sequence.\n",val);
 			break;
 	}
-	if (fastboot_preboot() || get_otgid() || ( 4==val) ||(5==val))
+	/* Always run fastboot */
+//	if (fastboot_preboot() || get_otgid() || ( 4==val) ||(5==val))
 		run_command("fastboot", 0);
 
 #ifdef CONFIG_PREBOOT
@@ -447,7 +448,31 @@ void main_loop (void)
 			}
 		}
 #endif
-			s = getenv (boot_env);
+		if(fastboot_wait_power_button_abort == 2){
+			printf("Resetting bootmode to normal\n");
+			fastboot_idme("bootmode 1");
+			val = 1;
+			boot_env = "bootcmd";
+		}
+		if(fastboot_wait_power_button_abort == 0){
+			printf("Normal boot\n");
+			val = 1;
+			boot_env = "bootcmd";
+		}
+#if defined(CONFIG_RECOVERYCMD)
+		else if(7 == val){
+			printf("Entering into single-use recovery mode !!! \n");
+			fastboot_idme("bootmode 1");
+			val = 1;
+			boot_env = "recoverycmd";
+		}
+		else if(fastboot_wait_power_button_abort == 1) {
+			printf("Entering into recovery mode !!! \n");
+			val = 1;
+			boot_env = "recoverycmd";
+		}
+#endif
+		s = getenv (boot_env);
 	}
 
 	debug ("### main_loop: bootcmd=\"%s\"\n", s ? s : "<UNDEFINED>");
