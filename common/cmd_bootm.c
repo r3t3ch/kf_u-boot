@@ -255,7 +255,7 @@ int do_bootm (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	}
 	printf("Kernel Signature Authentication passed \n");
 #endif
-	addr = (u8*)addr+ISW_CERTIFICATE_LENGTH_FULL;
+	addr = (u8*)addr+0x400;// ISW_CERTIFICATE_LENGTH_FULL;
 #endif
 
 	SHOW_BOOT_PROGRESS (1);
@@ -1652,7 +1652,7 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		unsigned char      *addr      = (unsigned char*)load_addr;
 
 		/* new kernels should skip the first 2 sectors */
-		if (mmc_read(mmcc, pte->start + 2, addr, CFG_FASTBOOT_MKBOOTIMAGE_PAGE_SIZE) != 1) {
+		if (mmc_read(mmcc, pte->start + 2, addr, 512) != 1) {
 			printf("booti: mmc failed to read bootimg header\n");
 			goto fail;
 		}
@@ -1669,11 +1669,10 @@ int do_booti (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 			/* NOT REACHED */
 		}
 #endif
-#endif
 
 		/* set the boot.img header */
 		hdr = (unsigned char *)load_addr + ISW_CERTIFICATE_LENGTH_FULL;
-
+#endif
 		if (memcmp(hdr->magic, BOOT_MAGIC, 8)) {
 			printf("booti: bad boot image magic\n");
 			goto fail;
