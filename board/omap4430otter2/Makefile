@@ -27,18 +27,13 @@ include $(TOPDIR)/config.mk
 
 LIB	= lib$(BOARD).a
 
-OBJS	:= omap4430otter2.o mmc.o splash.o fastboot_logo.o normalboot.o recoveryboot.o boot2.o
-# removed due to size
-# booting.o
+OBJS	:= omap4430otter2.o mmc.o splash.o normalboot.o recoveryboot.o boot2.o booting.o
 
 $(LIB):	$(OBJS)
 	$(AR) crv $@ $^
 
 splash.o:
 	$(OBJCOPY) -I binary -O elf32-littlearm -B arm initlogo.rle $@
-
-fastboot_logo.o:
-	$(OBJCOPY) -I binary -O elf32-littlearm -B arm fastboot_logo.gz $@
 
 normalboot.o:
 	$(OBJCOPY) -I binary -O elf32-littlearm -B arm normalboot.rle $@
@@ -49,8 +44,8 @@ recoveryboot.o:
 boot2.o:
 	$(OBJCOPY) -I binary -O elf32-littlearm -B arm boot2.rle $@
 
-#booting.o:
-#	$(OBJCOPY) -I binary -O elf32-littlearm -B arm booting.rle $@
+booting.o:
+	$(OBJCOPY) -I binary -O elf32-littlearm -B arm booting.rle $@
 
 clean:
 	rm -f $(OBJS)

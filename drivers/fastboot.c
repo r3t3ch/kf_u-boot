@@ -1056,18 +1056,6 @@ static int fastboot_rx(void)
 			/* Since the buffer is not null terminated,
 			 * poison the buffer */
 			memset(&fastboot_bulk_fifo[0], 0, fifo_size);
-
-			/* If the interface did not handle the command */
-			if (err) {
-					showimage(FASTBOOT_RED);
-					showimage(FASTBOOT_GREEN_OFF);
-#ifdef CONFIG_OMAP3430
-				OMAP3_LED_ERROR_ON ();
-#endif
-				CONFUSED();
-			}
-			showimage(FASTBOOT_RED);
-			showimage(FASTBOOT_GREEN);
 		}
 	}
 	return size_of_dload;
@@ -1116,30 +1104,6 @@ int fastboot_poll(void)
 	}
 #endif
 #endif
-	/* On panda blink the D1 LED in fastboot mode */
-	#define PRECEPTION_FACTOR 100000
-	if (blink == 0x7fff + PRECEPTION_FACTOR){
-		/*
-		__raw_writew(__raw_readw(reg) | (pull), reg);
-		*/
-		showimage(FASTBOOT_RED_OFF);
-		showimage(FASTBOOT_GREEN);
-	}
-	if (blink  == (0xffff + PRECEPTION_FACTOR)) {
-		/* Tablet 2 rev ID is 2158-xxx */
-		/*
-		if (board_version > 0x20EDB0 || cpu_rev >= OMAP4460_REV_ES1_0)
-			__raw_writew(__raw_readw(reg) & (~pull | 0xb), reg);
-		else
-			__raw_writew(__raw_readw(reg) & (~pull), reg);
-		*/
-		showimage(FASTBOOT_RED_OFF);
-		showimage(FASTBOOT_GREEN_OFF);
-		blink = 0;
-	}
-	blink ++ ;
-
-
 
 	/* Look at the interrupt registers */
 	intrusb = inb (OMAP34XX_USB_INTRUSB);
