@@ -83,9 +83,9 @@
 /*
  * Bootmessage (/misc partition)
  */
-#define CFG_BOOTMSG             1      /* Enable bootmessage support (used for entering into recovery mode) */
-#define CFG_BOOTMSG_IN_EMMC     1      /* bootmsg stored into the emmc */
-#define CFG_BOOTMSG_PARTITION   "misc" /* name of the RAW data-partition which holds the bootmessage */
+//#define CFG_BOOTMSG             1      /* Enable bootmessage support (used for entering into recovery mode) */
+//#define CFG_BOOTMSG_IN_EMMC     1      /* bootmsg stored into the emmc */
+//#define CFG_BOOTMSG_PARTITION   "misc" /* name of the RAW data-partition which holds the bootmessage */
 
 /*
  * Hardware drivers

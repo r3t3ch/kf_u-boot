@@ -744,10 +744,10 @@ int idme_select_boot_image(char **ptn)
 				(pidme_data+nvram_info[i].offset),
 				sizeof(unsigned long));
 			printf("boot_count = %d\n", boot_count);
-			boot_count++; // increase the boot count
+//			boot_count++; // increase the boot count
                         /* only copy the bootcount part */
-			memcpy((pidme_data+nvram_info[i].offset), &boot_count, sizeof(unsigned long));
-			idme_update_var("postmode", (pidme_data+nvram_info[i].offset));
+//			memcpy((pidme_data+nvram_info[i].offset), &boot_count, sizeof(unsigned long));
+//			idme_update_var("postmode", (pidme_data+nvram_info[i].offset));
 		}
         }
 

@@ -1380,9 +1380,8 @@ int do_fastboot (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	unsigned long val;
 	int button_press = 0;
 	/* Initialize the board specific support */
-//	if (0 == fastboot_init(&interface))
+	if (0 == fastboot_init(&interface))
 	{
-//		showimage(FASTBOOT);
 		printf ("Fastboot entered...\n");
 		run_command("setgreenled 50", 0);
 		fastboot_countdown = CFG_FASTBOOT_COUNTDOWN;
@@ -1442,7 +1441,7 @@ int do_fastboot (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	show_booting_splash();
 
 	/* Reset the board specific support */
-//	fastboot_shutdown();
+	fastboot_shutdown();
 	if(5 == val){
         printf ("setting boot sequence first to USB.\nreboot...\n");
         set_SWBootingCfg();		
