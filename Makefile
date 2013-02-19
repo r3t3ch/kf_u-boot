@@ -326,6 +326,7 @@ LIBS-y += lib/libfdt/libfdt.o
 LIBS-y += api/libapi.o
 LIBS-y += post/libpost.o
 LIBS-y += test/libtest.o
+LIBS-y += drivers/usb/dwc3/libdwc3.o
 
 ifneq ($(CONFIG_AM33XX)$(CONFIG_OMAP34XX)$(CONFIG_OMAP44XX)$(CONFIG_OMAP54XX)$(CONFIG_TI814X),)
 LIBS-y += $(CPUDIR)/omap-common/libomap-common.o
