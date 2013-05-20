@@ -201,6 +201,19 @@ struct s32ktimer {
 #define CFG_IO_DELAY_ACCESS_PATTERN	0x00029000
 #define CFG_IO_DELAY_LOCK_MASK		0x400
 
+/* ABB settings */
+#define OMAP_ABB_SETTLING_TIME		50
+#define OMAP_ABB_CLOCK_CYCLES		16
+
+/* ABB tranxdone mask */
+#define OMAP_ABB_MPU_TXDONE_MASK		(0x1 << 7)
+
+/* ABB efuse masks */
+#define OMAP5_ABB_FUSE_VSET_MASK		(0x1F << 24)
+#define OMAP5_ABB_FUSE_ENABLE_MASK		(0x1 << 29)
+#define OMAP5_ABB_LDOVBBMPU_MUX_CTRL_MASK	(0x1 << 10)
+#define OMAP5_ABB_LDOVBBMPU_VSET_OUT_MASK	(0x1f << 0)
+
 #ifndef __ASSEMBLY__
 struct srcomp_params {
 	s8 divide_factor;
