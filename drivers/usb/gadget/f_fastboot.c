@@ -121,9 +121,10 @@ static void fastboot_ep0_complete(struct usb_ep *ep, struct usb_request *req)
 {
 	int status = req->status;
 
-	if (!status)
+	if (status) {
+		printf("%s, status=%d\n",__func__, status);
 		return;
-	printf("ep0 status %d\n", status);
+	}	
 }
 
 static int fastboot_bind(struct usb_gadget *gadget)
@@ -409,10 +410,9 @@ static int fastboot_setup_out_req(struct usb_gadget *gadget,
 			if (req->wValue == CONFIGURATION_NORMAL) {
 				current_config = CONFIGURATION_NORMAL;
 				fastboot_set_interface(gadget, 1);
-				return usb_ep_queue(gadget->ep0,
-						ep0_req, 0);
+				return usb_ep_queue(gadget->ep0, ep0_req, 0);
 			}
-			if (req->wValue == 0) {
+			if (req->wValue == 0) {	
 				current_config = 0;
 				fastboot_set_interface(gadget, 0);
 				return usb_ep_queue(gadget->ep0,
@@ -481,7 +481,7 @@ static int fastboot_setup(struct usb_gadget *gadget,
 static void fastboot_disconnect(struct usb_gadget *gadget)
 {
 	fastboot_disable_ep(gadget);
-	gadget_is_connected = 0;
+//	gadget_is_connected = 0;
 }
 
 struct usb_gadget_driver fast_gadget = {

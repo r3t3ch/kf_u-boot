@@ -3,7 +3,7 @@ include $(TOPDIR)/config.mk
 LIB     := $(obj)libdwc3.o
 
 COBJS-$(CONFIG_USB_DWC3) += core.o gadget.o ep0.o
-COBJS-$(CONFIG_USB_DWC3) += misc.o
+COBJS-$(CONFIG_USB_DWC3) += misc.o dwc3_phy.o
 
 COBJS   := $(COBJS-y)
 SRCS    := $(COBJS:.o=.c)

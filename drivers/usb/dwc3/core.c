@@ -47,6 +47,11 @@
 
 #include "debug.h"
 
+#include <asm/omap_common.h>
+#include "asm/arch/dwc3.h"
+#include "palmas.h"
+#include "dwc3_phy.h"
+
 static char *maximum_speed = "super";
 /* -------------------------------------------------------------------------- */
 
@@ -81,7 +86,7 @@ void dwc3_set_mode(struct dwc3 *dwc, u32 mode)
 static void dwc3_core_soft_reset(struct dwc3 *dwc)
 {
 	u32		reg;
-
+	
 	/* Before Resetting PHY, put Core in Reset */
 	reg = dwc3_readl(dwc->regs, DWC3_GCTL);
 	reg |= DWC3_GCTL_CORESOFTRESET;
@@ -97,6 +102,8 @@ static void dwc3_core_soft_reset(struct dwc3 *dwc)
 	reg |= DWC3_GUSB2PHYCFG_PHYSOFTRST;
 	dwc3_writel(dwc->regs, DWC3_GUSB2PHYCFG(0), reg);
 
+	//usb_phy_init(dwc->usb3_phy);
+	dwc_usb3_phy_init();
 	mdelay(100);
 
 	/* Clear USB3 PHY reset */
@@ -109,10 +116,13 @@ static void dwc3_core_soft_reset(struct dwc3 *dwc)
 	reg &= ~DWC3_GUSB2PHYCFG_PHYSOFTRST;
 	dwc3_writel(dwc->regs, DWC3_GUSB2PHYCFG(0), reg);
 
+	mdelay(100);
+
 	/* After PHYs are stable we can take Core out of reset state */
 	reg = dwc3_readl(dwc->regs, DWC3_GCTL);
 	reg &= ~DWC3_GCTL_CORESOFTRESET;
 	dwc3_writel(dwc->regs, DWC3_GCTL, reg);
+
 }
 
 /**
@@ -226,6 +236,7 @@ static int __devinit dwc3_event_buffers_setup(struct dwc3 *dwc)
 		dev_dbg(dwc->dev, "Event buf %p dma %08llx length %d\n",
 				evt->buf, (unsigned long long) evt->dma,
 				evt->length);
+		evt->lpos = 0;
 
 		dwc3_writel(dwc->regs, DWC3_GEVNTADRLO(n),
 				lower_32_bits(evt->dma));
@@ -267,19 +278,16 @@ static void __devinit dwc3_cache_hwparams(struct dwc3 *dwc)
 	parms->hwparams7 = dwc3_readl(dwc->regs, DWC3_GHWPARAMS7);
 	parms->hwparams8 = dwc3_readl(dwc->regs, DWC3_GHWPARAMS8);
 }
-
 /**
  * dwc3_core_init - Low-level initialization of DWC3 Core
  * @dwc: Pointer to our controller context structure
  *
  * Returns 0 on success otherwise negative errno.
  */
-static int __devinit dwc3_core_init(struct dwc3 *dwc)
+static int dwc3_core_init(struct dwc3 *dwc)
 {
-	unsigned long		timeout;
 	u32			reg;
 	int			ret;
-
 	reg = dwc3_readl(dwc->regs, DWC3_GSNPSID);
 	/* This should read as U3 followed by revision number */
 	if ((reg & DWC3_GSNPSID_MASK) != 0x55330000) {
@@ -287,33 +295,22 @@ static int __devinit dwc3_core_init(struct dwc3 *dwc)
 		ret = -ENODEV;
 		goto err0;
 	}
-	dwc->revision = reg & DWC3_GSNPSREV_MASK;
+	dwc->revision = reg;
 
-	dwc3_core_soft_reset(dwc);
-
-	/* issue device SoftReset too */
-	timeout = 500;
+	dwc3_cache_hwparams(dwc);
+	
+	/* Issue soft reset */ 
 	dwc3_writel(dwc->regs, DWC3_DCTL, DWC3_DCTL_CSFTRST);
 	do {
 		reg = dwc3_readl(dwc->regs, DWC3_DCTL);
 		if (!(reg & DWC3_DCTL_CSFTRST))
 			break;
-
-		mdelay(1);
-		timeout--;
-		if (!timeout) {
-			dev_err(dwc->dev, "Reset Timed Out\n");
-			ret = -ETIMEDOUT;
-			goto err0;
-		}
-
-		cpu_relax();
 	} while (true);
 
-	dwc3_cache_hwparams(dwc);
+	dwc3_core_soft_reset(dwc);
 
 	reg = dwc3_readl(dwc->regs, DWC3_GCTL);
-	reg &= ~DWC3_GCTL_SCALEDOWN(3);
+	reg &= ~DWC3_GCTL_SCALEDOWN_MASK;
 	reg &= ~DWC3_GCTL_DISSCRAMBLE;
 
 	switch (DWC3_GHWPARAMS1_EN_PWROPT(dwc->hwparams.hwparams1)) {
@@ -326,32 +323,22 @@ static int __devinit dwc3_core_init(struct dwc3 *dwc)
 
 	/*
 	 * WORKAROUND: DWC3 revisions <1.90a have a bug
-	 * when The device fails to connect at SuperSpeed
+	 * where the device can fail to connect at SuperSpeed
 	 * and falls back to high-speed mode which causes
-	 * the device to enter in a Connect/Disconnect loop
+	 * the device to enter a Connect/Disconnect loop
 	 */
 	if (dwc->revision < DWC3_REVISION_190A)
 		reg |= DWC3_GCTL_U2RSTECN;
 
 	dwc3_writel(dwc->regs, DWC3_GCTL, reg);
 
-	ret = dwc3_alloc_event_buffers(dwc, DWC3_EVENT_BUFFERS_SIZE);
-	if (ret) {
-		dev_err(dwc->dev, "failed to allocate event buffers\n");
-		ret = -ENOMEM;
-		goto err1;
-	}
-
 	ret = dwc3_event_buffers_setup(dwc);
 	if (ret) {
-		dev_err(dwc->dev, "failed to setup event buffers\n");
-		goto err1;
+		dev_err(dwc->dev, "failed to setup event buffers \n");
+		goto err0;
 	}
-
+	
 	return 0;
-
-err1:
-	dwc3_free_event_buffers(dwc);
 
 err0:
 	return ret;
@@ -367,6 +354,8 @@ static void dwc3_core_exit(struct dwc3 *dwc)
 
 struct dwc3 *global_dwc3;
 
+void dwc3_wrapper_init();
+
 int __devinit dwc3_probe(struct platform_device *pdev)
 {
 	struct dwc3		*dwc;
@@ -377,7 +366,43 @@ int __devinit dwc3_probe(struct platform_device *pdev)
 	void			*mem;
 
 	u8			mode;
+	u32			val;
+	u32			retry;
+	u8 vali;
+	/* Initialize all the clocks (system clocks/ optional clocks etc) */
+	/* USB_OTG_SS_CLKSTCTRL */
+	writel(USB_OTG_SS_OPTFCLKEN_REFCLK960M | USB_OTG_SS_MODULEMODE_HW,
+			CM_L3INIT_USB_OTG_SS_CLKCTRL);
 
+	/* OCP2SCP1 register for PHY register access */
+	writel(OCP2SCP1_MODULEMODE_HW, CM_L3INIT_OCP2SCP1_CLKCTRL);
+
+	/* Turn on 32K AON clk */
+	writel(USB_PHY_CORE_OPTFCLKEN_CLK32K, CM_COREAON_USB_PHY_CORE_CLKCTRL);
+
+	/* Setting CM_L3INIT_CLKSTCTRL to NO sleep */
+	writel(L3INIT_CLKSTCTRL_NOSLEEP, CM_L3INIT_CLKSTCTRL);
+
+	/* Setting USBOTGSS_SYSCONFIG to NO idle */
+	writel((SYSCONFIG_DMADISABLE | SYSCONFIG_STANDBY_SMART | SYSCONFIG_IDLEMODE),
+			USBOTGSS_SYSCONFIG);
+
+
+	/* Initialize the wrapper registers */
+	dwc3_wrapper_init();
+#if 0
+	//Clear status
+	val = readl(USBOTGSS_UTMI_OTG_STATUS);
+	writel(val, USBOTGSS_UTMI_OTG_STATUS);
+	//Enable interrupts
+	writel(0x1, USBOTGSS_IRQENABLE_SET_0);
+	writel(0x13939, USBOTGSS_IRQENABLE_SET_1);
+	//Check for non zero status 
+	val = readl(USBOTGSS_IRQSTATUS_1);
+	writel(val,USBOTGSS_IRQSTATUS_1);
+	val = readl(USBOTGSS_IRQSTATUS_0);
+	writel(val,USBOTGSS_IRQSTATUS_0);
+#endif
 	mem = kzalloc(sizeof(*dwc) + DWC3_ALIGN_MASK, GFP_KERNEL);
 	if (!mem) {
 		dev_err(&pdev->dev, "not enough memory\n");
@@ -390,7 +415,6 @@ int __devinit dwc3_probe(struct platform_device *pdev)
 	dwc->regs	= CONFIG_USB_DWC3_UDC_REGS;
 	dwc->regs_size	= DWC3_USB_REGS_SIZE;
 	dwc->dev	= &pdev->dev;
-	dwc->irq	= 0;
 
 	if (!strncmp("super", maximum_speed, 5))
 		dwc->maximum_speed = DWC3_DCFG_SUPERSPEED;
@@ -407,14 +431,24 @@ int __devinit dwc3_probe(struct platform_device *pdev)
 	pm_runtime_get_sync(&pdev->dev);
 	pm_runtime_forbid(&pdev->dev);
 
-	ret = dwc3_core_init(dwc);
+	dwc3_cache_hwparams(dwc);
+	ret = dwc3_alloc_event_buffers(dwc, DWC3_EVENT_BUFFERS_SIZE);
+
 	if (ret) {
 		dev_err(&pdev->dev, "failed to initialize core\n");
 		goto err3;
 	}
 
-	mode = DWC3_MODE_DEVICE /*DWC3_MODE(dwc->hwparams.hwparams0)*/;
+	omap_usb2_suspend(0);
+	omap_usb3_suspend(0);
 
+	ret = dwc3_core_init(dwc);
+	if (ret) {
+		dev_err(dev, "failed to initialize core\n");
+		goto err0;
+	}
+
+	mode = DWC3_MODE_DEVICE /*DWC3_MODE(dwc->hwparams.hwparams0)*/;
 	switch (mode) {
 	case DWC3_MODE_DEVICE:
 		dwc3_set_mode(dwc, DWC3_GCTL_PRTCAP_DEVICE);
@@ -452,7 +486,14 @@ int __devinit dwc3_probe(struct platform_device *pdev)
 	}
 	dwc->mode = mode;
 
-	pm_runtime_allow(&pdev->dev);
+	/* Enable the VBUS comparator in the palmas chip */
+	palmas_i2c_read_u8(0x49, 0x1C, &vali);
+	palmas_i2c_write_u8(0x49, 0x53, 0x1);
+
+	/* Wait for the vbus line state interrupt */
+	do {
+		palmas_i2c_read_u8(0x49, 0x1C, &vali);
+	} while (!(vali & 0x80));
 
 	return 0;
 err4:
@@ -492,6 +533,28 @@ int __devexit dwc3_remove(struct platform_device *pdev)
 	kfree(dwc->mem);
 
 	return 0;
+}
+
+
+void dwc3_wrapper_init()
+{
+	u32 reg;
+
+	reg = USBOTGSS_IRQO_COREIRQ_ST;
+
+	writel(reg, USBOTGSS_IRQENABLE_SET_0);
+	reg = (USBOTGSS_IRQ1_OEVT |
+			USBOTGSS_IRQ1_DRVVBUS_RISE |
+			USBOTGSS_IRQ1_CHRGVBUS_RISE |
+			USBOTGSS_IRQ1_DISCHRGVBUS_RISE |
+			USBOTGSS_IRQ1_IDPULLUP_RISE |
+			USBOTGSS_IRQ1_DRVVBUS_FALL |
+			USBOTGSS_IRQ1_CHRGVBUS_FALL |
+			USBOTGSS_IRQ1_DISCHRGVBUS_FALL |
+			USBOTGSS_IRQ1_IDPULLUP_FALL);
+
+	writel(reg, USBOTGSS_IRQENABLE_SET_1);
+	
 }
 
 int usb_gadget_init_udc(void)

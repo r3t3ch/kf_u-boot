@@ -263,6 +263,15 @@ struct cmd_dispatch_info {
 	void (*cb)(struct usb_ep *ep, struct usb_request *req);
 };
 
+static void cb_dummy(struct usb_ep *ep, struct usb_request *req)
+{
+	sprintf(boot_addr_start, "0x%p", fb_cfg.transfer_buffer);
+
+//	req_in->complete = do_bootm_on_complete;
+	fastboot_tx_write_str("OKAY");
+	return;
+}
+
 static struct cmd_dispatch_info cmd_dispatch_info[] = {
 	{
 		.cmd = "reboot",
@@ -276,7 +285,10 @@ static struct cmd_dispatch_info cmd_dispatch_info[] = {
 	}, {
 		.cmd = "boot",
 		.cb = cb_boot,
-	},
+	}, {
+		.cmd = "flash",
+		.cb = cb_dummy,
+	}	
 };
 
 void rx_handler_command(struct usb_ep *ep, struct usb_request *req)
@@ -287,7 +299,6 @@ void rx_handler_command(struct usb_ep *ep, struct usb_request *req)
 	int i;
 
 	sprintf(response, "FAIL");
-
 	for (i = 0; i < ARRAY_SIZE(cmd_dispatch_info); i++) {
 		if (!strcmp_l1(cmd_dispatch_info[i].cmd, cmdbuf)) {
 			func_cb = cmd_dispatch_info[i].cb;

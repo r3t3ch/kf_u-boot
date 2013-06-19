@@ -45,6 +45,7 @@
 #include "misc.h"
 
 /* Global constants */
+#define DWC3_EP0_BOUNCE_SIZE	512
 #define DWC3_ENDPOINTS_NUM	32
 
 #define DWC3_EVENT_BUFFERS_SIZE	PAGE_SIZE
@@ -175,6 +176,9 @@
 #define DWC3_DCFG_DEVADDR(addr)	((addr) << 3)
 #define DWC3_DCFG_DEVADDR_MASK	DWC3_DCFG_DEVADDR(0x7f)
 
+/* Device Configuration Register */
+#define DWC3_DCFG_LPM_CAP	(1 << 22)
+
 #define DWC3_DCFG_SPEED_MASK	(7 << 0)
 #define DWC3_DCFG_SUPERSPEED	(4 << 0)
 #define DWC3_DCFG_HIGHSPEED	(0 << 0)
@@ -191,6 +195,20 @@
 #define DWC3_DCTL_HIRD_THRES(n)	(((n) & DWC3_DCTL_HIRD_THRES_MASK) >> 24)
 
 #define DWC3_DCTL_APPL1RES	(1 << 23)
+/* These apply for core versions 1.87a and earlier */
+#define DWC3_DCTL_TRGTULST_MASK		(0x0f << 17)
+#define DWC3_DCTL_TRGTULST(n)		((n) << 17)
+#define DWC3_DCTL_TRGTULST_U2		(DWC3_DCTL_TRGTULST(2))
+#define DWC3_DCTL_TRGTULST_U3		(DWC3_DCTL_TRGTULST(3))
+#define DWC3_DCTL_TRGTULST_SS_DIS	(DWC3_DCTL_TRGTULST(4))
+#define DWC3_DCTL_TRGTULST_RX_DET	(DWC3_DCTL_TRGTULST(5))
+#define DWC3_DCTL_TRGTULST_SS_INACT	(DWC3_DCTL_TRGTULST(6))
+
+/* These apply for core versions 1.94a and later */
+#define DWC3_DCTL_KEEP_CONNECT	(1 << 19)
+#define DWC3_DCTL_L1_HIBER_EN	(1 << 18)
+#define DWC3_DCTL_CRS		(1 << 17)
+#define DWC3_DCTL_CSS		(1 << 16)
 
 #define DWC3_DCTL_INITU2ENA	(1 << 12)
 #define DWC3_DCTL_ACCEPTU2ENA	(1 << 11)
@@ -326,7 +344,7 @@ struct dwc3_event_buffer {
  * @current_trb: index of current used trb
  * @number: endpoint number (1 - 15)
  * @type: set to bmAttributes & USB_ENDPOINT_XFERTYPE_MASK
- * @res_trans_idx: Resource transfer index
+ * @resource_index: Resource transfer index
  * @interval: the intervall on which the ISOC transfer is started
  * @name: a human readable name e.g. ep1out-bulk
  * @direction: true for TX, false for RX
@@ -359,7 +377,7 @@ struct dwc3_ep {
 
 	u8			number;
 	u8			type;
-	u8			res_trans_idx;
+	u8			resource_index;
 	u32			interval;
 
 	char			name[20];
@@ -440,6 +458,7 @@ enum dwc3_device_state {
  * @ioc: interrupt on complete
  * @sid_sofn: Stream ID / SOF Number
  */
+#if 1
 struct dwc3_trb {
 	u64             bplh;
 
@@ -472,6 +491,16 @@ struct dwc3_trb {
 		u32 control;
 	};
 } __packed;
+#endif
+/* TRB Control */
+#define DWC3_TRB_CTRL_HWO		(1 << 0)
+#define DWC3_TRB_CTRL_LST		(1 << 1)
+#define DWC3_TRB_CTRL_CHN		(1 << 2)
+#define DWC3_TRB_CTRL_CSP		(1 << 3)
+#define DWC3_TRB_CTRL_TRBCTL(n)		(((n) & 0x3f) << 4)
+#define DWC3_TRB_CTRL_ISP_IMI		(1 << 10)
+#define DWC3_TRB_CTRL_IOC		(1 << 11)
+#define DWC3_TRB_CTRL_SID_SOFN(n)	(((n) & 0xffff) << 14)
 
 /**
  * struct dwc3_trb_hw - transfer request block (hw format)
@@ -486,12 +515,13 @@ struct dwc3_trb_hw {
 	__le32		size;
 	__le32		ctrl;
 } __packed;
-
+#if 1
 static inline void dwc3_trb_to_hw(struct dwc3_trb *nat, struct dwc3_trb_hw *hw)
 {
 	hw->bpl = cpu_to_le32(lower_32_bits(nat->bplh));
 	hw->bph = cpu_to_le32(upper_32_bits(nat->bplh));
 	hw->size = cpu_to_le32p(&nat->len_pcm);
+	
 	/* HWO is written last */
 	hw->ctrl = cpu_to_le32p(&nat->control);
 }
@@ -507,7 +537,7 @@ static inline void dwc3_trb_to_nat(struct dwc3_trb_hw *hw, struct dwc3_trb *nat)
 	nat->len_pcm = le32_to_cpup(&hw->size);
 	nat->control = le32_to_cpup(&hw->ctrl);
 }
-
+#endif
 /**
  * dwc3_hwparams - copy of HWPARAMS registers
  * @hwparams0 - GHWPARAMS0
@@ -637,6 +667,11 @@ struct dwc3 {
 #define DWC3_REVISION_185A	0x5533185a
 #define DWC3_REVISION_188A	0x5533188a
 #define DWC3_REVISION_190A	0x5533190a
+#define DWC3_REVISION_194A	0x5533194a
+#define DWC3_REVISION_200A	0x5533200a
+#define DWC3_REVISION_202A	0x5533202a
+#define DWC3_REVISION_210A	0x5533210a
+#define DWC3_REVISION_220A	0x5533220a
 
 	unsigned		is_selfpowered:1;
 	unsigned		three_stage_setup:1;
@@ -656,10 +691,11 @@ struct dwc3 {
 
 	struct dwc3_hwparams	hwparams;
 	struct dentry		*root;
+	unsigned		resize_fifos:1;
 };
 
 /* -------------------------------------------------------------------------- */
-
+#if 1
 #define DWC3_TRBSTS_OK			0
 #define DWC3_TRBSTS_MISSED_ISOC		1
 #define DWC3_TRBSTS_SETUP_PENDING	2
@@ -672,6 +708,10 @@ struct dwc3 {
 #define DWC3_TRBCTL_ISOCHRONOUS_FIRST	6
 #define DWC3_TRBCTL_ISOCHRONOUS		7
 #define DWC3_TRBCTL_LINK_TRB		8
+#endif
+
+#define DWC3_TRB_SIZE_MASK	(0x00ffffff)
+#define DWC3_TRB_SIZE_TRBSTS(n)	(((n) & (0x0f << 28)) >> 28)
 
 /* -------------------------------------------------------------------------- */
 
