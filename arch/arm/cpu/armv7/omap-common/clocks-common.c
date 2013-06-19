@@ -343,7 +343,7 @@ void configure_mpu_dpll(void)
 	debug("MPU DPLL locked\n");
 }
 
-#ifdef CONFIG_USB_EHCI_OMAP
+#if (CONFIG_USB_EHCI_OMAP || CONFIG_USB_DWC3)
 static void setup_usb_dpll(void)
 {
 	const struct dpll_params *params;
@@ -408,7 +408,7 @@ static void setup_dplls(void)
 	/* MPU dpll */
 	configure_mpu_dpll();
 
-#ifdef CONFIG_USB_EHCI_OMAP
+#if (CONFIG_USB_EHCI_OMAP || CONFIG_USB_DWC3)
 	setup_usb_dpll();
 #endif
 	params = get_ddr_dpll_params(*dplls_data);
