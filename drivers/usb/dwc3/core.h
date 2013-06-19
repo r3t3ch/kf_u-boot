@@ -241,6 +241,9 @@
 #define DWC3_DEVTEN_DISCONNEVTEN	(1 << 0)
 
 /* Device Status Register */
+#define DWC3_DSTS_DCNRD			(1 << 29)
+
+/* Device Status Register */
 #define DWC3_DSTS_PWRUPREQ		(1 << 24)
 #define DWC3_DSTS_COREIDLE		(1 << 23)
 #define DWC3_DSTS_DEVCTRLHLT		(1 << 22)
@@ -269,6 +272,18 @@
 #define DWC3_DGCMD_ALL_FIFO_FLUSH	0x0a
 #define DWC3_DGCMD_SET_ENDPOINT_NRDY	0x0c
 #define DWC3_DGCMD_RUN_SOC_BUS_LOOPBACK	0x10
+
+#define DWC3_DGCMD_STATUS(n)		(((n) >> 15) & 1)
+#define DWC3_DGCMD_CMDACT		(1 << 10)
+#define DWC3_DGCMD_CMDIOC		(1 << 8)
+
+/* Device Generic Command Parameter Register */
+#define DWC3_DGCMDPAR_FORCE_LINKPM_ACCEPT	(1 << 0)
+#define DWC3_DGCMDPAR_FIFO_NUM(n)		((n) << 0)
+#define DWC3_DGCMDPAR_RX_FIFO			(0 << 5)
+#define DWC3_DGCMDPAR_TX_FIFO			(1 << 5)
+#define DWC3_DGCMDPAR_LOOPBACK_DIS		(0 << 0)
+#define DWC3_DGCMDPAR_LOOPBACK_ENA		(1 << 0)
 
 /* Device Endpoint Command Register */
 #define DWC3_DEPCMD_PARAM_SHIFT		16
@@ -606,25 +621,36 @@ struct dwc3_request {
  * @gadget_driver: pointer to the gadget driver
  * @regs: base address for our registers
  * @regs_size: address space size
- * @irq: IRQ number
  * @num_event_buffers: calculated number of event buffers
  * @u1u2: only used on revisions <1.83a for workaround
  * @maximum_speed: maximum speed requested (mainly for testing purposes)
  * @revision: revision register contents
  * @mode: mode of operation
+ * @usb2_phy: pointer to USB2 PHY
+ * @usb3_phy: pointer to USB3 PHY
+ * @dcfg: saved contents of DCFG register
+ * @gctl: saved contents of GCTL register
  * @is_selfpowered: true when we are selfpowered
  * @three_stage_setup: set if we perform a three phase setup
  * @ep0_bounced: true when we used bounce buffer
  * @ep0_expect_in: true when we expect a DATA IN transfer
  * @start_config_issued: true when StartConfig command has been issued
  * @setup_packet_pending: true when there's a Setup Packet in FIFO. Workaround
+ * @needs_fifo_resize: not all users might want fifo resizing, flag it
+ * @resize_fifos: tells us it's ok to reconfigure our TxFIFO sizes.
+ * @isoch_delay: wValue from Set Isochronous Delay request;
+ * @u2sel: parameter from Set SEL request.
+ * @u2pel: parameter from Set SEL request.
+ * @u1sel: parameter from Set SEL request.
+ * @u1pel: parameter from Set SEL request.
+ * @num_out_eps: number of out endpoints
+ * @num_in_eps: number of in endpoints
  * @ep0_next_event: hold the next expected event
  * @ep0state: state of endpoint zero
  * @link_state: link state
  * @speed: device speed (super, high, full, low)
  * @mem: points to start of memory which is used for this struct.
  * @hwparams: copy of hwparams registers
- * @root: debugfs root folder pointer
  */
 struct dwc3 {
 	struct usb_ctrlrequest	*ctrl_req;
@@ -636,8 +662,10 @@ struct dwc3 {
 	dma_addr_t		setup_buf_addr;
 	dma_addr_t		ep0_bounce_addr;
 	struct dwc3_request	ep0_usb_req;
+
 	/* device lock */
 	spinlock_t		lock;
+
 	struct device		*dev;
 
 	struct platform_device	*xhci;
@@ -649,10 +677,15 @@ struct dwc3 {
 	struct usb_gadget	gadget;
 	struct usb_gadget_driver *gadget_driver;
 
+	struct usb_phy		*usb2_phy;
+	struct usb_phy		*usb3_phy;
+
 	void __iomem		*regs;
 	size_t			regs_size;
 
-	int			irq;
+	/* used for suspend/resume */
+	u32			dcfg;
+	u32			gctl;
 
 	u32			num_event_buffers;
 	u32			u1u2;
@@ -665,6 +698,7 @@ struct dwc3 {
 #define DWC3_REVISION_180A	0x5533180a
 #define DWC3_REVISION_183A	0x5533183a
 #define DWC3_REVISION_185A	0x5533185a
+#define DWC3_REVISION_187A	0x5533187a
 #define DWC3_REVISION_188A	0x5533188a
 #define DWC3_REVISION_190A	0x5533190a
 #define DWC3_REVISION_194A	0x5533194a
@@ -672,6 +706,9 @@ struct dwc3 {
 #define DWC3_REVISION_202A	0x5533202a
 #define DWC3_REVISION_210A	0x5533210a
 #define DWC3_REVISION_220A	0x5533220a
+#define DWC3_REVISION_230A	0x5533230a
+#define DWC3_REVISION_240A	0x5533240a
+#define DWC3_REVISION_250A	0x5533250a
 
 	unsigned		is_selfpowered:1;
 	unsigned		three_stage_setup:1;
@@ -680,18 +717,29 @@ struct dwc3 {
 	unsigned		start_config_issued:1;
 	unsigned		setup_packet_pending:1;
 	unsigned		delayed_status:1;
+	unsigned		needs_fifo_resize:1;
+	unsigned		resize_fifos:1;
+	unsigned		pullups_connected:1;
 
 	enum dwc3_ep0_next	ep0_next_event;
 	enum dwc3_ep0_state	ep0state;
 	enum dwc3_link_state	link_state;
 	enum dwc3_device_state	dev_state;
 
+	u16			isoch_delay;
+	u16			u2sel;
+	u16			u2pel;
+	u8			u1sel;
+	u8			u1pel;
+
 	u8			speed;
 	void			*mem;
 
 	struct dwc3_hwparams	hwparams;
 	struct dentry		*root;
-	unsigned		resize_fifos:1;
+
+	u8			test_mode;
+	u8			test_mode_nr;
 };
 
 /* -------------------------------------------------------------------------- */

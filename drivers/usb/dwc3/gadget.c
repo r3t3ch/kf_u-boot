@@ -81,6 +81,100 @@ void dwc3_unmap_buffer_from_dma(struct dwc3_request *req)
 		req->request.dma = DMA_ADDR_INVALID;
 	}
 }
+
+/**
+ * dwc3_gadget_set_test_mode - Enables USB2 Test Modes
+ * @dwc: pointer to our context structure
+ * @mode: the mode to set (J, K SE0 NAK, Force Enable)
+ *
+ * Caller should take care of locking. This function will
+ * return 0 on success or -EINVAL if wrong Test Selector
+ * is passed
+ */
+int dwc3_gadget_set_test_mode(struct dwc3 *dwc, int mode)
+{
+	u32		reg;
+
+	reg = dwc3_readl(dwc->regs, DWC3_DCTL);
+	reg &= ~DWC3_DCTL_TSTCTRL_MASK;
+
+	switch (mode) {
+	case TEST_J:
+	case TEST_K:
+	case TEST_SE0_NAK:
+	case TEST_PACKET:
+	case TEST_FORCE_EN:
+		reg |= mode << 1;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	dwc3_writel(dwc->regs, DWC3_DCTL, reg);
+
+	return 0;
+}
+
+/**
+ * dwc3_gadget_set_link_state - Sets USB Link to a particular State
+ * @dwc: pointer to our context structure
+ * @state: the state to put link into
+ *
+ * Caller should take care of locking. This function will
+ * return 0 on success or -ETIMEDOUT.
+ */
+int dwc3_gadget_set_link_state(struct dwc3 *dwc, enum dwc3_link_state state)
+{
+	int		retries = 10000;
+	u32		reg;
+
+	/*
+	 * Wait until device controller is ready. Only applies to 1.94a and
+	 * later RTL.
+	 */
+	if (dwc->revision >= DWC3_REVISION_194A) {
+		while (--retries) {
+			reg = dwc3_readl(dwc->regs, DWC3_DSTS);
+			if (reg & DWC3_DSTS_DCNRD)
+				udelay(5);
+			else
+				break;
+		}
+
+		if (retries <= 0)
+			return -ETIMEDOUT;
+	}
+
+	reg = dwc3_readl(dwc->regs, DWC3_DCTL);
+	reg &= ~DWC3_DCTL_ULSTCHNGREQ_MASK;
+
+	/* set requested state */
+	reg |= DWC3_DCTL_ULSTCHNGREQ(state);
+	dwc3_writel(dwc->regs, DWC3_DCTL, reg);
+
+	/*
+	 * The following code is racy when called from dwc3_gadget_wakeup,
+	 * and is not needed, at least on newer versions
+	 */
+	if (dwc->revision >= DWC3_REVISION_194A)
+		return 0;
+
+	/* wait for a change in DSTS */
+	retries = 10000;
+	while (--retries) {
+		reg = dwc3_readl(dwc->regs, DWC3_DSTS);
+
+		if (DWC3_DSTS_USBLNKST(reg) == state)
+			return 0;
+
+		udelay(5);
+	}
+
+	dev_vdbg(dwc->dev, "link state change request timed out\n");
+
+	return -ETIMEDOUT;
+}
+
 /**
  * dwc3_gadget_resize_tx_fifos - reallocate fifo spaces for current use-case
  * @dwc: pointer to our context structure
@@ -102,7 +196,6 @@ void dwc3_unmap_buffer_from_dma(struct dwc3_request *req)
  *
  * Unfortunately, due to many variables that's not always the case.
  */
-
 
 #define DWC3_MDWIDTH(n)		(((n) & 0xff00) >> 8)
 #define DWC3_RAM1_DEPTH(n)	((n) & 0xffff)
@@ -232,6 +325,33 @@ static const char *dwc3_gadget_ep_cmd_string(u8 cmd)
 	default:
 		return "UNKNOWN command";
 	}
+}
+
+int dwc3_send_gadget_generic_command(struct dwc3 *dwc, int cmd, u32 param)
+{
+	u32		timeout = 500;
+	u32		reg;
+
+	dwc3_writel(dwc->regs, DWC3_DGCMDPAR, param);
+	dwc3_writel(dwc->regs, DWC3_DGCMD, cmd | DWC3_DGCMD_CMDACT);
+
+	do {
+		reg = dwc3_readl(dwc->regs, DWC3_DGCMD);
+		if (!(reg & DWC3_DGCMD_CMDACT)) {
+			dev_vdbg(dwc->dev, "Command Complete --> %d\n",
+					DWC3_DGCMD_STATUS(reg));
+			return 0;
+		}
+
+		/*
+		 * We can't sleep here, because it's also called from
+		 * interrupt context.
+		 */
+		timeout--;
+		if (!timeout)
+			return -ETIMEDOUT;
+		udelay(1);
+	} while (1);
 }
 
 int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
