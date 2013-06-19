@@ -36,11 +36,11 @@
 #define TX_ENDPOINT_MAXIMUM_PACKET_SIZE      (0x0040)
 
 static struct usb_string def_usb_fb_strings[] = {
-	{ FB_STR_PRODUCT_IDX,		"Default Product" },
+	{ FB_STR_PRODUCT_IDX,		"omap5_uevm" },
 	{ FB_STR_SERIAL_IDX,		"1234567890" },
 	{ FB_STR_CONFIG_IDX,		"Android Fastboot" },
 	{ FB_STR_INTERFACE_IDX,		"Android Fastboot" },
-	{ FB_STR_MANUFACTURER_IDX,	"Default Manufacturer" },
+	{ FB_STR_MANUFACTURER_IDX,	"Texas Instruments" },
 	{ FB_STR_PROC_REV_IDX,		"Default 1.0" },
 	{ FB_STR_PROC_TYPE_IDX,		"Emulator" },
 	{  }
@@ -169,6 +169,9 @@ struct usb_device_descriptor fb_descriptor = {
 	.bLength            = sizeof(fb_descriptor),
 	.bDescriptorType    = USB_DT_DEVICE,
 	.bcdUSB             = 0x200,
+	.bDeviceClass	    = 0xff,
+	.bDeviceSubClass    = 0xff,
+	.bDeviceProtocol    = 0xff,
 	.bMaxPacketSize0    = 0x40,
 	.idVendor           = DEVICE_VENDOR_ID,
 	.idProduct          = DEVICE_PRODUCT_ID,

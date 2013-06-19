@@ -1,10 +1,13 @@
 #include <common.h>
 #include <usb/fastboot.h>
+#include <asm/io.h>
+
+#define CONTROL_ID_CODE		0x4A002204
+
+char serialno[100];
 
 static struct usb_string def_usb_fb_strings[] = {
-	{ FB_STR_SERIAL_IDX,            "abcd+efg" },
-	{ FB_STR_PROC_REV_IDX,          "ES0.0" },
-	{ FB_STR_PROC_TYPE_IDX,         "VirtIO" },
+	{ FB_STR_SERIAL_IDX,            &serialno },
 	{  }
 };
 
@@ -26,8 +29,18 @@ DECLARE_GLOBAL_DATA_PTR;
 int fastboot_board_init(struct fastboot_config *interface,
 		struct usb_gadget_strings **str) {
 
+	u32 val[4] = { 0 };
+	u32 reg;
+
 	interface->transfer_buffer = CFG_FASTBOOT_TRANSFER_BUFFER;
 	interface->transfer_buffer_size = CFG_FASTBOOT_TRANSFER_BUFFER_SIZE;
+
+	/* Determine the serial number */
+	reg = CONTROL_ID_CODE;
+	val[2] = readl(reg + 0xC);
+	val[3] = readl(reg + 0x10);
+	printf("Device Serial Number: %08X%08X\n", val[3], val[2]);
+	sprintf(serialno, "%08X%08X", val[3], val[2]);
 
 	*str = &def_fb_strings;
 	return 0;

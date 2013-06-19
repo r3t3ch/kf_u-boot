@@ -5,7 +5,7 @@
 #define FASTBOOT_INTERFACE_CLASS	0xff
 #define FASTBOOT_INTERFACE_SUB_CLASS	0x42
 #define FASTBOOT_INTERFACE_PROTOCOL	0x03
-#define FASTBOOT_VERSION		"0.4"
+#define FASTBOOT_VERSION		"0.5"
 
 extern struct fastboot_config fb_cfg;
 extern struct usb_ep *ep_in;
