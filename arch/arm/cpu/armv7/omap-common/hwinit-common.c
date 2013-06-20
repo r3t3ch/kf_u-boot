@@ -158,6 +158,10 @@ int arch_cpu_init(void)
 }
 #endif /* CONFIG_ARCH_CPU_INIT */
 
+void __weak set_crossbar_regs(void)
+{
+}
+
 /*
  * Routine: s_init
  * Description: Does early system init of watchdog, muxing,  andclocks
@@ -204,6 +208,9 @@ void s_init(void)
 #ifdef CONFIG_SPL_BUILD
 	/* For regular u-boot sdram_init() is called from dram_init() */
 	sdram_init();
+#endif
+#ifndef CONFIG_SPL_BUILD
+	set_crossbar_regs();
 #endif
 }
 

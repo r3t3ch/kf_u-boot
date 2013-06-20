@@ -32,6 +32,7 @@
 #include <asm/arch/mmc_host_def.h>
 
 #include "mux_data.h"
+#include "crossbar_data.h"
 
 #ifdef CONFIG_USB_EHCI
 #include <usb.h>
@@ -101,3 +102,73 @@ int board_mmc_init(bd_t *bis)
 	return 0;
 }
 #endif
+
+/*
+ * MPU IRQs that are mapped to CROSSBAR are:
+ * MPU_IRQ_4,
+ * MPU_IRQ_7 to MPU_IRQ_130,
+ * MPU_IRQ_133 to MPU_IRQ_159
+ * Acccordingly the offset is calculated.
+ */
+static u16 get_mpu_offset(u16 irq_no)
+{
+	u16 offset;
+	if (irq_no == 4)
+		offset = 0x00;
+	else if (irq_no == 7)
+		offset = 0x02;
+	else if (irq_no <= 130)
+		offset = (irq_no - 6) * 2;
+	else if ((irq_no <= 159) && (irq_no >= 133))
+		offset = (irq_no - 8) * 2;
+	else
+		offset = -1;
+
+	return offset;
+}
+
+/*
+ * DREQ lines associated with DMA_CROSSBAR are:
+ * DMA_SYSTEM	: 0-126
+ */
+static inline u16 get_dma_offset(u16 irq_no)
+{
+	return irq_no * 2;
+}
+
+static void do_set_crossbar(u32 base, struct crossbar_entry const *array,
+			  int size, int module)
+{
+	u16 i, offset;
+	struct crossbar_entry *irq = (struct crossbar_entry *)array;
+
+	for (i = 0; i < size; i++, irq++) {
+		switch (module) {
+		case CROSSBAR_MPU_IRQ:
+			offset = get_mpu_offset(irq->module_irq);
+			break;
+		case CROSSBAR_SDMA:
+			offset = get_dma_offset(irq->module_irq);
+			break;
+		default:
+			offset = -1;
+		}
+
+		if (offset == -1)
+			printf("Mapping of %d line cannot be done\n",
+			       irq->module_irq);
+		else
+			writew(irq->crossbar_irq, base + offset);
+	}
+}
+
+void set_crossbar_regs(void)
+{
+	do_set_crossbar((*ctrl)->control_core_mpu_irq_base, mpu_irq_map,
+			sizeof(mpu_irq_map)/sizeof(struct crossbar_entry),
+			CROSSBAR_MPU_IRQ);
+	do_set_crossbar((*ctrl)->control_core_sdma_dreq_base,
+			sdma_dreq_map,
+			sizeof(sdma_dreq_map)/sizeof(struct crossbar_entry),
+			CROSSBAR_SDMA);
+}
