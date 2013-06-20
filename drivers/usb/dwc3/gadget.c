@@ -407,8 +407,12 @@ static int dwc3_alloc_trb_pool(struct dwc3_ep *dep)
 		return 0;
 
 	dep->trb_pool = dma_alloc_coherent(dwc->dev,
-			sizeof(struct dwc3_trb) * DWC3_TRB_NUM,
+			sizeof(struct dwc3_trb) * DWC3_TRB_NUM + 0x10,
 			&dep->trb_pool_dma, GFP_KERNEL);
+
+	dep->trb_pool = (0x10 - ((u32)dep->trb_pool & 0xf)) + (long)dep->trb_pool;
+	dep->trb_pool_dma = dep->trb_pool;
+
 	if (!dep->trb_pool) {
 		dev_err(dep->dwc->dev, "failed to allocate trb pool for %s\n",
 				dep->name);
@@ -749,7 +753,7 @@ static void dwc3_gadget_ep_free_request(struct usb_ep *ep,
 
 	kfree(req);
 }
-#if 1
+
 /*
  * dwc3_prepare_trbs - setup TRBs from requests
  * @dep: endpoint for which requests are being prepared
@@ -763,7 +767,7 @@ static struct dwc3_request *dwc3_prepare_trbs(struct dwc3_ep *dep,
 		bool starting)
 {
 	struct dwc3_request	*req, *n, *ret = NULL;
-	struct dwc3_trb		*trb_hw;
+	struct dwc3_trb_hw		*trb_hw;
 	struct dwc3_trb		trb;
 	u32			trbs_left;
 
@@ -891,210 +895,7 @@ static struct dwc3_request *dwc3_prepare_trbs(struct dwc3_ep *dep,
 
 	return ret;
 }
-#else
-/**
- * dwc3_prepare_one_trb - setup one TRB from one request
- * @dep: endpoint for which this request is prepared
- * @req: dwc3_request pointer
- */
-static void dwc3_prepare_one_trb(struct dwc3_ep *dep,
-		struct dwc3_request *req, dma_addr_t dma,
-		unsigned length, unsigned last, unsigned chain)
-{
-	struct dwc3		*dwc = dep->dwc;
-	struct dwc3_trb		*trb;
 
-	unsigned int		cur_slot;
-
-	dev_vdbg(dwc->dev, "%s: req %p dma %08llx length %d%s%s\n",
-			dep->name, req, (unsigned long long) dma,
-			length, last ? " last" : "",
-			chain ? " chain" : "");
-
-	trb = &dep->trb_pool[dep->free_slot & DWC3_TRB_MASK];
-	cur_slot = dep->free_slot;
-	dep->free_slot++;
-
-	/* Skip the LINK-TRB on ISOC */
-	if (((cur_slot & DWC3_TRB_MASK) == DWC3_TRB_NUM - 1) &&
-			usb_endpoint_xfer_isoc(dep->desc))//			usb_endpoint_xfer_isoc(dep->endpoint.desc))
-		return;
-
-	if (!req->trb) {
-		dwc3_gadget_move_request_queued(req);
-		req->trb = trb;
-		req->trb_dma = dwc3_trb_dma_offset(dep, trb);
-	}
-
-	trb->size = DWC3_TRB_SIZE_LENGTH(length);
-	trb->bpl = lower_32_bits(dma);
-	trb->bph = upper_32_bits(dma);
-
-//	switch (usb_endpoint_type(dep->endpoint.desc)) {
-	switch (usb_endpoint_type(dep->desc)) {
-	case USB_ENDPOINT_XFER_CONTROL:
-		trb->ctrl = DWC3_TRBCTL_CONTROL_SETUP;
-		break;
-
-	case USB_ENDPOINT_XFER_ISOC:
-		trb->ctrl = DWC3_TRBCTL_ISOCHRONOUS_FIRST;
-
-		if (!req->request.no_interrupt)
-			trb->ctrl |= DWC3_TRB_CTRL_IOC;
-		break;
-
-	case USB_ENDPOINT_XFER_BULK:
-	case USB_ENDPOINT_XFER_INT:
-		trb->ctrl = DWC3_TRBCTL_NORMAL;
-		break;
-	default:
-		/*
-		 * This is only possible with faulty memory because we
-		 * checked it already :)
-		 */
-		BUG();
-	}
-
-//	if (usb_endpoint_xfer_isoc(dep->endpoint.desc)) {
-	if (usb_endpoint_xfer_isoc(dep->desc)) {
-		trb->ctrl |= DWC3_TRB_CTRL_ISP_IMI;
-		trb->ctrl |= DWC3_TRB_CTRL_CSP;
-	} else {
-		if (chain)
-			trb->ctrl |= DWC3_TRB_CTRL_CHN;
-
-		if (last)
-			trb->ctrl |= DWC3_TRB_CTRL_LST;
-	}
-
-	//if (usb_endpoint_xfer_bulk(dep->endpoint.desc) && dep->stream_capable)
-	if (usb_endpoint_xfer_bulk(dep->desc) && dep->stream_capable)
-		trb->ctrl |= DWC3_TRB_CTRL_SID_SOFN(req->request.stream_id);
-
-	trb->ctrl |= DWC3_TRB_CTRL_HWO;
-}
-
-/*
- * dwc3_prepare_trbs - setup TRBs from requests
- * @dep: endpoint for which requests are being prepared
- * @starting: true if the endpoint is idle and no requests are queued.
- *
- * The function goes through the requests list and sets up TRBs for the
- * transfers. The function returns once there are no more TRBs available or
- * it runs out of requests.
- */
-static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
-{
-	struct dwc3_request	*req, *n;
-	u32			trbs_left;
-	u32			max;
-	unsigned int		last_one = 0;
-
-	BUILD_BUG_ON_NOT_POWER_OF_2(DWC3_TRB_NUM);
-
-	/* the first request must not be queued */
-	trbs_left = (dep->busy_slot - dep->free_slot) & DWC3_TRB_MASK;
-
-	/* Can't wrap around on a non-isoc EP since there's no link TRB */
-	//if (!usb_endpoint_xfer_isoc(dep->endpoint.desc)) {
-	if (!usb_endpoint_xfer_isoc(dep->desc)) {
-		max = DWC3_TRB_NUM - (dep->free_slot & DWC3_TRB_MASK);
-		if (trbs_left > max)
-			trbs_left = max;
-	}
-
-	/*
-	 * If busy & slot are equal than it is either full or empty. If we are
-	 * starting to process requests then we are empty. Otherwise we are
-	 * full and don't do anything
-	 */
-	if (!trbs_left) {
-		if (!starting)
-			return;
-		trbs_left = DWC3_TRB_NUM;
-		/*
-		 * In case we start from scratch, we queue the ISOC requests
-		 * starting from slot 1. This is done because we use ring
-		 * buffer and have no LST bit to stop us. Instead, we place
-		 * IOC bit every TRB_NUM/4. We try to avoid having an interrupt
-		 * after the first request so we start at slot 1 and have
-		 * 7 requests proceed before we hit the first IOC.
-		 * Other transfer types don't use the ring buffer and are
-		 * processed from the first TRB until the last one. Since we
-		 * don't wrap around we have to start at the beginning.
-		 */
-//		if (usb_endpoint_xfer_isoc(dep->endpoint.desc)) {
-		if (usb_endpoint_xfer_isoc(dep->desc)) {
-			dep->busy_slot = 1;
-			dep->free_slot = 1;
-		} else {
-			dep->busy_slot = 0;
-			dep->free_slot = 0;
-		}
-	}
-
-	/* The last TRB is a link TRB, not used for xfer */
-	//if ((trbs_left <= 1) && usb_endpoint_xfer_isoc(dep->endpoint.desc))
-	if ((trbs_left <= 1) && usb_endpoint_xfer_isoc(dep->desc))
-		return;
-
-	list_for_each_entry_safe(req, n, &dep->request_list, list) {
-		unsigned	length;
-		dma_addr_t	dma;
-
-		if (req->request.num_mapped_sgs > 0) {
-			struct usb_request *request = &req->request;
-			struct scatterlist *sg = request->sg;
-			struct scatterlist *s;
-			int		i;
-
-			for_each_sg(sg, s, request->num_mapped_sgs, i) {
-				unsigned chain = true;
-
-				length = sg_dma_len(s);
-				dma = sg_dma_address(s);
-
-				if (i == (request->num_mapped_sgs - 1) ||
-						sg_is_last(s)) {
-					last_one = true;
-					chain = false;
-				}
-
-				trbs_left--;
-				if (!trbs_left)
-					last_one = true;
-
-				if (last_one)
-					chain = false;
-
-				dwc3_prepare_one_trb(dep, req, dma, length,
-						last_one, chain);
-
-				if (last_one)
-					break;
-			}
-		} else {
-			dma = req->request.dma;
-			length = req->request.length;
-			trbs_left--;
-
-			if (!trbs_left)
-				last_one = 1;
-
-			/* Is this the last request? */
-			if (list_is_last(&req->list, &dep->request_list))
-				last_one = 1;
-
-			dwc3_prepare_one_trb(dep, req, dma, length,
-					last_one, false);
-
-			if (last_one)
-				break;
-		}
-	}
-}
-
-#endif
 static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep, u16 cmd_param,
 		int start_new)
 {
@@ -2532,13 +2333,11 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 		goto err0;
 	}
 
-//	dwc->ep0_trb = dma_alloc_coherent(dwc->dev, sizeof(*dwc->ep0_trb),
-//			&dwc->ep0_trb_addr, GFP_KERNEL);
-	dwc->ep0_trb = dma_alloc_coherent(dwc->dev, 0x8000,
+	dwc->ep0_trb = dma_alloc_coherent(dwc->dev, sizeof(*dwc->ep0_trb) + 0x10,
 			&dwc->ep0_trb_addr, GFP_KERNEL);
 
-	dwc->ep0_trb = (dma_addr_t*) (((unsigned int)dwc->ep0_trb + 0x4000) & 0xfffff000);
-	dwc->ep0_trb_addr = (dma_addr_t)dwc->ep0_trb;
+	dwc->ep0_trb = (0x10 - ((u32)dwc->ep0_trb & 0xf)) + (long)dwc->ep0_trb;
+	dwc->ep0_trb_addr = dwc->ep0_trb;
 
 	if (!dwc->ep0_trb) {
 		dev_err(dwc->dev, "failed to allocate ep0 trb\n");
