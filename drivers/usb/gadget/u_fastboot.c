@@ -69,6 +69,19 @@ struct fastboot_config fb_cfg;
 
 static unsigned int download_size;
 static unsigned int download_bytes;
+static void* read_buffer;
+
+#define DEBUG
+#ifdef DEBUG
+#define DBG(x...) printf("========================="); printf(x)
+#else
+#define DBG(x...)
+#endif /* DEBUG */
+
+int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
+static int fastboot_erase(const char *partition);
+static int fastboot_flash(const char *cmdbuf);
+
 
 static int fastboot_tx_write_str(const char *buffer)
 {
@@ -263,33 +276,184 @@ struct cmd_dispatch_info {
 	void (*cb)(struct usb_ep *ep, struct usb_request *req);
 };
 
-static void cb_dummy(struct usb_ep *ep, struct usb_request *req)
-{
-	sprintf(boot_addr_start, "0x%p", fb_cfg.transfer_buffer);
-
-//	req_in->complete = do_bootm_on_complete;
-	fastboot_tx_write_str("OKAY");
+static void cb_oem(struct usb_ep *ep, struct usb_request *req)
+{    
+	if(fastboot_oem(req->buf + 4) == 0)
+		fastboot_tx_write_str("OKAY");
+	else {
+		fastboot_tx_write_str("FAIL: Unable to create partitions");
+	}
 	return;
+}
+
+static void cb_flash(struct usb_ep *ep, struct usb_request *req)
+{    
+    fastboot_flash(req->buf + 6);
+    fastboot_tx_write_str("OKAY");
+    return;
+}
+
+static void cb_erase(struct usb_ep *ep, struct usb_request *req)
+{
+	if(fastboot_erase(req->buf + 6) != 0) {
+		printf("Unable to erase partition\n");
+	}
 }
 
 static struct cmd_dispatch_info cmd_dispatch_info[] = {
 	{
 		.cmd = "reboot",
 		.cb = cb_reboot,
-	}, {
+	}, 
+	{
 		.cmd = "getvar:",
 		.cb = cb_getvar,
-	}, {
+	}, 
+	{
 		.cmd = "download:",
 		.cb = cb_download,
-	}, {
+	}, 
+	{
 		.cmd = "boot",
 		.cb = cb_boot,
-	}, {
+	}, 
+	{
 		.cmd = "flash",
-		.cb = cb_dummy,
-	}	
+		.cb = cb_flash,
+	},
+	{
+	    .cmd = "oem",
+	    .cb = cb_oem,
+	},
+	{
+		.cmd = "erase",
+		.cb  = cb_erase,
+	}
 };
+
+
+static int fastboot_flash(const char *cmdbuf)
+{
+	int status = 0;
+	struct fastboot_ptentry *ptn;	
+	char source[32], dest[32], length[32];	
+	char *dev[3] = { "mmc", "dev", "1" };
+	char *mmc_write[5]  = {"mmc", "write", NULL, NULL, NULL};
+	char *mmc_init[2] = {"mmc", "rescan",};
+
+	/* Next is the partition name */
+	ptn = fastboot_flash_find_ptn(cmdbuf);
+
+	if (ptn == 0) {
+		printf("Partition:[%s] does not exist\n", cmdbuf);
+		fastboot_tx_write_str("FAIL:Partition does not exist");
+	} else if ((download_bytes> ptn->length) &&
+					!(ptn->flags & FASTBOOT_PTENTRY_FLAGS_WRITE_ENV)) {
+		printf("Image too large for the partition\n");
+		fastboot_tx_write_str("FAIL: image too large for partition");
+	} else {
+		source[0] = '\0';
+		dest[0] = '\0';
+		length[0] = '\0';
+
+		printf("writing to partition '%s'\n", ptn->name);
+
+		mmc_write[2] = source;
+		mmc_write[3] = dest;
+		mmc_write[4] = length;
+
+		sprintf(source, "0x%x", fb_cfg.transfer_buffer);
+		sprintf(dest, "0x%x", ptn->start);
+		sprintf(length, "0x%x", (download_bytes/512) + 1);
+
+		printf("Setting current mmc device to 1\n");
+		status = do_mmcops(NULL, 0, 2, dev); 
+		if(status) {	
+			printf("Unable to set MMC device\n");
+			fastboot_tx_write_str("FAIL: init of MMC");
+			goto exit;
+		}
+
+		printf("Initializing '%s'\n", ptn->name);
+		status = do_mmcops(NULL, 0, 2, mmc_init);
+		if(status) {
+			fastboot_tx_write_str("FAIL:Init of MMC card");
+			goto exit;
+		}
+		else {
+			printf("Writing '%s'\n", ptn->name);
+			status = do_mmcops(NULL, 0, 5, mmc_write);
+			if(status) {
+				printf("Writing '%s' FAILED!\n", ptn->name);
+				fastboot_tx_write_str("FAIL: Write partition");
+				goto exit;
+			} else {
+				printf("Writing '%s' DONE!\n", ptn->name);
+				fastboot_tx_write_str("OKAY");
+			}
+		}
+	}
+exit:
+	return status;
+}
+
+static int fastboot_erase(const char *partition)
+{
+	struct fastboot_ptentry *ptn;
+	int status = 0;
+	char start[32], length[32];
+	char *dev[3] = { "mmc", "dev", "1" };
+	char *erase[4]	= { "mmc", "erase", NULL, NULL, };
+	char *mmc_init[2] = {"mmc", "rescan",};
+
+	/* Find the partition and erase it */
+	printf("Finding partition %s\n",partition);
+	ptn = fastboot_flash_find_ptn("crypto");
+
+	if (ptn == 0) {
+		printf("Partition does not exist");
+		fastboot_tx_write_str("FAIL: partition doesn't exist");
+		status = -1;
+	} else {
+
+		erase[2] = start;
+		erase[3] = length;
+
+		sprintf(length, "0x%x", ptn->length);
+		sprintf(start, "0x%x", ptn->start);
+
+		printf("Setting current mmc device to 1\n");
+		status = do_mmcops(NULL, 0, 2, dev); 
+		if(status) {	
+			printf("Unable to set MMC device\n");
+			fastboot_tx_write_str("FAIL: init of MMC");
+			goto exit;
+		}
+
+		printf("Initializing '%s'\n", ptn->name);
+		status = do_mmcops(NULL, 0, 2, mmc_init);
+		if(status) {	
+			fastboot_tx_write_str("FAIL: init of MMC");
+			goto exit;
+		}
+
+		printf("Erasing '%s'\n", ptn->name);
+		status = do_mmcops(NULL, 0, 4, erase);
+		if(status) {
+			printf("Erasing '%s' FAILED! %d\n", ptn->name,status);
+			fastboot_tx_write_str("FAIL: Eraze of partition");
+		} else {
+			printf("Erasing '%s' DONE!\n", ptn->name);
+			fastboot_tx_write_str("OKAY");
+		}
+		
+	fastboot_tx_write_str("OKAY");
+
+	}
+exit:	
+	return status;
+}
+
 
 void rx_handler_command(struct usb_ep *ep, struct usb_request *req)
 {

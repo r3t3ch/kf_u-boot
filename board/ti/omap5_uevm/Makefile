@@ -29,6 +29,7 @@ COBJS	:= evm.o
 
 ifdef CONFIG_CMD_FASTBOOT
 COBJS	+= fastboot.o
+COBJS	+= mmc.o
 endif
 
 SRCS	:= $(COBJS:.o=.c)

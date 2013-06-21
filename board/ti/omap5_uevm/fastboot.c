@@ -6,6 +6,12 @@
 
 char serialno[100];
 
+/* To support the Android-style naming of flash */
+#define MAX_PTN 16
+
+static fastboot_ptentry ptable[MAX_PTN];
+static unsigned int pcount = 0;
+
 static struct usb_string def_usb_fb_strings[] = {
 	{ FB_STR_SERIAL_IDX,            &serialno },
 	{  }
@@ -43,5 +49,36 @@ int fastboot_board_init(struct fastboot_config *interface,
 	sprintf(serialno, "%08X%08X", val[3], val[2]);
 
 	*str = &def_fb_strings;
+    
+	board_mmc_ftbtptn_init();
 	return 0;
 }
+
+fastboot_ptentry *fastboot_flash_find_ptn(const char *name)
+{
+	unsigned int n;
+
+	for (n = 0; n < MAX_PTN; n++) {
+		/* Make sure a substring is not accepted */
+		if (strlen(name) == strlen(ptable[n].name)) {
+			if (0 == strcmp(ptable[n].name, name))
+				return ptable + n;
+		}
+	}
+
+	return NULL;
+}
+void fastboot_flash_reset_ptn(void)
+{
+	pcount = 0;
+}
+
+void fastboot_flash_add_ptn(fastboot_ptentry *ptn, int count)
+{
+	if(pcount < MAX_PTN) {
+	    memcpy(ptable + pcount, ptn, sizeof(*ptn));
+	    pcount++;
+	}
+}
+
+
