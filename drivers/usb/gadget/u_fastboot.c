@@ -73,7 +73,7 @@ static void* read_buffer;
 
 #define DEBUG
 #ifdef DEBUG
-#define DBG(x...) printf("========================="); printf(x)
+#define DBG(x...) printf(x)
 #else
 #define DBG(x...)
 #endif /* DEBUG */
@@ -165,10 +165,19 @@ static void cb_getvar(struct usb_ep *ep, struct usb_request *req)
 static unsigned int rx_bytes_expected(void)
 {
 	int rx_remain = download_size - download_bytes;
-	if (rx_remain < 0)
+	int rem = 0;
+	if (rx_remain < 0) {
 		return 0;
-	if (rx_remain > EP_BUFFER_SIZE)
+	}
+	if (rx_remain > EP_BUFFER_SIZE) {
 		return EP_BUFFER_SIZE;
+	}
+	if(rx_remain < 512) {
+		rx_remain = 512;
+	}else if(rx_remain % 512 != 0) {
+		rem = rx_remain % 512;
+		rx_remain = rx_remain + (512 - rem);
+	}
 	return rx_remain;
 }
 
@@ -243,6 +252,7 @@ static void cb_download(struct usb_ep *ep, struct usb_request *req)
 		sprintf(response, "DATA%08x", download_size);
 		req->complete = rx_handler_dl_image;
 		req->length = rx_bytes_expected();
+		printf("req->length %d\n",req->length);
 	}
 	fastboot_tx_write_str(response);
 }
@@ -342,7 +352,7 @@ static int fastboot_flash(const char *cmdbuf)
 	char *mmc_init[2] = {"mmc", "rescan",};
 
 	/* Next is the partition name */
-	ptn = fastboot_flash_find_ptn(cmdbuf);
+	ptn = fastboot_flash_find_ptn("boot");
 
 	if (ptn == 0) {
 		printf("Partition:[%s] does not exist\n", cmdbuf);
@@ -367,7 +377,7 @@ static int fastboot_flash(const char *cmdbuf)
 		sprintf(length, "0x%x", (download_bytes/512) + 1);
 
 		printf("Setting current mmc device to 1\n");
-		status = do_mmcops(NULL, 0, 2, dev); 
+		status = do_mmcops(NULL, 0, 3, dev); 
 		if(status) {	
 			printf("Unable to set MMC device\n");
 			fastboot_tx_write_str("FAIL: init of MMC");
@@ -408,7 +418,7 @@ static int fastboot_erase(const char *partition)
 
 	/* Find the partition and erase it */
 	printf("Finding partition %s\n",partition);
-	ptn = fastboot_flash_find_ptn("crypto");
+	ptn = fastboot_flash_find_ptn("boot");
 
 	if (ptn == 0) {
 		printf("Partition does not exist");
@@ -423,7 +433,7 @@ static int fastboot_erase(const char *partition)
 		sprintf(start, "0x%x", ptn->start);
 
 		printf("Setting current mmc device to 1\n");
-		status = do_mmcops(NULL, 0, 2, dev); 
+		status = do_mmcops(NULL, 0, 3, dev); 
 		if(status) {	
 			printf("Unable to set MMC device\n");
 			fastboot_tx_write_str("FAIL: init of MMC");
@@ -461,8 +471,9 @@ void rx_handler_command(struct usb_ep *ep, struct usb_request *req)
 	char *cmdbuf = req->buf;
 	void (*func_cb)(struct usb_ep *ep, struct usb_request *req) = NULL;
 	int i;
-
-	sprintf(response, "FAIL");
+	//DBG("cmd buff %s %s\n",__func__,cmdbuf);
+    
+    sprintf(response, "FAIL");
 	for (i = 0; i < ARRAY_SIZE(cmd_dispatch_info); i++) {
 		if (!strcmp_l1(cmd_dispatch_info[i].cmd, cmdbuf)) {
 			func_cb = cmd_dispatch_info[i].cb;
@@ -476,7 +487,7 @@ void rx_handler_command(struct usb_ep *ep, struct usb_request *req)
 		func_cb(ep, req);
 
 	if (req->status == 0) {
-		*cmdbuf = '\0';
+        *cmdbuf = '\0';
 		req->actual = 0;
 		usb_ep_queue(ep, req, 0);
 	}

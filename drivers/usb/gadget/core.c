@@ -352,6 +352,7 @@ int usbd_endpoint_halted (struct usb_device_instance *device, int endpoint)
  */
 void usbd_rcv_complete(struct usb_endpoint_instance *endpoint, int len, int urb_bad)
 {
+	printf("Entered %s\n",__func__);
 	if (endpoint) {
 		struct urb *rcv_urb;
 

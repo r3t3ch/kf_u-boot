@@ -344,7 +344,8 @@ static int fastboot_enable_ep(struct usb_gadget *gadget)
 {
 	int ret;
 
-	/* make sure we don't enable the ep twice */
+    printf("Entered %s\n",__func__);
+    /* make sure we don't enable the ep twice */
 	if (gadget->speed == USB_SPEED_HIGH)
 		ret = usb_ep_enable(ep_out, &hs_ep_out);
 	else
@@ -374,9 +375,13 @@ static int fastboot_enable_ep(struct usb_gadget *gadget)
 	req_out->complete = rx_handler_command;
 	req_out->buf = ep_out_buffer;
 	req_out->length = sizeof(ep_out_buffer);
+    printf("%d %d %s\n",ep_out_buffer[0],req_out->length,ep_out->name);
 
 	req_in->buf = ep_in_buffer;
 	req_in->length = sizeof(ep_in_buffer);
+
+   
+    printf("%d %d\n",ep_in_buffer[0],req_in->length);
 
 	ret = usb_ep_queue(ep_out, req_out, 0);
 	if (ret)

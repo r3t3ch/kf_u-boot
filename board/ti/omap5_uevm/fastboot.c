@@ -28,7 +28,7 @@ static struct usb_gadget_strings def_fb_strings = {
  */
 DECLARE_GLOBAL_DATA_PTR;
 #define SZ_16M                          0x01000000
-#define SZ_128M                         0x08000000
+#define SZ_128M                         0x10000000
 #define CFG_FASTBOOT_TRANSFER_BUFFER (void *)(gd->bd->bi_dram[0].start + SZ_16M)
 #define CFG_FASTBOOT_TRANSFER_BUFFER_SIZE (SZ_128M - SZ_16M)
 

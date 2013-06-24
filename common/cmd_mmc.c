@@ -211,7 +211,6 @@ int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	} else if (strcmp(argv[1], "dev") == 0) {
 		int dev, part = -1;
 		struct mmc *mmc;
-
 		if (argc == 2)
 			dev = curr_device;
 		else if (argc == 3)
