@@ -36,8 +36,6 @@
 #define EFI_ENTRIES 128
 #define EFI_NAMELEN 36
 
-#define DEBUG
-
 #ifdef DEBUG
 #define DBG(x...) printf(x)
 #else

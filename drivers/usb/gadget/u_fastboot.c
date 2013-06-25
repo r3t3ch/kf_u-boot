@@ -71,7 +71,6 @@ static unsigned int download_size;
 static unsigned int download_bytes;
 static void* read_buffer;
 
-#define DEBUG
 #ifdef DEBUG
 #define DBG(x...) printf(x)
 #else
@@ -252,7 +251,6 @@ static void cb_download(struct usb_ep *ep, struct usb_request *req)
 		sprintf(response, "DATA%08x", download_size);
 		req->complete = rx_handler_dl_image;
 		req->length = rx_bytes_expected();
-		printf("req->length %d\n",req->length);
 	}
 	fastboot_tx_write_str(response);
 }
@@ -296,16 +294,37 @@ static void cb_oem(struct usb_ep *ep, struct usb_request *req)
 	return;
 }
 
+/*HACK : Fastboot doesn't seem to be null terminating the flash command. Do it ourselves*/
+static void format_flash_cmd(char* cmd) 
+{
+	int i;
+	char *parts[] = {"bootloader", "boot", "system", "userdata", "cache", "recovery"};	
+	for(i = 0;i < 5;i++) {
+		if(!strncmp(parts[i],cmd,strlen(parts[i]))) {
+			*(cmd + strlen(parts[i])) = '\0';
+			printf("Process %s %d\n",cmd,strlen(cmd));
+			break;
+		}
+	}
+	
+}
+
 static void cb_flash(struct usb_ep *ep, struct usb_request *req)
 {    
-    fastboot_flash(req->buf + 6);
-    fastboot_tx_write_str("OKAY");
+	char *cmd = req->buf + 6;
+	format_flash_cmd(cmd);
+	if(fastboot_flash(cmd) != 0) {
+		printf("Unable to flash partition\n");
+	}
+
     return;
 }
 
 static void cb_erase(struct usb_ep *ep, struct usb_request *req)
 {
-	if(fastboot_erase(req->buf + 6) != 0) {
+	char *cmd = req->buf + 6;
+	format_flash_cmd(cmd);
+	if(fastboot_erase(cmd) != 0) {
 		printf("Unable to erase partition\n");
 	}
 }
@@ -342,7 +361,7 @@ static struct cmd_dispatch_info cmd_dispatch_info[] = {
 };
 
 
-static int fastboot_flash(const char *cmdbuf)
+static int fastboot_flash(const char *partition)
 {
 	int status = 0;
 	struct fastboot_ptentry *ptn;	
@@ -351,11 +370,10 @@ static int fastboot_flash(const char *cmdbuf)
 	char *mmc_write[5]  = {"mmc", "write", NULL, NULL, NULL};
 	char *mmc_init[2] = {"mmc", "rescan",};
 
-	/* Next is the partition name */
-	ptn = fastboot_flash_find_ptn("boot");
-
+	ptn = fastboot_flash_find_ptn(partition);
+	
 	if (ptn == 0) {
-		printf("Partition:[%s] does not exist\n", cmdbuf);
+		printf("Partition:[%s] does not exist\n", partition);
 		fastboot_tx_write_str("FAIL:Partition does not exist");
 	} else if ((download_bytes> ptn->length) &&
 					!(ptn->flags & FASTBOOT_PTENTRY_FLAGS_WRITE_ENV)) {
@@ -365,9 +383,7 @@ static int fastboot_flash(const char *cmdbuf)
 		source[0] = '\0';
 		dest[0] = '\0';
 		length[0] = '\0';
-
-		printf("writing to partition '%s'\n", ptn->name);
-
+ 
 		mmc_write[2] = source;
 		mmc_write[3] = dest;
 		mmc_write[4] = length;
@@ -375,17 +391,14 @@ static int fastboot_flash(const char *cmdbuf)
 		sprintf(source, "0x%x", fb_cfg.transfer_buffer);
 		sprintf(dest, "0x%x", ptn->start);
 		sprintf(length, "0x%x", (download_bytes/512) + 1);
-
-		printf("Setting current mmc device to 1\n");
+ 
 		status = do_mmcops(NULL, 0, 3, dev); 
 		if(status) {	
 			printf("Unable to set MMC device\n");
 			fastboot_tx_write_str("FAIL: init of MMC");
 			goto exit;
 		}
-
-		printf("Initializing '%s'\n", ptn->name);
-		status = do_mmcops(NULL, 0, 2, mmc_init);
+ 		status = do_mmcops(NULL, 0, 2, mmc_init);
 		if(status) {
 			fastboot_tx_write_str("FAIL:Init of MMC card");
 			goto exit;
@@ -417,8 +430,7 @@ static int fastboot_erase(const char *partition)
 	char *mmc_init[2] = {"mmc", "rescan",};
 
 	/* Find the partition and erase it */
-	printf("Finding partition %s\n",partition);
-	ptn = fastboot_flash_find_ptn("boot");
+ 	ptn = fastboot_flash_find_ptn(partition);
 
 	if (ptn == 0) {
 		printf("Partition does not exist");
@@ -426,22 +438,19 @@ static int fastboot_erase(const char *partition)
 		status = -1;
 	} else {
 
+		sprintf(length, "0x%x", ptn->length);
+		sprintf(start, "0x%x", ptn->start);
 		erase[2] = start;
 		erase[3] = length;
 
-		sprintf(length, "0x%x", ptn->length);
-		sprintf(start, "0x%x", ptn->start);
-
-		printf("Setting current mmc device to 1\n");
-		status = do_mmcops(NULL, 0, 3, dev); 
+ 		status = do_mmcops(NULL, 0, 3, dev); 
 		if(status) {	
 			printf("Unable to set MMC device\n");
 			fastboot_tx_write_str("FAIL: init of MMC");
 			goto exit;
 		}
 
-		printf("Initializing '%s'\n", ptn->name);
-		status = do_mmcops(NULL, 0, 2, mmc_init);
+ 		status = do_mmcops(NULL, 0, 2, mmc_init);
 		if(status) {	
 			fastboot_tx_write_str("FAIL: init of MMC");
 			goto exit;
@@ -471,9 +480,8 @@ void rx_handler_command(struct usb_ep *ep, struct usb_request *req)
 	char *cmdbuf = req->buf;
 	void (*func_cb)(struct usb_ep *ep, struct usb_request *req) = NULL;
 	int i;
-	//DBG("cmd buff %s %s\n",__func__,cmdbuf);
-    
-    sprintf(response, "FAIL");
+
+	sprintf(response, "FAIL");
 	for (i = 0; i < ARRAY_SIZE(cmd_dispatch_info); i++) {
 		if (!strcmp_l1(cmd_dispatch_info[i].cmd, cmdbuf)) {
 			func_cb = cmd_dispatch_info[i].cb;
