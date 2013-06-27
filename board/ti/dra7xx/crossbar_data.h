@@ -34,6 +34,10 @@ const struct crossbar_entry mpu_irq_map[] = {
 	{157, 151},	/* MCASP3_IRQ_AXEVT */
 	{136, 251},	/* MAILBOX5 */
 	{141, 255},	/* MAILBOX6 */
+	{142, 396},	/* IPU1 MMU */
+	{143, 145},	/* DSP1 MMU1 */
+	{144, 146},	/* DSP2 MMU0 */
+	{145, 147},	/* DSP2 MMU1 */
 };
 
 const struct crossbar_entry sdma_dreq_map[] = {
