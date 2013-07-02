@@ -222,8 +222,11 @@ static void rx_handler_dl_image(struct usb_ep *ep, struct usb_request *req)
 
 		printf("\ndownloading of %d bytes finished\n",
 				download_bytes);
-	} else
+	} else {
 		req->length = rx_bytes_expected();
+		if (req->length < ep->maxpacket)
+			req->length = ep->maxpacket;
+	}
 
 	/*if (download_bytes && !(download_bytes % BYTES_PER_DOT)) {
 		printf(".");
@@ -257,6 +260,8 @@ static void cb_download(struct usb_ep *ep, struct usb_request *req)
 		sprintf(response, "DATA%08x", download_size);
 		req->complete = rx_handler_dl_image;
 		req->length = rx_bytes_expected();
+		if (req->length < ep->maxpacket)
+			req->length = ep->maxpacket;
 	}
 	fastboot_tx_write_str(response);
 }
