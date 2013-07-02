@@ -60,6 +60,7 @@
 #include <usb/fastboot.h>
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
+#include <sparse.h>
 #include "g_fastboot.h"
 
 /* The 64 defined bytes plus \0 */
@@ -69,7 +70,6 @@ struct fastboot_config fb_cfg;
 
 static unsigned int download_size;
 static unsigned int download_bytes;
-static void* read_buffer;
 
 #ifdef DEBUG
 #define DBG(x...) printf(x)
@@ -80,6 +80,8 @@ static void* read_buffer;
 int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
 static int fastboot_erase(const char *partition);
 static int fastboot_flash(const char *cmdbuf);
+fastboot_ptentry *fastboot_flash_find_ptn(const char *name);
+
 
 
 static int fastboot_tx_write_str(const char *buffer)
@@ -108,6 +110,7 @@ static void cb_getvar(struct usb_ep *ep, struct usb_request *req)
 	char *cmd = req->buf;
 	char response[RESPONSE_LEN];
 	const char *s;
+	char userdata_sz[64];
 
 	strcpy(response, "OKAY");
 	strsep(&cmd, ":");
@@ -155,6 +158,9 @@ static void cb_getvar(struct usb_ep *ep, struct usb_request *req)
 			strncat(response, s, sizeof(response));
 		else
 			strcpy(response, "FAILValue not set");
+	} else if (!strcmp_l1("userdata_size", cmd)) {
+		strncat(response,get_ptn_size(userdata_sz, "userdata"),sizeof(response));
+
 	} else {
 		strcpy(response, "FAILVariable not implemented");
 	}
@@ -219,12 +225,12 @@ static void rx_handler_dl_image(struct usb_ep *ep, struct usb_request *req)
 	} else
 		req->length = rx_bytes_expected();
 
-	if (download_bytes && !(download_bytes % BYTES_PER_DOT)) {
+	/*if (download_bytes && !(download_bytes % BYTES_PER_DOT)) {
 		printf(".");
 		if (!(download_bytes % (74 * BYTES_PER_DOT)))
 				printf("\n");
-
-	}
+	
+	}*/
 	req->actual = 0;
 	usb_ep_queue(ep, req, 0);
 }
@@ -302,7 +308,6 @@ static void format_flash_cmd(char* cmd)
 	for(i = 0;i < 5;i++) {
 		if(!strncmp(parts[i],cmd,strlen(parts[i]))) {
 			*(cmd + strlen(parts[i])) = '\0';
-			printf("Process %s %d\n",cmd,strlen(cmd));
 			break;
 		}
 	}
@@ -388,9 +393,10 @@ static int fastboot_flash(const char *partition)
 		mmc_write[3] = dest;
 		mmc_write[4] = length;
 
-		sprintf(source, "0x%x", fb_cfg.transfer_buffer);
+		sprintf(source, "0x%x", (unsigned int)fb_cfg.transfer_buffer);
 		sprintf(dest, "0x%x", ptn->start);
 		sprintf(length, "0x%x", (download_bytes/512) + 1);
+
  
 		status = do_mmcops(NULL, 0, 3, dev); 
 		if(status) {	
@@ -403,8 +409,22 @@ static int fastboot_flash(const char *partition)
 			fastboot_tx_write_str("FAIL:Init of MMC card");
 			goto exit;
 		}
-		else {
-			printf("Writing '%s'\n", ptn->name);
+		if ( ((sparse_header_t *)fb_cfg.transfer_buffer)->magic
+				== SPARSE_HEADER_MAGIC) {
+			printf("fastboot: %s is in sparse format\n", ptn->name);
+			status = do_unsparse(fb_cfg.transfer_buffer,
+					ptn->start,
+					ptn->length);
+			if(status) {
+				printf("Writing '%s' FAILED!\n", ptn->name);
+				fastboot_tx_write_str("FAIL: Write partition");
+			} else {	
+				printf("Writing sparsed: '%s' DONE!\n", ptn->name);
+				printf("Writing '%s' DONE!\n", ptn->name);
+				fastboot_tx_write_str("OKAY");
+			}				
+		} else {
+			printf("Writing non-sparsed format '%s'\n", ptn->name);
 			status = do_mmcops(NULL, 0, 5, mmc_write);
 			if(status) {
 				printf("Writing '%s' FAILED!\n", ptn->name);
@@ -415,6 +435,7 @@ static int fastboot_flash(const char *partition)
 				fastboot_tx_write_str("OKAY");
 			}
 		}
+
 	}
 exit:
 	return status;

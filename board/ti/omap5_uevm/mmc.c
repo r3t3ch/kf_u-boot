@@ -35,6 +35,7 @@
 #define EFI_VERSION 0x00010000
 #define EFI_ENTRIES 128
 #define EFI_NAMELEN 36
+#define MMC_DEVICE 1
 
 #ifdef DEBUG
 #define DBG(x...) printf(x)
@@ -42,7 +43,9 @@
 #define DBG(x...)
 #endif /* DEBUG */
 
-int load_ptbl();
+static int load_ptbl();
+int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
+
 
 static const u8 partition_type[16] = {
 	0xa2, 0xa0, 0xd0, 0xeb, 0xe5, 0xb9, 0x33, 0x44,
@@ -256,7 +259,7 @@ static void import_efi_partition(struct efi_entry *entry, int count)
 	
 }
 
-int load_ptbl()
+static int load_ptbl()
 {
 	u64 ptbl_sectors = 0;
 	int i = 0, r = 0;
@@ -264,7 +267,7 @@ int load_ptbl()
 	struct ptable *gpt;
 	struct mmc* mmc = NULL;
 	
-	mmc = find_mmc_device(1);
+	mmc = find_mmc_device(MMC_DEVICE);
 	if(mmc == NULL) {
 		printf("No MMC in slot 1\n");
 		return -1;
@@ -306,6 +309,105 @@ fail:
 	return r;
 }
 
+char *convert_ptn_name_to_unicode(struct efi_entry *entry)
+{
+	int i = 0;
+	static char name[16];
+
+	/* copying a simple unicode partition name */
+	while (i < (sizeof(entry->name)-1)) {
+		name[i] = entry->name[i];
+		i++;
+		if (entry->name[i] == 0)
+			break;
+	}
+
+	name[i] = 0;
+
+	return name;
+}
+
+static u64 get_entry_size_kb(struct efi_entry *entry, const char *ptn)
+{
+	int ret = 0;
+	char name[16];
+	u64 sz = 0;
+
+	ret = memcmp(entry->type_uuid, partition_type, sizeof(partition_type));
+	if (ret != 0)
+		return 0;
+
+	strcpy(name, (convert_ptn_name_to_unicode(entry)));
+
+	if (!strcmp(name, ptn))
+		sz = (entry->last_lba - entry->first_lba)/2;
+
+	return sz;
+}
+
+char *get_ptn_size(char *buf, const char *ptn)
+{
+		u64 ptbl_sectors = 0;
+	int i = 0, r = 0;
+	u32 sz_mb;
+	u64 sz = 0;
+
+	struct ptable *gpt;
+	struct mmc* mmc = NULL;
+	
+	mmc = find_mmc_device(MMC_DEVICE);
+	if(mmc == NULL) {
+		printf("No MMC in slot 1\n");
+		return -1;
+	}
+	mmc->has_init = 0;
+	mmc_init(mmc);
+	if(r!= 0) {
+		printf("mmc init failed\n");
+		return r;
+	}
+	
+	int gpt_size = sizeof(struct ptable);
+	
+	gpt =  (struct ptable *) malloc(gpt_size);
+	if (!gpt) {
+		r = -1;
+		goto fail;
+	}
+
+	ptbl_sectors = (u64)(gpt_size / MMCSD_SECTOR_SIZE);
+
+	r = mmc->block_dev.block_read(1,0,ptbl_sectors,(void*)gpt);
+	if (r == -1) {
+		printf("error reading GPT\n");
+		goto fail;
+	}
+
+	if (memcmp(gpt->header.magic, "EFI PART", 8)) {
+		printf("efi partition table not found\n");
+		r = -1;
+		goto fail;
+	}
+
+	for (i = 0; i < EFI_ENTRIES; i++) {
+		sz = get_entry_size_kb(&gpt->entry[i], ptn);
+		if(sz)
+			break;
+	}
+	
+	if (sz >= 0xFFFFFFFF) {
+		sz_mb = (u32)(sz >> 20);
+		DBG("sz is > 0xFFFFFFFF\n");
+		sprintf(buf, "0x%d MB", sz_mb);
+	} else {
+		DBG("Size of the partition = %d KB\n", (u32)sz);
+		sprintf(buf, "%d KB", (u32)sz);
+	}
+
+fail:
+	free((void *)gpt);
+	return buf;
+}
 
 struct _partition {
 	const char *name;
@@ -338,8 +440,10 @@ static int do_format(void)
 	struct mmc* mmc = NULL;
 	int status = 0;
 	u64 ptbl_sectors = 0;
+	char *mmc_write[5]	= {"mmc", "write", NULL, NULL, NULL};
+	char source[32], dest[32], length[32];
 
-	mmc = find_mmc_device(1);
+	mmc = find_mmc_device(MMC_DEVICE);
 	if(mmc == NULL) {
 		return -1;
 	}
@@ -381,7 +485,21 @@ static int do_format(void)
 	fastboot_flash_reset_ptn();     
        
 	ptbl_sectors = (sizeof(struct ptable) / sector_sz) + 1;
-	mmc->block_dev.block_write(1,0,ptbl_sectors,(void*)ptbl);
+
+	mmc_write[2] = source;
+	mmc_write[3] = dest;
+	mmc_write[4] = length;
+
+	sprintf(source, "0x%x", (unsigned int)ptbl);
+	sprintf(dest, "0x%x", 0x00);
+	sprintf(length, "0x%x", (sizeof(struct ptable)/512)+1);
+
+	if (do_mmcops(NULL, 0, 5, mmc_write)) {
+		printf("Writing mbr is FAILED!\n");
+		goto fail;
+	} else {
+		printf("Writing mbr is DONE!\n");
+	}
 
 	load_ptbl();
     

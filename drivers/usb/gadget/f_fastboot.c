@@ -36,13 +36,13 @@
 #define TX_ENDPOINT_MAXIMUM_PACKET_SIZE      (0x0040)
 
 static struct usb_string def_usb_fb_strings[] = {
-	{ FB_STR_PRODUCT_IDX,		"omap5_uevm" },
+	{ FB_STR_PRODUCT_IDX,		"omap5uevm" },
 	{ FB_STR_SERIAL_IDX,		"1234567890" },
 	{ FB_STR_CONFIG_IDX,		"Android Fastboot" },
 	{ FB_STR_INTERFACE_IDX,		"Android Fastboot" },
 	{ FB_STR_MANUFACTURER_IDX,	"Texas Instruments" },
-	{ FB_STR_PROC_REV_IDX,		"Default 1.0" },
-	{ FB_STR_PROC_TYPE_IDX,		"Emulator" },
+	{ FB_STR_PROC_REV_IDX,		"ES2.0" },
+	{ FB_STR_PROC_TYPE_IDX,		"GP" },
 	{  }
 };
 

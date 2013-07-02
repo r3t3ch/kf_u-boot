@@ -87,6 +87,8 @@ struct fastboot_config {
 #define FB_STR_MANUFACTURER_IDX 5
 #define FB_STR_PROC_REV_IDX     6
 #define FB_STR_PROC_TYPE_IDX    7
+#define FB_STR_USER_DATA_IDX    8
+
 
 #define FASTBOOT_INTERFACE_CLASS     0xff
 #define FASTBOOT_INTERFACE_SUB_CLASS 0x42
@@ -272,7 +274,12 @@ extern int fastboot_oem(const char *command);
 
 extern void fastboot_flash_reset_ptn(void);
 extern void fastboot_flash_add_ptn(fastboot_ptentry *ptn, int count);
+extern fastboot_ptentry *fastboot_flash_find_ptn(const char *name);
+
 extern int board_mmc_ftbtptn_init(void);
+
+extern char *get_ptn_size(char *buf, const char *ptn);
+
 
 
 #endif
