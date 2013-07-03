@@ -2,7 +2,11 @@
 #include <usb/fastboot.h>
 #include <asm/io.h>
 
+#if defined(CONFIG_DRA7XX)
+#define CONTROL_ID_CODE		0x4AE0C204
+#elif defined(CONFIG_OMAP54XX)
 #define CONTROL_ID_CODE		0x4A002204
+#endif
 
 char serialno[100];
 
