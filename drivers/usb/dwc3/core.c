@@ -390,19 +390,7 @@ int __devinit dwc3_probe(struct platform_device *pdev)
 
 	/* Initialize the wrapper registers */
 	dwc3_wrapper_init();
-#if 0
-	//Clear status
-	val = readl(USBOTGSS_UTMI_OTG_STATUS);
-	writel(val, USBOTGSS_UTMI_OTG_STATUS);
-	//Enable interrupts
-	writel(0x1, USBOTGSS_IRQENABLE_SET_0);
-	writel(0x13939, USBOTGSS_IRQENABLE_SET_1);
-	//Check for non zero status 
-	val = readl(USBOTGSS_IRQSTATUS_1);
-	writel(val,USBOTGSS_IRQSTATUS_1);
-	val = readl(USBOTGSS_IRQSTATUS_0);
-	writel(val,USBOTGSS_IRQSTATUS_0);
-#endif
+
 	mem = kzalloc(sizeof(*dwc) + DWC3_ALIGN_MASK, GFP_KERNEL);
 	if (!mem) {
 		dev_err(&pdev->dev, "not enough memory\n");
@@ -485,7 +473,7 @@ int __devinit dwc3_probe(struct platform_device *pdev)
 		goto err4;
 	}
 	dwc->mode = mode;
-
+#if !defined(CONFIG_DRA7XX)
 	/* Enable the VBUS comparator in the palmas chip */
 	palmas_i2c_read_u8(0x49, 0x1C, &vali);
 	palmas_i2c_write_u8(0x49, 0x53, 0x1);
@@ -494,7 +482,7 @@ int __devinit dwc3_probe(struct platform_device *pdev)
 	do {
 		palmas_i2c_read_u8(0x49, 0x1C, &vali);
 	} while (!(vali & 0x80));
-
+#endif
 	return 0;
 err4:
 	dwc3_core_exit(dwc);

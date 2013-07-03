@@ -27,6 +27,10 @@ LIB	= $(obj)lib$(BOARD).o
 
 COBJS	:= evm.o
 
+ifdef CONFIG_CMD_FASTBOOT
+COBJS	+= mmc.o
+endif
+
 SRCS	:= $(COBJS:.o=.c)
 OBJS	:= $(addprefix $(obj),$(COBJS))
 

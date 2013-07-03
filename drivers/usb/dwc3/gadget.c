@@ -1320,9 +1320,20 @@ static void dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on)
 		udelay(1);
 	} while (1);
 }
+
+#if defined(CONFIG_DRA7XX)
+
+#define USBOTGSS_UTMI_OTG_STATUS 0x48880084
+#define USBOTGSS_IRQSTATUS_0	 0x48880028
+#define USBOTGSS_IRQSTATUS_1	 0x48880038
+
+#else
+
 #define USBOTGSS_UTMI_OTG_STATUS 0x4A020084
 #define USBOTGSS_IRQSTATUS_0	 0x4A020028
 #define USBOTGSS_IRQSTATUS_1	 0x4A020038
+
+#endif
 
 /* UTMI_OTG_STATUS REGISTER */
 #define USBOTGSS_UTMI_OTG_STATUS_SW_MODE	(1 << 31)
