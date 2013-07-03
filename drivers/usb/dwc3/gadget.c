@@ -1320,8 +1320,10 @@ static void dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on)
 		udelay(1);
 	} while (1);
 }
-
 #define USBOTGSS_UTMI_OTG_STATUS 0x4A020084
+#define USBOTGSS_IRQSTATUS_0	 0x4A020028
+#define USBOTGSS_IRQSTATUS_1	 0x4A020038
+
 /* UTMI_OTG_STATUS REGISTER */
 #define USBOTGSS_UTMI_OTG_STATUS_SW_MODE	(1 << 31)
 #define USBOTGSS_UTMI_OTG_STATUS_POWERPRESENT	(1 << 9)
@@ -1350,8 +1352,7 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 	mdelay(25);
 	retry = 0;	
 	do {
-	//	val = readl(USBOTGSS_IRQSTATUS_1);
-		val = readl(0x4A020038);
+		val = readl(USBOTGSS_IRQSTATUS_1);
 		retry++;
 	} while ((val !=0)&&(retry < 25));
 
@@ -2269,7 +2270,7 @@ irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 	u32				irq_any;
 
 	spin_lock(&dwc->lock);
-	irq_any = readl(0x4A020028);
+	irq_any = readl(USBOTGSS_IRQSTATUS_0);
 
 	if (!irq_any) { 
 		trb = trb_address;
