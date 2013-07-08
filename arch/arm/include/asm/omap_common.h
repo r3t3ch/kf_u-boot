@@ -357,6 +357,10 @@ struct prcm_regs {
 
 struct omap_sys_ctrl_regs {
 	u32 control_status;
+	u32 control_core_mac_id_0_lo;
+	u32 control_core_mac_id_0_hi;
+	u32 control_core_mac_id_1_lo;
+	u32 control_core_mac_id_1_hi;
 	u32 control_core_mmr_lock1;
 	u32 control_core_mmr_lock2;
 	u32 control_core_mmr_lock3;
