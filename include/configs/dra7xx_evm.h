@@ -84,4 +84,23 @@
 #define KERNEL_ENTRY                 0x80300000
 #define DEVICE_TREE	                 0x80f80000
 
+/* CPSW Ethernet */
+#define CONFIG_CMD_NET
+#define CONFIG_CMD_DHCP
+#define CONFIG_CMD_PING
+#define CONFIG_CMD_MII
+#define CONFIG_DRIVER_TI_CPSW
+#define CONFIG_MII
+#define CONFIG_BOOTP_DEFAULT
+#define CONFIG_BOOTP_DNS
+#define CONFIG_BOOTP_DNS2
+#define CONFIG_BOOTP_SEND_HOSTNAME
+#define CONFIG_BOOTP_GATEWAY
+#define CONFIG_BOOTP_SUBNETMASK
+#define CONFIG_NET_RETRY_COUNT         10
+#define CONFIG_NET_MULTI
+#define CONFIG_PHY_GIGE
+#define CONFIG_PHYLIB
+#define CONFIG_PHY_ADDR			2
+
 #endif /* __CONFIG_DRA7XX_EVM_H */
