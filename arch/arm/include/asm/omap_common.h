@@ -349,6 +349,10 @@ struct prcm_regs {
 	u32 cm_l3init_usbphy_clkctrl;
 	u32 cm_l4per_mcbsp4_clkctrl;
 	u32 prm_vc_cfg_channel;
+
+	/* GMAC Clk Ctrl */
+	u32 cm_gmac_gmac_clkctrl;
+	u32 cm_gmac_clkstctrl;
 };
 
 struct omap_sys_ctrl_regs {
