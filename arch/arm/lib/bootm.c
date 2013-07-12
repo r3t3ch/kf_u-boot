@@ -32,10 +32,12 @@
 #include <asm/byteorder.h>
 #include <libfdt.h>
 #include <fdt_support.h>
+#include <bootimg.h>
 #include <asm/bootm.h>
 #include <linux/compiler.h>
 
 DECLARE_GLOBAL_DATA_PTR;
+
 
 #if defined(CONFIG_SETUP_MEMORY_TAGS) || \
 	defined(CONFIG_CMDLINE_TAG) || \
@@ -408,3 +410,60 @@ int bootz_setup(void *image, void **start, void **end)
 	return 0;
 }
 #endif	/* CONFIG_CMD_BOOTZ */
+
+
+
+void do_booti_linux(boot_img_hdr *hdr)
+{
+#if 0
+	ulong initrd_start, initrd_end;
+	void (*theKernel)(int zero, int arch, uint params);
+	bd_t *bd = gd->bd;
+
+	theKernel = (void (*)(int, int, uint))(hdr->kernel_addr);
+
+	initrd_start = hdr->ramdisk_addr;
+	initrd_end = initrd_start + hdr->ramdisk_size;
+
+#if defined(CONFIG_SETUP_MEMORY_TAGS)
+	setup_start_tag(bd);
+#ifdef CONFIG_SERIAL_TAG
+//	setup_serial_tag(&params);
+#endif
+#ifdef CONFIG_REVISION_TAG
+	setup_revision_tag(&params);
+#endif
+#ifdef CONFIG_SETUP_MEMORY_TAGS
+	setup_memory_tags(bd);
+#endif
+#ifdef CONFIG_CMDLINE_TAG
+	setup_commandline_tag(bd, hdr->cmdline);
+#endif
+#ifdef CONFIG_INITRD_TAG
+	if (hdr->ramdisk_size)
+		setup_initrd_tag(bd, initrd_start, initrd_end);
+#endif
+#if defined(CONFIG_VFD) || defined(CONFIG_LCD)
+	setup_videolfb_tag((gd_t *) gd);
+#endif
+	setup_end_tag(bd);
+#endif
+
+	/* we assume that the kernel is in place */
+	printf("\nStarting kernel ...\n\n");
+
+#ifdef CONFIG_USB_DEVICE
+	{
+		extern void udc_disconnect(void);
+		udc_disconnect();
+	}
+#endif
+
+	printf("\nCleanup before kernel ...\n\n");
+	cleanup_before_linux();
+
+	printf("\nStarting kernel, theKernel ... %d 0x%x\n\n",bd->bi_arch_number,bd->bi_boot_params);
+	theKernel(0, 4070, bd->bi_boot_params);
+	#endif
+}
+

@@ -77,6 +77,8 @@
 #define CONFIG_SYS_L2CACHE_OFF	1
 #define CONFIG_CMD_FASTBOOT	1
 #endif
-#define CONFIG_ANDROID_BOOT_IMAGE	1
+
+
+
 
 #endif /* __CONFIG_DRA7XX_EVM_H */

@@ -37,6 +37,7 @@
 #define EFI_NAMELEN 36
 #define MMC_DEVICE 1
 
+#define DEBUG
 #ifdef DEBUG
 #define DBG(x...) printf(x)
 #else
@@ -414,11 +415,12 @@ struct _partition {
 	unsigned size_kb;
 };
 
+
+/*
 static struct _partition partitions[] = {
 	{ "-", 128 },
 	{ "bootloader", 256 },
 	{ "environment", 256 },
-	/* "misc" partition is required for recovery */
 	{ "misc", 128 },
 	{ "-", 384 },
 	{ "efs", 16384 },
@@ -430,7 +432,23 @@ static struct _partition partitions[] = {
 	{ "userdata", 0},
 	{ NULL, 0 },
 };
+*/
+static struct _partition partitions[] = {
+	{ "-", 128 },
+	{ "xloader", 128 },
+	{ "bootloader", 256 },
+	{ "environment", 256 },
+	{ "-", 512 },
+	{ "recovery", 8*1024 },
+	{ "boot", 8*1024 },
+	{ "system", 512*1024 },
+	{ "cache", 256*1024 },
+	{ "userdata", 512*1024},
+	{ "media", 0 },
+	{ 0, 0 },
+};
 
+	
 static int do_format(void)
 {
 	struct ptable *ptbl;
@@ -441,6 +459,8 @@ static int do_format(void)
 	int status = 0;
 	u64 ptbl_sectors = 0;
 	char *mmc_write[5]	= {"mmc", "write", NULL, NULL, NULL};
+	
+	char *dev[3] = { "mmc", "dev", "1" };
 	char source[32], dest[32], length[32];
 
 	mmc = find_mmc_device(MMC_DEVICE);
@@ -451,6 +471,12 @@ static int do_format(void)
 	status = mmc_init(mmc);
 	if(status != 0) {
 		printf("mmc init failed\n");
+		return status;
+	}
+
+	status = do_mmcops(NULL, 0, 3, dev); 
+	if(status) {	
+		printf("Unable to set MMC device\n");
 		return status;
 	}
 
@@ -521,5 +547,11 @@ int board_mmc_ftbtptn_init(void)
 {
 	return load_ptbl();
 }
+
+int board_late_init(void)
+{
+	return load_ptbl();
+}
+
 
 

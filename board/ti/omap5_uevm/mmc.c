@@ -37,6 +37,7 @@
 #define EFI_NAMELEN 36
 #define MMC_DEVICE 1
 
+#define DEBUG
 #ifdef DEBUG
 #define DBG(x...) printf(x)
 #else
@@ -183,6 +184,7 @@ static int add_ptn(struct ptable *ptbl, u64 first, u64 last, const char *name)
 	struct efi_header *hdr = &ptbl->header;
 	struct efi_entry *entry = ptbl->entry;
 	u32 n; int i = 0;
+
 
 	if (first < 34) {
 		printf("partition '%s' overlaps partition table\n", name);
@@ -416,20 +418,19 @@ struct _partition {
 
 static struct _partition partitions[] = {
 	{ "-", 128 },
+	{ "xloader", 128 },
 	{ "bootloader", 256 },
-	{ "environment", 256 },
-	/* "misc" partition is required for recovery */
-	{ "misc", 128 },
-	{ "-", 384 },
-	{ "efs", 16384 },
-	{ "crypto", 16 },
+	{ "-", 512 },
 	{ "recovery", 8*1024 },
 	{ "boot", 8*1024 },
 	{ "system", 512*1024 },
 	{ "cache", 256*1024 },
-	{ "userdata", 0},
-	{ NULL, 0 },
+	{ "userdata", 512*1024},
+	{ "media", 0 },
+	{ 0, 0 },
 };
+
+
 
 static int do_format(void)
 {
@@ -440,6 +441,8 @@ static int do_format(void)
 	struct mmc* mmc = NULL;
 	int status = 0;
 	u64 ptbl_sectors = 0;
+	
+	char *dev[3] = { "mmc", "dev", "1" };
 	char *mmc_write[5]	= {"mmc", "write", NULL, NULL, NULL};
 	char source[32], dest[32], length[32];
 
@@ -451,6 +454,12 @@ static int do_format(void)
 	status = mmc_init(mmc);
 	if(status != 0) {
 		printf("mmc init failed\n");
+		return status;
+	}
+
+	status = do_mmcops(NULL, 0, 3, dev); 
+	if(status) {	
+		printf("Unable to set MMC device\n");
 		return status;
 	}
 
@@ -472,7 +481,8 @@ static int do_format(void)
 		if (sz == 0)
 			sz = blocks - next;
 
-	    if (add_ptn(ptbl, next, next + sz - 1, partitions[n].name)) {
+		printf("%u\n",next);
+		if (add_ptn(ptbl, next, next + sz - 1, partitions[n].name)) {
 	        printf("Add partition failed\n");
 			status = -1;
 	        goto fail;	        
@@ -519,6 +529,12 @@ int fastboot_oem(const char *cmd)
 
 int board_mmc_ftbtptn_init(void)
 {
+	return load_ptbl();
+}
+
+int board_late_init(void)
+{
+	printf("\nefi partition table:\n");
 	return load_ptbl();
 }
 

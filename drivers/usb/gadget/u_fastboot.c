@@ -309,8 +309,8 @@ static void cb_oem(struct usb_ep *ep, struct usb_request *req)
 static void format_flash_cmd(char* cmd) 
 {
 	int i;
-	char *parts[] = {"bootloader", "boot", "system", "userdata", "cache", "recovery"};	
-	for(i = 0;i < 5;i++) {
+	char *parts[] = {"xloader", "bootloader", "boot", "system", "userdata", "cache", "recovery","environment"};	
+	for(i = 0;i < 8;i++) {
 		if(!strncmp(parts[i],cmd,strlen(parts[i]))) {
 			*(cmd + strlen(parts[i])) = '\0';
 			break;

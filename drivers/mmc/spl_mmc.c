@@ -36,28 +36,39 @@ static void mmc_load_image_raw(struct mmc *mmc)
 {
 	u32 image_size_sectors, err;
 	const struct image_header *header;
+	u32 boot_device;
+	u8 device;
+	boot_device = spl_boot_device();
+	if(boot_device == BOOT_DEVICE_MMC1) {
+		device = 0;
+	} else {
+		device = 1;
+	}
 
 	header = (struct image_header *)(CONFIG_SYS_TEXT_BASE -
 						sizeof(struct image_header));
 
 	/* read image header to find the image size & load address */
-	err = mmc->block_dev.block_read(0,
+	err = mmc->block_dev.block_read(device,
 			CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR, 1,
 			(void *)header);
 
 	if (err <= 0)
 		goto end;
 
+
 	spl_parse_image_header(header);
+
 
 	/* convert size to sectors - round up */
 	image_size_sectors = (spl_image.size + mmc->read_bl_len - 1) /
 				mmc->read_bl_len;
-
+	
 	/* Read the header too to avoid extra memcpy */
-	err = mmc->block_dev.block_read(0,
+	err = mmc->block_dev.block_read(device,
 			CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR,
 			image_size_sectors, (void *)spl_image.load_addr);
+
 
 end:
 	if (err <= 0) {
@@ -106,10 +117,19 @@ void spl_mmc_load_image(void)
 	struct mmc *mmc;
 	int err;
 	u32 boot_mode;
+	u32 boot_device;
+	u8 device;
+	printf("%s\n",__func__);
+	boot_device = spl_boot_device();
+	if(boot_device == BOOT_DEVICE_MMC1) {
+		device = 0;
+	} else {
+		device = 1;
+	}
 
 	mmc_initialize(gd->bd);
 	/* We register only one device. So, the dev id is always 0 */
-	mmc = find_mmc_device(0);
+	mmc = find_mmc_device(device);
 	if (!mmc) {
 		puts("spl: mmc device not found!!\n");
 		hang();

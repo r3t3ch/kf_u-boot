@@ -137,6 +137,7 @@
 #define PARTS_DEFAULT
 #endif
 
+
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"loadaddr=0x82000000\0" \
 	"console=ttyO2,115200n8\0" \
@@ -191,6 +192,18 @@
 			"run mmcboot; " \
 		"fi; " \
 	"fi"
+	
+#if 0
+
+#define CONFIG_EXTRA_ENV_SETTINGS \
+	"bootcmd=go 0x80008000\0"
+
+
+#define CONFIG_BOOTARGS "console=ttyO2,115200n8 mem=456M@0x80000000 mem=512M@0xA0000000" \
+			" init=/init vram=10M omapfb.vram=0:4M androidboot.console=ttyO2"
+
+#define CONFIG_BOOTCOMMAND "booti mmc1"
+#endif
 
 #define CONFIG_AUTO_COMPLETE		1
 
@@ -245,6 +258,8 @@
 #define CONFIG_PALMAS_POWER
 #endif
 
+#define CONFIG_BOARD_LATE_INIT
+
 /* Defines for SPL */
 #define CONFIG_SPL
 #define CONFIG_SPL_FRAMEWORK
@@ -253,7 +268,7 @@
 #define CONFIG_SPL_STACK		CONFIG_SYS_INIT_SP_ADDR
 #define CONFIG_SPL_DISPLAY_PRINT
 
-#define CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR	0x300 /* address 0x60000 */
+#define CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR	 512 /*bootloader partition*/
 #define CONFIG_SYS_U_BOOT_MAX_SIZE_SECTORS	0x200 /* 256 KB */
 #define CONFIG_SYS_MMC_SD_FAT_BOOT_PARTITION	1
 #define CONFIG_SPL_FAT_LOAD_PAYLOAD_NAME	"u-boot.img"
