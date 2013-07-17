@@ -298,6 +298,15 @@ struct cmd_dispatch_info {
 int boot_from_spi = 0;
 static void cb_oem(struct usb_ep *ep, struct usb_request *req)
 {    
+	if(strcmp(req->buf + 4,"spi") == 0) {
+		boot_from_spi = 1;
+		fastboot_tx_write_str("OKAY");
+		return;
+	}else if(strcmp(req->buf + 4,"emmc") == 0) {
+		boot_from_spi = 0;
+		fastboot_tx_write_str("OKAY");
+		return;
+	}
 	if(fastboot_oem(req->buf + 4) == 0)
 		fastboot_tx_write_str("OKAY");
 	else {
