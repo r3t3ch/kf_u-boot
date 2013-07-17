@@ -28,18 +28,11 @@
 
 
 #include <bootimg.h>
-//#include <configs/dra7xx_evm.h>
+#include <configs/dra7xx_evm.h>
 #include <malloc.h>
-
-//#include <boot_settings.h>
 #include <device_tree.h>
 #include <usb/fastboot.h>
 #include <mmc.h>
-//#include <alloc.h>
-
-#define MEMORY_BASE			0x80000000
-#define CONFIG_ADDR_ATAGS		(MEMORY_BASE + 0x100)
-#define CONFIG_ADDR_DOWNLOAD		(MEMORY_BASE + 0x02000000)
 
 #ifdef DEBUG
 #define DBG(x...) printf(x)
@@ -55,6 +48,7 @@ struct device_tree_data {
 };
 
 static struct device_tree_data *dt_data;
+static int find_dev_tree();
 
 /**
  * DOC: Introduction
@@ -86,45 +80,9 @@ static struct device_tree_data *dt_data;
  * Returns 0 if the device tree is found or -1 if no device tree is found.
  **/
  
-void printPacketBuffer3(void *buffer, unsigned int length)
-{
-    printf("*************************************************\n");
-    unsigned int i=0;
-    char *c;
-    unsigned int limit = length;
-	int line = 0;
-    for (i=0; i<limit; i++) {
-        c = (char *)(buffer+i);
-        if ( *c != '\0' ) {
-            printf("%c  ", *c,i);
-			line++;
-			if(line == 100) {
-				line = 0;
-				printf("\n");
-			}
-        }else {
-        //printf("null\n");
-        }
-    }
-}
 static int find_dev_tree()
 {
-
 	struct fastboot_ptentry *pte;
-	enviro_img_hdr *env_hdr;
-	boot_img_hdr *boot_hdr;
-	int ret = 0;
-	u64 num_sectors = 0;
-	int sector_sz = 0;
-	u32 addr = CONFIG_ADDR_DOWNLOAD;
-	char *dev[3] = { "mmc", "dev", "1" };
-	char source[32], dest[32], length[32];
-
-	char *mmc_read[5]  = {"mmc", "read", NULL, NULL, NULL};
-	char *mmc_init[2] = {"mmc", "rescan",};
-
-	sector_sz = 512;
-
 	dt_data = (void *) malloc(sizeof(struct device_tree_data));
 	if (dt_data == NULL) {
 		printf("unable to allocate memory requested: dt_data\n");
@@ -133,72 +91,13 @@ static int find_dev_tree()
 
 	pte = fastboot_flash_find_ptn("environment");
 	if (pte) {
-		printf("found2\n");
 		dt_data->pte = pte;
 		dt_data->page_size = pte->length;
 		dt_data->dev_tree_sz = pte->length;
 		dt_data->dev_tree_load_addr = DEVICE_TREE;
-		goto out;
+		return 1;
 	}
-
-	printf("Find partition environment\n");
-	pte = fastboot_flash_find_ptn("environment");
-	if (pte) {
-		printf("found\n");
-		env_hdr = (enviro_img_hdr *)addr;
-		num_sectors =  sizeof(enviro_img_hdr) / sector_sz;
-		if (num_sectors <= 0)
-			num_sectors = 1;
-
-		if(do_mmcops(NULL, 0, 3, dev)) {
-			printf("Unable to set MMC device\n");
-			return -1;
-		}
-		
-		if (do_mmcops(NULL, 0, 2, mmc_init)) {
-			printf("FAIL:Init of MMC card..");
-			return -1;
-		}
-
-		mmc_read[2] = source;
-		mmc_read[3] = dest;
-		mmc_read[4] = length;
-
-		sprintf(source, "0x%x", env_hdr);
-		sprintf(dest, "0x%x", pte->start);
-		sprintf(length, "0x%x", num_sectors);
-
-		if (do_mmcops(NULL, 0, 5, mmc_read)) {
-			printf("Reading boot magic FAILED!\n");
-			return -1;
-		}
-		printPacketBuffer3(env_hdr,512);
-
-	//		ret = boot_ops->storage_ops->read(pte->start, num_sectors,
-	//							(void *) env_hdr);
-
-
-		ret = memcmp(env_hdr->magic, ENVIRO_MAGIC, ENVIRO_MAGIC_SIZE);
-		if (ret != 0) {
-			printf("%s: bad enviroment magic\n", __func__);
-			goto out;
-		}
-
-		if (env_hdr->dev_tree_size) {
-			printf("Found device tree\n");
-			dt_data->pte = pte;
-			dt_data->page_size = env_hdr->page_size;
-			dt_data->dev_tree_sz = env_hdr->dev_tree_size;
-			dt_data->dev_tree_load_addr = env_hdr->dev_tree_addr;
-			goto out;
-		}
-		ret = -1;
-		goto out;
-	}
-
-out:
-	return ret;
-
+	return -1;
 }
 
 /**
@@ -220,12 +119,10 @@ u32 load_dev_tree(u32 atag_load_addr)
 	int sector;
 	int num_sectors;
 	int sector_sz = 0;
-	u32 dt_load_addr;
-	char *dev[3] = { "mmc", "dev", "1" };
-	struct mmc* mmc;
+	u32 dt_load_addr = 0;
+	struct mmc* mmc = NULL;
+	int status;
 
-
-	printf("%s\n",__func__);
 	ret = find_dev_tree();
 	if (ret < 0) {
 		printf("%s: Device tree not supported\n", __func__);
@@ -233,33 +130,39 @@ u32 load_dev_tree(u32 atag_load_addr)
 		goto out;
 	}
 	sector_sz = 512;
-	sector = dt_data->pte->start + (dt_data->page_size / sector_sz);
+	sector = dt_data->pte->start;
 
-	num_sectors = (dt_data->dev_tree_sz, sector_sz);
+	num_sectors = (dt_data->dev_tree_sz/sector_sz);
 	if (num_sectors <= (dt_data->dev_tree_sz / sector_sz))
 		num_sectors = (dt_data->dev_tree_sz / sector_sz);
 
 	mmc = find_mmc_device(1);
-	mmc_init(mmc);
-	mmc->block_dev.block_read(1,sector,num_sectors,(void *)dt_data->dev_tree_load_addr);
+	if(mmc == NULL) {
+		goto out;
+	}
+	
+	status = mmc_init(mmc);
+	if(status != 0) {
+		printf("mmc init failed\n");
+		goto out;
+	}
+	
+	status = mmc->block_dev.block_read(1,sector,num_sectors,(void *)dt_data->dev_tree_load_addr);
+	if(status < 0) {
+		printf("mmc read failed\n");
+		goto out;
+	}
 
-//	ret = boot_ops->storage_ops->read(sector, num_sectors,
-//					(void *)dt_data->dev_tree_load_addr);
-
-	printf("dev_tree @ %08x (%d)\n",
+	DBG("dev_tree @ %08x (%d)\n",
 		dt_data->dev_tree_load_addr,
 		dt_data->dev_tree_sz);
 
 out:
 	if (dt_data->dev_tree_load_addr) {		
 		dt_load_addr = dt_data->dev_tree_load_addr;
-		printf("dt_load_addr=======%u 0x%x\n",dt_load_addr,dt_load_addr);
 	}
-	else
-		return -1;
 
 	free(dt_data);
-
 	return dt_load_addr;
 
 }

@@ -29,14 +29,11 @@
 #ifndef __DEVICE_TREE_H__
 #define __DEVICE_TREE_H__
 
-//#include <usbboot_common.h>
-
 #define ENVIRO_MAGIC "ANDROID_ENV!"
 #define ENVIRO_MAGIC_SIZE 12
 #define ENVIRO_NAME_SIZE 16
 #define ENVIRO_ARGS_SIZE 512
 
-#define DEVICE_TREE	0x80f80000
 
 typedef struct enviro_img_hdr enviro_img_hdr;
 

@@ -77,8 +77,11 @@
 #define CONFIG_SYS_L2CACHE_OFF	1
 #define CONFIG_CMD_FASTBOOT	1
 #endif
-
-
-
+#define CONFIG_BOARD_MACH_TYPE		 4070
+#define MEMORY_BASE			         0x80000000
+#define CONFIG_ADDR_ATAGS		     (MEMORY_BASE + 0x100)
+#define CONFIG_ADDR_DOWNLOAD		 (MEMORY_BASE + 0x02000000)
+#define KERNEL_ENTRY                 0x80300000
+#define DEVICE_TREE	                 0x80f80000
 
 #endif /* __CONFIG_DRA7XX_EVM_H */

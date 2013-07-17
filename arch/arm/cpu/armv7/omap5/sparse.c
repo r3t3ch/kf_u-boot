@@ -33,7 +33,6 @@ int _unsparse(unsigned char *source, u32 sector, u32 section_size)
 {
 	sparse_header_t *header = (void*) source;
 	u32 i, outlen = 0;	
-	char *mmc_write[5]  = {"mmc", "write", NULL, NULL, NULL};	
 	char *dev[3] = { "mmc", "dev", "1" };	
 	char *mmc_init[2] = {"mmc", "rescan",};
 	struct mmc* mmc = NULL;
@@ -97,10 +96,6 @@ int _unsparse(unsigned char *source, u32 sector, u32 section_size)
 			printf("sparse: RAW blk=%d bsz=%d: write(sector=%d,len=%d)\n",
 			       chunk->chunk_sz, header->blk_sz, sector, len);
 #endif
-			mmc_write[2] = (char*)source;
-			mmc_write[3] = (char*)sector;
-			mmc_write[4] = (char*)len;
-
 			mmc = find_mmc_device(1);
 			if(mmc == NULL) {
 				printf("No mmc in slot 1\n");

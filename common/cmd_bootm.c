@@ -40,6 +40,8 @@
 #include <usb/fastboot.h>
 #include <mmc.h>
 #include <bootimg.h>
+#include <config.h>
+#include <device_tree.h>
 
 
 #if defined(CONFIG_CMD_USB)
@@ -1886,27 +1888,10 @@ U_BOOT_CMD(
 );
 #endif	/* CONFIG_CMD_BOOTZ */
 
-#define CONFIG_ANDROID_BOOT_IMAGE	1
-#define CONFIG_BOARD_MACH_TYPE		4070
-#define MEMORY_BASE			0x80000000
-#define CONFIG_ADDR_ATAGS		(MEMORY_BASE + 0x100)
-#define CONFIG_ADDR_DOWNLOAD		(MEMORY_BASE + 0x02000000)
-#define EXTENDED_CMDLINE        " earlyprintk ";
-#define ABOOT_VERSION "Texas Instruments Inc Bootloader 1.1.0-g33af7cb4-dirty"
-#define _CORE		0x54410001
-#define _MEM		0x54410002
-#define _INITRD		0x54420005
-#define _CMDLINE	0x54410009
-#define _REV		0x54410007
-#define _NONE		0x00000000
-#define MEMORY_SIZE			0x80000000
-#define CONFIG_ADDR_ATAGS		(MEMORY_BASE + 0x100)
-
 
 void
 bootimg_print_image_hdr (boot_img_hdr *hdr)
 {
-//#ifdef DEBUG
 	int i;
 	printf ("   Image magic:   %s\n", hdr->magic);
 
@@ -1923,149 +1908,29 @@ bootimg_print_image_hdr (boot_img_hdr *hdr)
 	printf ("   page_size:   0x%x\n", hdr->page_size);
 
 	printf ("   name:      %s\n", hdr->name);
-//	strcpy(hdr->cmdline, "console=ttyO2,115200n8 mem=1024M androidboot.console=ttyO20");
 	printf ("   cmdline:   %s\n", hdr->cmdline);
 
 	for (i=0;i<8;i++)
 		printf ("   id[%d]:   0x%x\n", i, hdr->id[i]);
-//#endif
 }
 
-static unsigned char boothdr[2048];
+#ifdef __CONFIG_DRA7XX_EVM_H
 
-#define ALIGN(n,pagesz) ((n + (pagesz - 1)) & (~(pagesz - 1)))
-
-/* booti <addr> [ mmc0 | mmc1 [ <partition> ] ] */
-static u32 setup_atag(boot_img_hdr *hdr, u32 *atag)
-{
-	u32 size;
-	u32 rev;
-	u32 *atag_start = atag;
-	char *p;
-	char *cmdline = (char *)hdr->cmdline;
-
-	printf("---- %s-----\n",__func__);
-	*(atag++) = 5;
-	*(atag++) = _CORE;
-	*(atag++) = 0;
-	*(atag++) = 0;
-	*(atag++) = 0;
-
-	*(atag++) = 4;
-	*(atag++) = _INITRD;
-	*(atag++) = hdr->ramdisk_addr;
-	*(atag++) = hdr->ramdisk_size;
-
-	*(atag++) = 4;
-	*(atag++) = _MEM;
-	*(atag++) = MEMORY_SIZE;
-	*(atag++) = MEMORY_BASE;
-
-	*(atag++) = 3;
-	*(atag++) = _REV;
-	rev = 0;
-	printf("rev %u\n",rev);
-	*(atag++) = rev;
-
-
-	if (!cmdline)
-		goto _none;
-
-	for (p = cmdline; *p == ' '; p++)
-		;
-
-	if (*p == '\0')
-		goto _none;
-
-	printf("here\n");
-	size = strlen(p); /* size in bytes */
-	*(atag++) = 2 + size/4; /* size text + size of size + size of tag */
-	*(atag++) = _CMDLINE;
-	strcpy((char *)atag, p);	
-	printf("ATAG %s\n",(char*)atag);
-	atag += size/4;	/* size in u32 */
-_none:
-	*(atag++) = 0;
-	*(atag) = _NONE;
-
-	return atag - atag_start;
-}
-
-
-static void boot_settings(boot_img_hdr *hdr, u32 atag)
-{
-	char serial_str[64];
-	int serial_len;
-	u32 boot_len;
-	char aboot_version_string[64];
-	char boot_str[64];
-	char temp_cmdline[512] = EXTENDED_CMDLINE;
-
-	printf("%s==============\n",__func__);
-	serial_len = sprintf(serial_str, " androidboot.serialno=%s",
-		"2E6604F000CE0021");
-
-	
-	strcat((char *)hdr->cmdline, temp_cmdline);
-	if (sizeof(hdr->cmdline) >= (serial_len +
-		strlen((const char *)hdr->cmdline) + 1))
-		strcat((char *)hdr->cmdline, serial_str);
-	
-	printf("hdr->cmdline %s\n",hdr->cmdline);
-
-	strcpy(aboot_version_string, ABOOT_VERSION);
-	
-	printf("aboot_version %s\n",aboot_version_string);
-	boot_len = sprintf(boot_str, " androidboot.bootloader=%s",
-		aboot_version_string);
-
-	if (sizeof(hdr->cmdline) >= (boot_len +
-			strlen((const char *)hdr->cmdline) + 1)) {			
-		strcat((char *)hdr->cmdline, boot_str);
-		printf("hdr->cmdline %s\n",hdr->cmdline);
-	}
-
-	setup_atag(hdr, (u32 *)atag);
-
-	return;
-}
-
-void printPacketBuffer2(void *buffer, unsigned int length)
-{
-    printf("*************************************************\n");
-    unsigned int i=0;
-    char *c;
-    unsigned int limit = length;
-	int line = 0;
-    for (i=0; i<limit; i++) {
-        c = (char *)(buffer+i);
-        if ( *c != '\0' ) {
-            printf("%c  ", *c,i);
-			line++;
-			if(line == 100) {
-				line = 0;
-				printf("\n");
-			}
-        }else {
-        //printf("null\n");
-        }
-    }
-}
-
+#define _ALIGN(n,pagesz) ((n + (pagesz - 1)) & (~(pagesz - 1)))
 
 int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 {
-#if 0
+
 	u32 addr;
 	char *ptn = "boot";
 	int mmcc = -1;
-	boot_img_hdr *hdr;
-	char *dev[3] = { "mmc", "dev", "1" };
+	boot_img_hdr *hdr;	
 	unsigned dbt_addr = CONFIG_ADDR_ATAGS;
 	unsigned cfg_machine_type = CONFIG_BOARD_MACH_TYPE;	
+	struct mmc* mmc = NULL;
+	u64 num_sectors;
+	int status;
 	
-//	boot_img_hdr *hdr = (void *) boothdr;
-
 	void (*theKernel)(int zero, int arch, void *);
 
 	if (argc < 2)
@@ -2075,12 +1940,22 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		mmcc = 0;
 	} else if (!strcmp(argv[1], "mmc1")) {
 		mmcc = 1;
+	} else {
+		return -1;
 	}
+	
+	mmc = find_mmc_device(mmcc);
+	if(mmc == NULL) {
+		return -1;
+	}
+	status = mmc_init(mmc);
+	if(status) {
+		printf("mmc init failed\n");
+		return status;
+	}
+
 	addr = CONFIG_ADDR_DOWNLOAD;	
 	hdr = (boot_img_hdr *) addr;
-//	hdr = (void *) boothdr;
-	dbt_addr = load_dev_tree(dbt_addr);
-
 	if (argc > 2)
 		ptn = argv[2];
 
@@ -2090,121 +1965,63 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 
 		pte = fastboot_flash_find_ptn(ptn);
 		if (!pte) {
-		printf("booti: cannot find '%s' partition\n", ptn);
+			printf("booti: cannot find '%s' partition\n", ptn);
 			return -1;
 		}
 
-		if(do_mmcops(NULL, 0, 3, dev)) {
-			printf("Unable to set MMC device\n");
-			return -1;
-		}
+		dbt_addr = load_dev_tree(dbt_addr);
 
-		/* mmc init */
-		char source[32], dest[32], length[32];
-
-		char *mmc_read[5]  = {"mmc", "read", NULL, NULL, NULL};
-		char *mmc_init[2] = {"mmc", "rescan",};
-
-
-		if (do_mmcops(NULL, 0, 2, mmc_init)) {
-			printf("FAIL:Init of MMC card..");
-			return -1;
-		}
-
-		/* read boot magic */
-		/*mmc_read[2] = source;
-		mmc_read[3] = dest;
-		mmc_read[4]	= length;
-
-		sprintf(source, "0x%x", hdr);
-		sprintf(dest, "0x%x", pte->start);
-		sprintf(length, "0x%x", 1);
-
-		if (do_mmcops(NULL, 0, 5, mmc_read)) {
-			printf("Reading boot magic FAILED!\n");
-			return -1;
-		}
-		*/
-
-		//if (memcmp(hdr->magic, BOOT_MAGIC, 8)) {
-		//	printf("booti: bad boot image magic\n");
-		//	return -1;
-		//}
-
-//		bootimg_print_image_hdr(hdr);
-		/* read kernel */
-
-		//printf("\nHeader: Kernel Addr:0x%x", hdr->kernel_addr);
-		//printf("\nHeader: Kernel Size:0x%x", hdr->kernel_size);
-		//printf("\nHeader: Ramdisk Addr:0x%x", hdr->ramdisk_addr);
-		//printf("\nHeader: Ramdisk Size:0x%x", hdr->ramdisk_size);
-
-		//printf("\n\nramdisk sector count:%d", hdr->ramdisk_size/512);
-		 hdr->kernel_addr = 0x80300000;
-
-		sector = pte->start;// + (hdr->page_size / 512);
-
-		source[0] = '\0';
-		dest[0] = '\0';
-		length[0] = '\0';
-		mmc_read[2] = source;
-		mmc_read[3] = dest;
-		mmc_read[4] = length;
-
-		sprintf(source, "0x%x", hdr->kernel_addr);
-		sprintf(dest, "0x%x", sector);
-//		sprintf(length, "0x%x", ((hdr->kernel_size/512)+1));
-		sprintf(length, "0x%x", (pte->length)/512);
-
-
-		if (do_mmcops(NULL, 0, 5, mmc_read)) {
-			printf("Reading kernel FAILED!\n");
-			return -1;
-		}
+		num_sectors =  1;
+		mmc->block_dev.block_read(mmcc,pte->start,num_sectors,(void*)hdr);
 		
+		if (memcmp(hdr->magic, BOOT_MAGIC, 8)) {
+			printf("booti: bad boot image magic\n");
+			return -1;
+		}
 
-		/* read ramdisk */
-		sector += ALIGN(hdr->kernel_size, hdr->page_size) / 512;
+		bootimg_print_image_hdr(hdr);
+		
+		hdr->kernel_addr = KERNEL_ENTRY;
+		
+		/* read kernel */
+		printf("\nHeader: Kernel Addr:0x%x", hdr->kernel_addr);
+		printf("\nHeader: Kernel Size:0x%x", hdr->kernel_size);
+		printf("\nHeader: Ramdisk Addr:0x%x", hdr->ramdisk_addr);
+		printf("\nHeader: Ramdisk Size:0x%x", hdr->ramdisk_size);
 		printf("\n\nramdisk sector count:%d", hdr->ramdisk_size/512);
-		source[0] = '\0';
-		dest[0] = '\0';
-		length[0] = '\0';
-		mmc_read[2] = source;
-		mmc_read[3] = dest;
-		mmc_read[4] = length;
 
-		sprintf(source, "0x%x", hdr->ramdisk_addr);
-		sprintf(dest, "0x%x", sector);
-		sprintf(length, "0x%x", ((hdr->ramdisk_size/512)+1));
+		sector = pte->start + (hdr->page_size / 512);
+		num_sectors = ((hdr->kernel_size/512) + 1);
+		
+		status = mmc->block_dev.block_read(mmcc,sector, num_sectors,(void*)hdr->kernel_addr);
+		if(status < 0) {
+			printf("booti: Could not read kernel image\n");
+			return -1;
+		}
+			
+		/* read ramdisk */
+		sector += _ALIGN(hdr->kernel_size, hdr->page_size) / 512;
+		num_sectors = ((hdr->ramdisk_size/512) + 1);
 
-//		if (do_mmcops(NULL, 0, 5, mmc_read)) {
-//			printf("Reading ramdisk FAILED!\n");
-//			return -1;
-//		}
+		status = mmc->block_dev.block_read(mmcc,sector,num_sectors,(void*)hdr->ramdisk_addr);
+		if(status < 0) {
+			printf("booti: Could not read ramdisk\n");
+			return -1;
+		}
 
 	}
 	printf("kernel   @ %08x (%d)\n", hdr->kernel_addr, hdr->kernel_size);
 	printf("ramdisk  @ %08x (%d)\n", hdr->ramdisk_addr, hdr->ramdisk_size);
 
 	
-//	boot_settings(&hdr[0], CONFIG_ADDR_ATAGS);
-
 	theKernel = (void (*)(int, int, void *))(hdr->kernel_addr);
 
-	printf("booting kernel...%u 0x%x\n",cfg_machine_type,dbt_addr);
+	printf("Starting kernel...\n");
 
-//	do_booti_linux(hdr);
-
-//	printPacketBuffer2(CONFIG_ADDR_ATAGS,400);
-//	bootimg_print_image_hdr(hdr);
-
-//	theKernel = (void (*)(int, int, void *))(hdr->kernel_addr);
-
-//	theKernel(0, cfg_machine_type, (void *)dbt_addr);
+	theKernel(0, cfg_machine_type, (void *)dbt_addr);
 
 	puts("booti: Control returned to monitor - resetting...\n");
-//	do_reset(cmdtp, flag, argc, argv);
-#endif
+	do_reset(cmdtp, flag, argc, argv);
 	return 1;
 }
 
@@ -2215,4 +2032,4 @@ U_BOOT_CMD(
 	"<addr>\n    - boot application image stored in memory\n"
 	"\t'addr' should be the address of boot image which is zImage+ramdisk.img\n"
 );
-
+#endif
