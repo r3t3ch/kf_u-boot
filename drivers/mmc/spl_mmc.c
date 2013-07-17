@@ -119,7 +119,6 @@ void spl_mmc_load_image(void)
 	u32 boot_mode;
 	u32 boot_device;
 	u8 device;
-	printf("%s\n",__func__);
 	boot_device = spl_boot_device();
 	if(boot_device == BOOT_DEVICE_MMC1) {
 		device = 0;

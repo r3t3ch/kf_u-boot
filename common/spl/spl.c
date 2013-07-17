@@ -154,7 +154,7 @@ static void spl_ram_load_image(void)
 void board_init_r(gd_t *dummy1, ulong dummy2)
 {
 	u32 boot_device;
-	printf(">>spl:board_init_r()\n");
+	debug(">>spl:board_init_r()\n");
 
 #ifdef CONFIG_SYS_SPL_MALLOC_START
 	mem_malloc_init(CONFIG_SYS_SPL_MALLOC_START,
@@ -174,7 +174,7 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 #endif
 
 	boot_device = spl_boot_device();
-	printf("boot device - %d\n", boot_device);
+	debug("boot device - %d\n", boot_device);
 	switch (boot_device) {
 #ifdef CONFIG_SPL_RAM_DEVICE
 	case BOOT_DEVICE_RAM:
