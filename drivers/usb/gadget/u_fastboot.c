@@ -295,6 +295,7 @@ struct cmd_dispatch_info {
 	void (*cb)(struct usb_ep *ep, struct usb_request *req);
 };
 
+int boot_from_spi = 0;
 static void cb_oem(struct usb_ep *ep, struct usb_request *req)
 {    
 	if(fastboot_oem(req->buf + 4) == 0)
@@ -370,6 +371,7 @@ static struct cmd_dispatch_info cmd_dispatch_info[] = {
 	}
 };
 
+extern int do_spi_flash(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 
 static int fastboot_flash(const char *partition)
 {
@@ -379,7 +381,30 @@ static int fastboot_flash(const char *partition)
 	char *dev[3] = { "mmc", "dev", "1" };
 	char *mmc_write[5]  = {"mmc", "write", NULL, NULL, NULL};
 	char *mmc_init[2] = {"mmc", "rescan",};
+	char *sf_probe[3] = {"sf", "probe", "0"};
+	char *sf_write_xloader[5] = {"sf", "write", NULL, "0", "10000"};
+	char *sf_write_bootloader[5] = {"sf", "write", NULL, "20000", "80000"};
 
+	/*Check if this is for xloader or bootloader. Also, check if we have to flash to SPI*/
+	if(strcmp(partition,"xloader") == 0 && boot_from_spi) {
+		printf("Flashing %s to SPI\n",partition);
+		do_spi_flash(NULL, 0, 3, sf_probe);
+		sf_write_xloader[2] = source;
+		sprintf(source, "0x%x", (unsigned int)fb_cfg.transfer_buffer);
+		do_spi_flash(NULL, 0, 5, sf_write_xloader);
+		fastboot_tx_write_str("OKAY");
+		return 0;
+	}
+	if(strcmp(partition,"bootloader") == 0 && boot_from_spi) {
+		printf("Flashing %s to SPI\n",partition);
+		do_spi_flash(NULL, 0, 3, sf_probe);
+		sf_write_bootloader[2] = source;
+		sprintf(source, "0x%x", (unsigned int)fb_cfg.transfer_buffer);
+		printf("Writing bootloader to SPI\n");
+		do_spi_flash(NULL, 0, 5, sf_write_bootloader);
+		fastboot_tx_write_str("OKAY");
+		return 0;
+	}
 	ptn = fastboot_flash_find_ptn(partition);
 	
 	if (ptn == 0) {

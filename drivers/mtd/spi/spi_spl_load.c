@@ -35,6 +35,7 @@ void spl_spi_load_image(void)
 {
 	struct spi_flash *flash;
 	struct image_header *header;
+	printf("%s\n",__func__);
 
 	/*
 	 * Load U-Boot image from SPI flash into RAM
