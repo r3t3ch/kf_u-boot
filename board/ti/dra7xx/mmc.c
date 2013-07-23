@@ -416,9 +416,10 @@ struct _partition {
 };
 
 
-/*
+
 static struct _partition partitions[] = {
 	{ "-", 128 },
+	{ "xloader", 128 },
 	{ "bootloader", 256 },
 	{ "environment", 256 },
 	{ "misc", 128 },
@@ -432,23 +433,8 @@ static struct _partition partitions[] = {
 	{ "userdata", 0},
 	{ NULL, 0 },
 };
-*/
-static struct _partition partitions[] = {
-	{ "-", 128 },
-	{ "xloader", 128 },
-	{ "bootloader", 256 },
-	{ "environment", 256 },
-	{ "-", 512 },
-	{ "recovery", 8*1024 },
-	{ "boot", 8*1024 },
-	{ "system", 512*1024 },
-	{ "cache", 256*1024 },
-	{ "userdata", 512*1024},
-	{ "media", 0 },
-	{ 0, 0 },
-};
 
-	
+
 static int do_format(void)
 {
 	struct ptable *ptbl;
