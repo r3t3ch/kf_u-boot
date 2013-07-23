@@ -61,6 +61,7 @@
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
 #include <sparse.h>
+#include <config.h>
 #include "g_fastboot.h"
 
 /* The 64 defined bytes plus \0 */
@@ -295,9 +296,12 @@ struct cmd_dispatch_info {
 	void (*cb)(struct usb_ep *ep, struct usb_request *req);
 };
 
+#ifdef CONFIG_SPL_SPI_SUPPORT
 int boot_from_spi = 0;
+#endif
 static void cb_oem(struct usb_ep *ep, struct usb_request *req)
 {    
+#ifdef CONFIG_SPL_SPI_SUPPORT
 	if(strcmp(req->buf + 4,"spi") == 0) {
 		boot_from_spi = 1;
 		fastboot_tx_write_str("OKAY");
@@ -307,6 +311,7 @@ static void cb_oem(struct usb_ep *ep, struct usb_request *req)
 		fastboot_tx_write_str("OKAY");
 		return;
 	}
+#endif	
 	if(fastboot_oem(req->buf + 4) == 0)
 		fastboot_tx_write_str("OKAY");
 	else {
@@ -379,8 +384,9 @@ static struct cmd_dispatch_info cmd_dispatch_info[] = {
 		.cb  = cb_erase,
 	}
 };
-
+#ifdef CONFIG_SPL_SPI_SUPPORT
 extern int do_spi_flash(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
+#endif
 
 static int fastboot_flash(const char *partition)
 {
@@ -390,6 +396,8 @@ static int fastboot_flash(const char *partition)
 	char *dev[3] = { "mmc", "dev", "1" };
 	char *mmc_write[5]  = {"mmc", "write", NULL, NULL, NULL};
 	char *mmc_init[2] = {"mmc", "rescan",};
+	
+#ifdef CONFIG_SPL_SPI_SUPPORT
 	char *sf_probe[3] = {"sf", "probe", "0"};
 	char *sf_write_xloader[5] = {"sf", "write", NULL, "0", "10000"};
 	char *sf_write_bootloader[5] = {"sf", "write", NULL, "20000", "80000"};
@@ -414,6 +422,7 @@ static int fastboot_flash(const char *partition)
 		fastboot_tx_write_str("OKAY");
 		return 0;
 	}
+#endif	
 	ptn = fastboot_flash_find_ptn(partition);
 	
 	if (ptn == 0) {
