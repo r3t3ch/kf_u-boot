@@ -310,7 +310,7 @@ static void cb_oem(struct usb_ep *ep, struct usb_request *req)
 		boot_from_spi = 1;
 		fastboot_tx_write_str("OKAY");
 		return;
-	}else if(strcmp(req->buf + 4,"emmc") == 0) {
+	}else if(strcmp(req->buf + 4,"mmc") == 0) {
 		boot_from_spi = 0;
 		fastboot_tx_write_str("OKAY");
 		return;
