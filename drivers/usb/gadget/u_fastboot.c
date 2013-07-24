@@ -84,7 +84,6 @@ static unsigned int download_bytes;
 int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
 static int fastboot_erase(const char *partition);
 static int fastboot_flash(const char *cmdbuf);
-static int fastboot_update_zimage();
 
 fastboot_ptentry *fastboot_flash_find_ptn(const char *name);
 
@@ -281,7 +280,7 @@ static void do_bootm_on_complete(struct usb_ep *ep, struct usb_request *req)
 	fastboot_shutdown();
 	printf("Booting kernel..\n");
 
-	do_bootm(NULL, 0, 2, bootm_args);
+	//do_bootm(NULL, 0, 2, bootm_args);
 
 	/* This only happens if image is somehow faulty so we start over */
 	do_reset(NULL, 0, 0, NULL);
@@ -389,6 +388,7 @@ static struct cmd_dispatch_info cmd_dispatch_info[] = {
 	}
 };
 
+#ifdef ZIMAGE_FLASH
 static u32 fastboot_get_boot_ptn(boot_img_hdr *hdr, char *response,
 	                                   struct mmc* mmc)
 {
@@ -437,7 +437,7 @@ out:
 static void* read_buffer;
 #define CEIL(a, b) (((a) / (b)) + ((a % b) > 0 ? 1 : 0))
 
-static int fastboot_update_zimage()
+static int fastboot_update_zimage(void)
 {
 	boot_img_hdr *hdr = NULL;
 	u8 *ramdisk_buffer;
@@ -544,6 +544,7 @@ out:
 
 	return ret;
 }
+#endif
 
 #ifdef CONFIG_SPL_SPI_SUPPORT
 extern int do_spi_flash(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);

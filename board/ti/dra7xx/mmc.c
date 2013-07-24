@@ -44,7 +44,7 @@
 #define DBG(x...)
 #endif /* DEBUG */
 
-static int load_ptbl();
+static int load_ptbl(void);
 int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
 
 
@@ -260,7 +260,7 @@ static void import_efi_partition(struct efi_entry *entry, int count)
 	
 }
 
-static int load_ptbl()
+static int load_ptbl(void)
 {
 	u64 ptbl_sectors = 0;
 	int i = 0, r = 0;
@@ -359,13 +359,13 @@ char *get_ptn_size(char *buf, const char *ptn)
 	mmc = find_mmc_device(MMC_DEVICE);
 	if(mmc == NULL) {
 		printf("No MMC in slot 1\n");
-		return -1;
+		return NULL;
 	}
 	mmc->has_init = 0;
 	mmc_init(mmc);
 	if(r!= 0) {
 		printf("mmc init failed\n");
-		return r;
+		return NULL;
 	}
 	
 	int gpt_size = sizeof(struct ptable);
@@ -438,12 +438,11 @@ static struct _partition partitions[] = {
 static int do_format(void)
 {
 	struct ptable *ptbl;
-	unsigned sector_sz, blocks;
+	unsigned blocks;
 	unsigned next;
 	int n;
 	struct mmc* mmc = NULL;
 	int status = 0;
-	u64 ptbl_sectors = 0;
 	char *mmc_write[5]	= {"mmc", "write", NULL, NULL, NULL};
 	
 	char *dev[3] = { "mmc", "dev", "1" };
@@ -467,8 +466,6 @@ static int do_format(void)
 	}
 
 	blocks = mmc->block_dev.lba;
-	sector_sz = mmc->block_dev.blksz;
-		
 	
 	ptbl = (struct ptable *) malloc(sizeof(struct ptable));
 
@@ -496,7 +493,6 @@ static int do_format(void)
 
 	fastboot_flash_reset_ptn();     
        
-	ptbl_sectors = (sizeof(struct ptable) / sector_sz) + 1;
 
 	mmc_write[2] = source;
 	mmc_write[3] = dest;

@@ -48,7 +48,7 @@ struct device_tree_data {
 };
 
 static struct device_tree_data *dt_data;
-static int find_dev_tree();
+static int find_dev_tree(void);
 
 /**
  * DOC: Introduction
@@ -80,7 +80,7 @@ static int find_dev_tree();
  * Returns 0 if the device tree is found or -1 if no device tree is found.
  **/
  
-static int find_dev_tree()
+static int find_dev_tree(void)
 {
 	struct fastboot_ptentry *pte;
 	dt_data = (void *) malloc(sizeof(struct device_tree_data));
