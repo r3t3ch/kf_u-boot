@@ -173,6 +173,7 @@
 			"setenv fdtfile omap5-uevm.dtb; fi;\0 " \
 	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile};\0" \
 
+#ifdef SD_BOOT
 #define CONFIG_BOOTCOMMAND \
 	"run findfdt; " \
 	"mmc dev ${mmcdev}; if mmc rescan; then " \
@@ -193,17 +194,10 @@
 		"fi; " \
 	"fi"
 	
-#if 0
-
-#define CONFIG_EXTRA_ENV_SETTINGS \
-	"bootcmd=go 0x80008000\0"
-
-
-#define CONFIG_BOOTARGS "console=ttyO2,115200n8 mem=456M@0x80000000 mem=512M@0xA0000000" \
-			" init=/init vram=10M omapfb.vram=0:4M androidboot.console=ttyO2"
+#endif
 
 #define CONFIG_BOOTCOMMAND "booti mmc1"
-#endif
+
 
 #define CONFIG_AUTO_COMPLETE		1
 
