@@ -226,24 +226,40 @@ static void ddr3_leveling(u32 base, const struct emif_regs *regs)
 {
 	struct emif_reg_struct *emif = (struct emif_reg_struct *)base;
 
-	/* keep sdram in self-refresh */
-	writel(((LP_MODE_SELF_REFRESH << EMIF_REG_LP_MODE_SHIFT)
-		& EMIF_REG_LP_MODE_MASK), &emif->emif_pwr_mgmt_ctrl);
-	__udelay(130);
+	if (omap_revision() != DRA752_ES1_0)	{
+		/* keep sdram in self-refresh */
+		writel(((LP_MODE_SELF_REFRESH << EMIF_REG_LP_MODE_SHIFT)
+			& EMIF_REG_LP_MODE_MASK), &emif->emif_pwr_mgmt_ctrl);
+		__udelay(130);
 
-	/*
-	 * Set invert_clkout (if activated)--DDR_PHYCTRL_1
-	 * Invert clock adds an additional half cycle delay on the command
-	 * interface.  The additional half cycle, is usually meant to enable
-	 * leveling in the situation that DQS is later than CK on the board.It
-	 * also helps provide some additional margin for leveling.
-	 */
-	writel(regs->emif_ddr_phy_ctlr_1, &emif->emif_ddr_phy_ctrl_1);
-	writel(regs->emif_ddr_phy_ctlr_1, &emif->emif_ddr_phy_ctrl_1_shdw);
-	__udelay(130);
+		/*
+		 * Set invert_clkout (if activated)--DDR_PHYCTRL_1
+		 * Invert clock adds an additional half cycle delay on the
+		 * command interface.  The additional half cycle, is usually
+		 * meant to enable leveling in the situation that DQS is later
+		 * than CK on the board.It also helps provide some additional
+		 * margin for leveling.
+		 */
+		writel(regs->emif_ddr_phy_ctlr_1,
+		       &emif->emif_ddr_phy_ctrl_1);
 
-	writel(((LP_MODE_DISABLE << EMIF_REG_LP_MODE_SHIFT)
-		& EMIF_REG_LP_MODE_MASK), &emif->emif_pwr_mgmt_ctrl);
+		writel(regs->emif_ddr_phy_ctlr_1,
+		       &emif->emif_ddr_phy_ctrl_1_shdw);
+		__udelay(130);
+
+		writel(((LP_MODE_DISABLE << EMIF_REG_LP_MODE_SHIFT)
+			& EMIF_REG_LP_MODE_MASK), &emif->emif_pwr_mgmt_ctrl);
+	} else {
+		u32 fifo_reg;
+
+		fifo_reg = readl(&emif->emif_ddr_fifo_misaligned_clear_1);
+		writel(fifo_reg | 0x00000100,
+		       &emif->emif_ddr_fifo_misaligned_clear_1);
+
+		fifo_reg = readl(&emif->emif_ddr_fifo_misaligned_clear_2);
+		writel(fifo_reg | 0x00000100,
+		       &emif->emif_ddr_fifo_misaligned_clear_2);
+	}
 
 	/* Launch Full leveling */
 	writel(DDR3_FULL_LVL, &emif->emif_rd_wr_lvl_ctl);
@@ -254,26 +270,6 @@ static void ddr3_leveling(u32 base, const struct emif_regs *regs)
 
 	/* Read data eye leveling no of samples */
 	config_data_eye_leveling_samples(base);
-
-	/* Launch 8 incremental WR_LVL- to compensate for PHY limitation */
-	writel(0x2 << EMIF_REG_WRLVLINC_INT_SHIFT, &emif->emif_rd_wr_lvl_ctl);
-	__udelay(130);
-
-	/* Launch Incremental leveling */
-	writel(DDR3_INC_LVL, &emif->emif_rd_wr_lvl_ctl);
-	__udelay(130);
-}
-
-static void ddr3_sw_leveling(u32 base, const struct emif_regs *regs)
-{
-	struct emif_reg_struct *emif = (struct emif_reg_struct *)base;
-
-	writel(regs->emif_ddr_phy_ctlr_1, &emif->emif_ddr_phy_ctrl_1);
-	writel(regs->emif_ddr_phy_ctlr_1, &emif->emif_ddr_phy_ctrl_1_shdw);
-	config_data_eye_leveling_samples(base);
-
-	writel(regs->emif_rd_wr_lvl_ctl, &emif->emif_rd_wr_lvl_ctl);
-	writel(regs->sdram_config, &emif->emif_sdram_config);
 }
 
 static void ddr3_init(u32 base, const struct emif_regs *regs)
@@ -286,9 +282,6 @@ static void ddr3_init(u32 base, const struct emif_regs *regs)
 	 * defined, contents of mode Registers must be fully initialized.
 	 * H/W takes care of this initialization
 	 */
-	writel(regs->sdram_config2, &emif->emif_lpddr2_nvm_config);
-	writel(regs->sdram_config_init, &emif->emif_sdram_config);
-
 	writel(regs->emif_ddr_phy_ctlr_1_init, &emif->emif_ddr_phy_ctrl_1);
 
 	/* Update timing registers */
@@ -301,13 +294,13 @@ static void ddr3_init(u32 base, const struct emif_regs *regs)
 
 	do_ext_phy_settings(base, regs);
 
+	writel(regs->sdram_config2, &emif->emif_lpddr2_nvm_config);
+	writel(regs->sdram_config_init, &emif->emif_sdram_config);
+
 	/* enable leveling */
 	writel(regs->emif_rd_wr_lvl_rmp_ctl, &emif->emif_rd_wr_lvl_rmp_ctl);
 
-	if (omap_revision() == DRA752_ES1_0)
-		ddr3_sw_leveling(base, regs);
-	else
-		ddr3_leveling(base, regs);
+	ddr3_leveling(base, regs);
 }
 
 #ifndef CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
@@ -1095,10 +1088,7 @@ static void do_sdram_init(u32 base)
 	if (warm_reset() && (emif_sdram_type() == EMIF_SDRAM_TYPE_DDR3)) {
 		set_lpmode_selfrefresh(base);
 		emif_reset_phy(base);
-		if (omap_revision() == DRA752_ES1_0)
-			ddr3_sw_leveling(base, regs);
-		else
-			ddr3_leveling(base, regs);
+		ddr3_leveling(base, regs);
 	}
 
 	/* Write to the shadow registers */
