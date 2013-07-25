@@ -489,7 +489,7 @@ static int fastboot_update_zimage(void)
 	}
 
 	/* Extract ramdisk location and read it into local buffer */
-	sectors_per_page = hdr->page_size / 512;
+	sectors_per_page = hdr->page_size / mmc->block_dev.blksz;
 	ramdisk_sector_start = pte->start + sectors_per_page;
 	ramdisk_sector_start += CEIL(hdr->kernel_size, hdr->page_size)*
 						sectors_per_page;
@@ -497,7 +497,7 @@ static int fastboot_update_zimage(void)
 						sectors_per_page;
 
 	ramdisk_buffer = (u8 *)hdr;
-	ramdisk_buffer += (hdr_sectors * 512);
+	ramdisk_buffer += (hdr_sectors * mmc->block_dev.blksz);
 	printf("0x%x\n",ramdisk_sector_start);
 	if (mmc->block_dev.block_read(1,ramdisk_sector_start,
 		ramdisk_sectors, ramdisk_buffer)) {

@@ -129,13 +129,6 @@ u32 load_dev_tree(u32 atag_load_addr)
 		dt_data->dev_tree_load_addr = atag_load_addr;
 		goto out;
 	}
-	sector_sz = 512;
-	sector = dt_data->pte->start;
-
-	num_sectors = (dt_data->dev_tree_sz/sector_sz);
-	if (num_sectors <= (dt_data->dev_tree_sz / sector_sz))
-		num_sectors = (dt_data->dev_tree_sz / sector_sz);
-
 	mmc = find_mmc_device(1);
 	if(mmc == NULL) {
 		goto out;
@@ -147,6 +140,15 @@ u32 load_dev_tree(u32 atag_load_addr)
 		goto out;
 	}
 	
+
+	sector_sz = mmc->block_dev.blksz;
+	sector = dt_data->pte->start;
+
+	num_sectors = (dt_data->dev_tree_sz/sector_sz);
+	if (num_sectors <= (dt_data->dev_tree_sz / sector_sz))
+		num_sectors = (dt_data->dev_tree_sz / sector_sz);
+
+
 	status = mmc->block_dev.block_read(1,sector,num_sectors,(void *)dt_data->dev_tree_load_addr);
 	if(status < 0) {
 		printf("mmc read failed\n");

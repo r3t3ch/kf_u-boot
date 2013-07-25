@@ -1988,10 +1988,10 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		printf("\nHeader: Kernel Size:0x%x", hdr->kernel_size);
 		printf("\nHeader: Ramdisk Addr:0x%x", hdr->ramdisk_addr);
 		printf("\nHeader: Ramdisk Size:0x%x", hdr->ramdisk_size);
-		printf("\n\nramdisk sector count:%d", hdr->ramdisk_size/512);
+		printf("\n\nramdisk sector count:%d", hdr->ramdisk_size/mmc->block_dev.blksz);
 
-		sector = pte->start + (hdr->page_size / 512);
-		num_sectors = ((hdr->kernel_size/512) + 1);
+		sector = pte->start + (hdr->page_size / mmc->block_dev.blksz);
+		num_sectors = ((hdr->kernel_size/mmc->block_dev.blksz) + 1);
 		
 		status = mmc->block_dev.block_read(mmcc,sector, num_sectors,(void*)hdr->kernel_addr);
 		if(status < 0) {
@@ -2000,8 +2000,8 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		}
 			
 		/* read ramdisk */
-		sector += _ALIGN(hdr->kernel_size, hdr->page_size) / 512;
-		num_sectors = ((hdr->ramdisk_size/512) + 1);
+		sector += _ALIGN(hdr->kernel_size, hdr->page_size) / mmc->block_dev.blksz;
+		num_sectors = ((hdr->ramdisk_size/mmc->block_dev.blksz) + 1);
 
 		status = mmc->block_dev.block_read(mmcc,sector,num_sectors,(void*)hdr->ramdisk_addr);
 		if(status < 0) {
