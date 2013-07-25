@@ -36,7 +36,11 @@
 #define TX_ENDPOINT_MAXIMUM_PACKET_SIZE      (0x0040)
 
 static struct usb_string def_usb_fb_strings[] = {
+#ifdef CONFIG_DRA7XX
+	{ FB_STR_PRODUCT_IDX,		"dra7xx_evm" },
+#else
 	{ FB_STR_PRODUCT_IDX,		"omap5uevm" },
+#endif
 	{ FB_STR_SERIAL_IDX,		"1234567890" },
 	{ FB_STR_CONFIG_IDX,		"Android Fastboot" },
 	{ FB_STR_INTERFACE_IDX,		"Android Fastboot" },
