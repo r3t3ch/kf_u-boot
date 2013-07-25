@@ -173,6 +173,7 @@
 			"setenv fdtfile omap5-uevm.dtb; fi;\0 " \
 	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile};\0" \
 
+#define SD_BOOT
 #ifdef SD_BOOT
 #define CONFIG_BOOTCOMMAND \
 	"run findfdt; " \
@@ -194,10 +195,10 @@
 		"fi; " \
 	"fi"
 	
-#endif
+#else
 
 #define CONFIG_BOOTCOMMAND "booti mmc1"
-
+#endif
 
 #define CONFIG_AUTO_COMPLETE		1
 
