@@ -500,7 +500,7 @@ static int do_format(void)
 
 	sprintf(source, "0x%x", (unsigned int)ptbl);
 	sprintf(dest, "0x%x", 0x00);
-	sprintf(length, "0x%x", (sizeof(struct ptable)/mmc->block_dev.blksz)+1);
+	sprintf(length, "0x%x", (unsigned int)((sizeof(struct ptable)/mmc->block_dev.blksz)+1));
 
 	if (do_mmcops(NULL, 0, 5, mmc_write)) {
 		printf("Writing mbr is FAILED!\n");

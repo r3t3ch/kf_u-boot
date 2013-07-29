@@ -1918,9 +1918,12 @@ bootimg_print_image_hdr (boot_img_hdr *hdr)
 
 #define _ALIGN(n,pagesz) ((n + (pagesz - 1)) & (~(pagesz - 1)))
 
+#define TOSTRING(x) #x
+#define STR(x) TOSTRING(x)
+int do_fdt(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
+
 int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 {
-
 	u32 addr;
 	char *ptn = "boot";
 	int mmcc = -1;
@@ -1930,6 +1933,11 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	struct mmc* mmc = NULL;
 	u64 num_sectors;
 	int status;
+	char* fdt_addr[3] = { "fdt", "addr", STR(DEVICE_TREE) };
+	char* fdt_resize[2] = { "fdt", "resize"};
+	char* fdt_chosen[4] = { "fdt", "chosen", NULL, NULL}; 
+	char start[32];
+	char end[32];
 	
 	void (*theKernel)(int zero, int arch, void *);
 
@@ -1988,7 +1996,7 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 		printf("\nHeader: Kernel Size:0x%x", hdr->kernel_size);
 		printf("\nHeader: Ramdisk Addr:0x%x", hdr->ramdisk_addr);
 		printf("\nHeader: Ramdisk Size:0x%x", hdr->ramdisk_size);
-		printf("\n\nramdisk sector count:%d", hdr->ramdisk_size/mmc->block_dev.blksz);
+		printf("\n\nramdisk sector count:%d", (int)(hdr->ramdisk_size/mmc->block_dev.blksz));
 
 		sector = pte->start + (hdr->page_size / mmc->block_dev.blksz);
 		num_sectors = ((hdr->kernel_size/mmc->block_dev.blksz) + 1);
@@ -2013,6 +2021,29 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 	printf("kernel   @ %08x (%d)\n", hdr->kernel_addr, hdr->kernel_size);
 	printf("ramdisk  @ %08x (%d)\n", hdr->ramdisk_addr, hdr->ramdisk_size);
 
+	
+	//Set the initrd_start and initrd_end inside the FDT
+	status = do_fdt(NULL, 0, 3, fdt_addr);
+	if(status) {
+		printf("booti: Could not set FDT address\n");
+		return -1;
+	}
+	status = do_fdt(NULL, 0, 4, fdt_resize);	
+	if(status) {
+		printf("booti: Could not resize FDT\n");
+		return -1;
+	}
+	
+	fdt_chosen[2] = start;
+	fdt_chosen[3] = end;
+	sprintf(start, "0x%x", (unsigned int)hdr->ramdisk_addr);
+	sprintf(end, "0x%x", (unsigned int)(hdr->ramdisk_addr + hdr->ramdisk_size));
+	status = do_fdt(NULL, 0, 4, fdt_chosen);
+	if(status) {
+		printf("booti: Could not set initrd_start and initrd_end\n");
+		return -1;
+	}
+	
 	
 	theKernel = (void (*)(int, int, void *))(hdr->kernel_addr);
 
