@@ -90,7 +90,7 @@ static int fdt_value_setenv(const void *nodep, int len, const char *var)
 /*
  * Flattened Device Tree command, see the help for parameter definitions.
  */
-static int do_fdt(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+int do_fdt(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	if (argc < 2)
 		return CMD_RET_USAGE;
