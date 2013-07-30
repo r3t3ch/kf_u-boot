@@ -243,12 +243,27 @@ static void rx_handler_dl_image(struct usb_ep *ep, struct usb_request *req)
 	usb_ep_queue(ep, req, 0);
 }
 
+size_t strlcpy(char *dest, const char *src, size_t size)
+{
+	size_t ret = strlen(src);
+
+	if (size) {
+		size_t len = (ret >= size) ? size - 1 : ret;
+		memcpy(dest, src, len);
+		dest[len] = '\0';
+	}
+	return ret;
+}
+
 static void cb_download(struct usb_ep *ep, struct usb_request *req)
 {
 	char *cmd = req->buf;
 	char response[RESPONSE_LEN];
 
 	strsep(&cmd, ":");
+
+	/*HACK: Zero terminate the command string*/
+	strlcpy(cmd,cmd,9);
 	download_size = simple_strtoul(cmd, NULL, 16);
 	download_bytes = 0;
 
@@ -272,7 +287,6 @@ static void cb_download(struct usb_ep *ep, struct usb_request *req)
 }
 
 static char boot_addr_start[32];
-static char *bootm_args[] = { "bootm", boot_addr_start, NULL };
 
 static void do_bootm_on_complete(struct usb_ep *ep, struct usb_request *req)
 {
@@ -357,6 +371,15 @@ static void cb_erase(struct usb_ep *ep, struct usb_request *req)
 	}
 }
 
+static void cb_reboot_bootloader(struct usb_ep *ep, struct usb_request *req)
+{
+	char *cmd = req->buf + 6;
+	format_flash_cmd(cmd);
+	if(fastboot_erase(cmd) != 0) {
+		printf("Unable to erase partition\n");
+	}
+}
+
 static struct cmd_dispatch_info cmd_dispatch_info[] = {
 	{
 		.cmd = "reboot",
@@ -385,6 +408,10 @@ static struct cmd_dispatch_info cmd_dispatch_info[] = {
 	{
 		.cmd = "erase",
 		.cb  = cb_erase,
+	},
+	{
+		.cmd = "reboot-bootloader",
+		.cb  = cb_reboot_bootloader,
 	}
 };
 
@@ -621,7 +648,7 @@ static int fastboot_flash(const char *partition)
 		}
 		if ( ((sparse_header_t *)fb_cfg.transfer_buffer)->magic
 				== SPARSE_HEADER_MAGIC) {
-			printf("fastboot: %s is in sparse format\n", ptn->name);
+			printf("fastboot: %s is in sparse format %u %u \n", ptn->name, ptn->start, ptn->length);
 			status = do_unsparse(fb_cfg.transfer_buffer,
 					ptn->start,
 					ptn->length);
