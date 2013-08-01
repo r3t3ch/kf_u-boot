@@ -209,7 +209,7 @@ static inline void usleep_range(unsigned long min, unsigned long max)
 		unlikely(__ret_warn_once);                              \
 	})
 
-#define dev_WARN_ONCE(dev, condition, format, arg...) \
+#define dev_WARN_ONCE(condition, format, arg...) \
 	WARN_ONCE(condition, format, ## arg)
 
 #define WARN_ON(condition) ({                                           \

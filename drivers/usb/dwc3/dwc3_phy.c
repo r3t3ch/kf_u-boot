@@ -1,5 +1,12 @@
 #include "dwc3_phy.h"
 
+u32 get_sys_clk_freq(void);
+void udelay(unsigned long usec);
+void mdelay(unsigned long msec);
+u32 get_sys_clk_index(void);;
+
+
+
 static struct usb_dpll_params omap_usb3_dpll_params[7] = {
 	{1250, 5, 4, 20, 0},		/* 12 MHz */
 	{1000, 7, 4, 10, 0},            /* 20 MHz */

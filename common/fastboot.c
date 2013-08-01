@@ -17,7 +17,7 @@ static fastboot_ptentry ptable[MAX_PTN];
 static unsigned int pcount = 0;
 
 static struct usb_string def_usb_fb_strings[] = {
-	{ FB_STR_SERIAL_IDX,            &serialno },
+	{ FB_STR_SERIAL_IDX,            (const char*)&serialno },
 	{  }
 };
 

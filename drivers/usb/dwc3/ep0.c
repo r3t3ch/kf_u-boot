@@ -62,6 +62,9 @@ static void dwc3_ep0_do_control_status(struct dwc3 *dwc,
 static void __dwc3_ep0_do_control_data(struct dwc3 *dwc,
 		struct dwc3_ep *dep, struct dwc3_request *req);
 
+int dwc3_gadget_resize_tx_fifos(struct dwc3 *dwc);
+
+
 static const char *dwc3_ep0_state_string(enum dwc3_ep0_state state)
 {
 	switch (state) {
@@ -240,11 +243,9 @@ int dwc3_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *request,
 	struct dwc3_ep			*dep = to_dwc3_ep(ep);
 	struct dwc3			*dwc = dep->dwc;
 
-	unsigned long			flags;
 
 	int				ret;
 
-	spin_lock_irqsave(&dwc->lock, flags);
 	if (!dep->desc) {
 		dev_dbg(dwc->dev, "trying to queue request %p to disabled %s\n",
 				request, dep->name);
@@ -265,7 +266,6 @@ int dwc3_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *request,
 	ret = __dwc3_gadget_ep0_queue(dep, req);
 
 out:
-	spin_unlock_irqrestore(&dwc->lock, flags);
 
 	return ret;
 }
@@ -634,12 +634,10 @@ static int dwc3_ep0_set_sel(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 {
 	struct dwc3_ep	*dep;
 	u16		wLength;
-	u16		wValue;
 
 	if (dwc->dev_state == DWC3_DEFAULT_STATE)
 		return -EINVAL;
 
-	wValue = le16_to_cpu(ctrl->wValue);
 	wLength = le16_to_cpu(ctrl->wLength);
 
 	if (wLength != 6) {
@@ -783,7 +781,7 @@ static void dwc3_ep0_complete_data(struct dwc3 *dwc,
 	r = next_request(&ep0->request_list);
 	ur = &r->request;
 
-	trb = dwc->ep0_trb;
+	trb = 	(struct dwc3_trb*)dwc->ep0_trb;
 
 	status = trb->trbsts;
 	if (status == DWC3_TRBSTS_SETUP_PENDING) {
@@ -834,7 +832,7 @@ static void dwc3_ep0_complete_status(struct dwc3 *dwc,
 	u32			status;
 
 	dep = dwc->eps[0];
-	trb = dwc->ep0_trb;
+	trb = (struct dwc3_trb *)dwc->ep0_trb;
 
 	if (!list_empty(&dep->request_list)) {
 		r = next_request(&dep->request_list);
@@ -894,7 +892,7 @@ static void dwc3_ep0_xfer_complete(struct dwc3 *dwc,
 static void __dwc3_ep0_do_control_data(struct dwc3 *dwc,
 		struct dwc3_ep *dep, struct dwc3_request *req)
 {
-	int			ret;
+	int			ret = 0;
 
 	req->direction = !!dep->number;
 
