@@ -320,11 +320,11 @@ int boot_from_spi = 0;
 static void cb_oem(struct usb_ep *ep, struct usb_request *req)
 {    
 #ifdef CONFIG_SPL_SPI_SUPPORT
-	if(strcmp(req->buf + 4,"spi") == 0) {
+	if(strncmp(req->buf + 4,"spi",3) == 0) {
 		boot_from_spi = 1;
 		fastboot_tx_write_str("OKAY");
 		return;
-	}else if(strcmp(req->buf + 4,"mmc") == 0) {
+	}else if(strncmp(req->buf + 4,"mmc",3) == 0) {
 		boot_from_spi = 0;
 		fastboot_tx_write_str("OKAY");
 		return;
@@ -342,7 +342,8 @@ static void cb_oem(struct usb_ep *ep, struct usb_request *req)
 static void format_flash_cmd(char* cmd) 
 {
 	int i;
-	char *parts[] = {"xloader", "bootloader", "boot", "system", "userdata", "cache", "recovery","environment", "zImage", "zimage"};	
+	char *parts[] = {"xloader", "bootloader", "boot", "system", "userdata",
+		            "cache", "recovery","environment", "zImage", "zimage"};	
 	for(i = 0;i < 10;i++) {
 		if(!strncmp(parts[i],cmd,strlen(parts[i]))) {
 			*(cmd + strlen(parts[i])) = '\0';
