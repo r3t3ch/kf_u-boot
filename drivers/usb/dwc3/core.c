@@ -252,11 +252,9 @@ static int __devinit dwc3_event_buffers_setup(struct dwc3 *dwc)
 
 static void dwc3_event_buffers_cleanup(struct dwc3 *dwc)
 {
-	struct dwc3_event_buffer	*evt;
 	int				n;
 
 	for (n = 0; n < dwc->num_event_buffers; n++) {
-		evt = dwc->ev_buffs[n];
 		dwc3_writel(dwc->regs, DWC3_GEVNTADRLO(n), 0);
 		dwc3_writel(dwc->regs, DWC3_GEVNTADRHI(n), 0);
 		dwc3_writel(dwc->regs, DWC3_GEVNTSIZ(n), 0);
@@ -354,7 +352,7 @@ static void dwc3_core_exit(struct dwc3 *dwc)
 
 struct dwc3 *global_dwc3;
 
-void dwc3_wrapper_init();
+void dwc3_wrapper_init(void);
 
 int __devinit dwc3_probe(struct platform_device *pdev)
 {
@@ -366,9 +364,6 @@ int __devinit dwc3_probe(struct platform_device *pdev)
 	void			*mem;
 
 	u8			mode;
-	u32			val;
-	u32			retry;
-	u8 vali;
 	/* Initialize all the clocks (system clocks/ optional clocks etc) */
 	/* USB_OTG_SS_CLKSTCTRL */
 	writel(USB_OTG_SS_OPTFCLKEN_REFCLK960M | USB_OTG_SS_MODULEMODE_HW,
@@ -524,7 +519,7 @@ int __devexit dwc3_remove(struct platform_device *pdev)
 }
 
 
-void dwc3_wrapper_init()
+void dwc3_wrapper_init(void)
 {
 	u32 reg;
 

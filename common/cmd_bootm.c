@@ -1922,7 +1922,7 @@ bootimg_print_image_hdr (boot_img_hdr *hdr)
 #define STR(x) TOSTRING(x)
 int do_fdt(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 
-int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
+int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	u32 addr;
 	char *ptn = "boot";
