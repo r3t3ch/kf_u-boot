@@ -316,12 +316,27 @@ struct cmd_dispatch_info {
 
 #ifdef CONFIG_SPL_SPI_SUPPORT
 int boot_from_spi = 0;
+extern int do_spi_flash(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 #endif
+
 static void cb_oem(struct usb_ep *ep, struct usb_request *req)
 {    
 #ifdef CONFIG_SPL_SPI_SUPPORT
+	char *sf_erase[4] = {"sf", "erase", "0", "10000"};
+	int status;
+	char *sf_probe[3] = {"sf", "probe", "0"};
 	if(strncmp(req->buf + 4,"spi",3) == 0) {
 		boot_from_spi = 1;
+		status = do_spi_flash(NULL, 0, 3, sf_probe);
+		if(status) {
+			fastboot_tx_write_str("FAIL:Could not probe SPI");
+			return;
+		}
+		status = do_spi_flash(NULL, 0, 4, sf_erase);
+		if(status) {
+			fastboot_tx_write_str("FAIL:Could not erase SPI");
+			return;
+		}
 		fastboot_tx_write_str("OKAY");
 		return;
 	}else if(strncmp(req->buf + 4,"mmc",3) == 0) {
@@ -574,10 +589,6 @@ out:
 }
 #endif
 
-#ifdef CONFIG_SPL_SPI_SUPPORT
-extern int do_spi_flash(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
-#endif
-
 static int fastboot_flash(const char *partition)
 {
 	int status = 0;
@@ -590,25 +601,50 @@ static int fastboot_flash(const char *partition)
 #ifdef CONFIG_SPL_SPI_SUPPORT
 	char *sf_probe[3] = {"sf", "probe", "0"};
 	char *sf_write_xloader[5] = {"sf", "write", NULL, "0", "10000"};
-	char *sf_write_bootloader[5] = {"sf", "write", NULL, "20000", "80000"};
+	char *sf_write_bootloader[5] = {"sf", "write", NULL, "80000", "80000"};
+	char *sf_update_bootloader[5] = {"sf", "update", NULL, "80000", "80000"};
+
 
 	/*Check if this is for xloader or bootloader. Also, check if we have to flash to SPI*/
 	if(strcmp(partition,"xloader") == 0 && boot_from_spi) {
 		printf("Flashing %s to SPI\n",partition);
-		do_spi_flash(NULL, 0, 3, sf_probe);
+		status = do_spi_flash(NULL, 0, 3, sf_probe);
+		if(status) {
+			fastboot_tx_write_str("FAIL:Could not probe SPI");
+			return status;
+		}
 		sf_write_xloader[2] = source;
 		sprintf(source, "0x%x", (unsigned int)fb_cfg.transfer_buffer);
-		do_spi_flash(NULL, 0, 5, sf_write_xloader);
+		status = do_spi_flash(NULL, 0, 5, sf_write_xloader);
+		if(status) {
+			fastboot_tx_write_str("FAIL:Could not write xloader to SPI");
+			return status;
+		}
 		fastboot_tx_write_str("OKAY");
 		return 0;
 	}
 	if(strcmp(partition,"bootloader") == 0 && boot_from_spi) {
 		printf("Flashing %s to SPI\n",partition);
-		do_spi_flash(NULL, 0, 3, sf_probe);
+		status = do_spi_flash(NULL, 0, 3, sf_probe);
+		if(status) {
+			fastboot_tx_write_str("FAIL:Could not probe SPI");
+			return status;
+		}		
 		sf_write_bootloader[2] = source;
+		sf_update_bootloader[2] = source;
 		sprintf(source, "0x%x", (unsigned int)fb_cfg.transfer_buffer);
+		printf("Updating bootloader to SPI\n");
+		status = do_spi_flash(NULL, 0, 5, sf_update_bootloader);
+		if(status) {
+			fastboot_tx_write_str("FAIL:Could not update bootloader to SPI");
+			return status;
+		}		
 		printf("Writing bootloader to SPI\n");
-		do_spi_flash(NULL, 0, 5, sf_write_bootloader);
+		status = do_spi_flash(NULL, 0, 5, sf_write_bootloader);
+		if(status) {
+			fastboot_tx_write_str("FAIL:Could not write bootloader to SPI");
+			return status;
+		}		
 		fastboot_tx_write_str("OKAY");
 		return 0;
 	}
