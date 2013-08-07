@@ -53,17 +53,17 @@ const struct pad_conf_entry core_padconf_array_essential[] = {
 	{UART1_RTSN, (IEN | PTU | PDIS | M3)},
 	{I2C1_SDA, (IEN | PTU | PDIS | M0)},
 	{I2C1_SCL, (IEN | PTU | PDIS | M0)},
-	{GPMC_A13, (IEN | PDIS | M1)},
-	{GPMC_A14, (IEN | PDIS | M1)},
-	{GPMC_A15, (IEN | PDIS | M1)},
-	{GPMC_A16, (IEN | PDIS | M1)},
-	{GPMC_A17, (IEN | PDIS | M1)},
-	{GPMC_A18, (IEN | PDIS | M1)},
-	{GPMC_A3, (IEN | PDIS | M3)},
-	{GPMC_A4, (IEN | PDIS | M3)},
+	{GPMC_A13, (IEN | PDIS | M1)},  /* QSPI1_RTCLK */
+	{GPMC_A14, (IEN | PDIS | M1)},  /* QSPI1_D[3] */
+	{GPMC_A15, (IEN | PDIS | M1)},  /* QSPI1_D[2] */
+	{GPMC_A16, (IEN | PDIS | M1)},  /* QSPI1_D[1] */
+	{GPMC_A17, (IEN | PDIS | M1)},  /* QSPI1_D[0] */
+	{GPMC_A18, (IEN | PDIS | M1)},  /* QSPI1_SCLK */
+	{GPMC_A3, (IEN | PDIS | M1)},   /* QSPI1_CS2 */
+	{GPMC_A4, (IEN | PDIS | M1)},   /* QSPI1_CS3 */
 	{GPMC_CS0, (IEN | PTU | PDIS | M15)},
-	{GPMC_CS2, (IEN | PTU | PDIS | M1)},
-	{GPMC_CS3, (IEN | PTU | PDIS | M3)},
+	{GPMC_CS2, (IEN | PTU | PDIS | M1)},    /* QSPI1_CS0 */
+	{GPMC_CS3, (IEN | PTU | PDIS | M1)},    /* QSPI1_CS1*/
 	{MDIO_MCLK, (PTU | PEN | M0)},		/* MDIO_MCLK  */
 	{MDIO_D, (IEN | PTU | PEN | M0)},	/* MDIO_D  */
 	{RGMII0_TXC, (M0) },
