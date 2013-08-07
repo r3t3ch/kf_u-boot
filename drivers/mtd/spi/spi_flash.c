@@ -162,37 +162,44 @@ int spi_flash_read_common(struct spi_flash *flash, const u8 *cmd,
 int spi_flash_cmd_read_fast(struct spi_flash *flash, u32 offset,
 		size_t len, void *data)
 {
-	unsigned long page_addr, byte_addr, page_size;
-	size_t chunk_len, actual;
-	int ret = 0;
-	u8 cmd[4];
+	u8 cmd[5], bank_sel;
+	u32 remain_len, read_len;
+	int ret = -1;
 
 	/* Handle memory-mapped SPI */
 	if (flash->memory_map)
 		memcpy(data, flash->memory_map + offset, len);
-	page_size = flash->page_size;
-	page_addr = offset / page_size;
-	byte_addr = offset % page_size;
 
-	cmd[0] = CMD_READ_ARRAY_SLOW;
-	for (actual = 0; actual < len; actual += chunk_len) {
-		chunk_len = min(len - actual, page_size - byte_addr);
+	cmd[0] = CMD_READ_ARRAY_FAST;
+	cmd[4] = 0x00;
 
-		cmd[1] = page_addr >> 8;
-		cmd[2] = page_addr;
-		cmd[3] = byte_addr;
+	while (len) {
+		bank_sel = offset / SPI_FLASH_16MB_BOUN;
 
-		ret = spi_flash_read_common(flash, cmd, sizeof(cmd), data + actual, chunk_len);
+		ret = spi_flash_cmd_bankaddr_write(flash, bank_sel);
+		if (ret) {
+			debug("SF: fail to set bank%d\n", bank_sel);
+			return ret;
+		}
+
+		remain_len = (SPI_FLASH_16MB_BOUN * (bank_sel + 1) - offset);
+		if (len < remain_len)
+			read_len = len;
+		else
+			read_len = remain_len;
+
+		spi_flash_addr(offset, cmd);
+
+		ret = spi_flash_read_common(flash, cmd, sizeof(cmd),
+							data, read_len);
 		if (ret < 0) {
-			debug("SF: read failed");
+			debug("SF: read failed\n");
 			break;
 		}
 
-		byte_addr += chunk_len;
-		if (byte_addr == page_size) {
-			page_addr++;
-			byte_addr = 0;
-		}
+		offset += read_len;
+		len -= read_len;
+		data += read_len;
 	}
 
 	return ret;
