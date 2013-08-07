@@ -144,6 +144,7 @@ struct spi_flash *spi_flash_probe_spansion(struct spi_slave *spi, u8 *idcode)
 	flash->page_size = 256;
 	flash->sector_size = 256 * params->pages_per_sector;
 	flash->size = flash->sector_size * params->nr_sectors;
+	flash->memory_map = spi->memory_map;
 
 	return flash;
 }

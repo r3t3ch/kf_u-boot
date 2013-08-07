@@ -86,6 +86,24 @@ static struct qspi_regs *qspi = (struct qspi_regs *)QSPI_BASE;
 #define QSPI_WC_BUSY			(QSPI_WC | QSPI_BUSY)
 #define QSPI_XFER_DONE			QSPI_WC
 
+#define MM_SWITCH		0x01
+#define MEM_CS                  0x100
+#define MEM_CS_UNSELECT		0xfffff0ff
+#define MMAP_START_ADDR         0x5c000000
+#define CORE_CTRL_IO            0x4a002558
+
+#define	QSPI_CMD_READ				(0x3 << 0)
+#define	QSPI_CMD_READ_QUAD			(0x6b << 0)
+#define	QSPI_CMD_READ_FAST			(0x0b << 0)
+
+#define	QSPI_SETUP0_NUM_A_BYTES			(0x2 << 8)
+#define	QSPI_SETUP0_NUM_D_BYTES_NO_BITS		(0x0 << 10)
+#define	QSPI_SETUP0_NUM_D_BYTES_8_BITS		(0x1 << 10)
+#define	QSPI_SETUP0_READ_NORMAL			(0x0 << 12)
+#define	QSPI_SETUP0_READ_QUAD			(0x3 << 12)
+#define	QSPI_CMD_WRITE				(0x2 << 16)
+#define QSPI_NUM_DUMMY_BITS			(0x0 << 24)
+
 int spi_cs_is_valid(unsigned int bus, unsigned int cs)
 {
 	return 1;
@@ -106,6 +124,24 @@ void spi_cs_deactivate(struct spi_slave *slave)
 void spi_init(void)
 {
 	/* nothing to do */
+}
+
+void spi_set_up_spi_register(struct spi_slave *slave)
+{
+	u32 memval = 0;
+
+	slave->memory_map = (void *)MMAP_START_ADDR;
+
+#ifdef CONFIG_SF_QUAD_RD
+	memval |= (QSPI_CMD_READ_QUAD | QSPI_SETUP0_NUM_A_BYTES |
+		QSPI_SETUP0_NUM_D_BYTES_8_BITS | QSPI_SETUP0_READ_QUAD |
+			QSPI_CMD_WRITE | QSPI_NUM_DUMMY_BITS);
+#else
+	memval |= (QSPI_CMD_READ | QSPI_SETUP0_NUM_A_BYTES |
+		QSPI_SETUP0_NUM_D_BYTES_NO_BITS | QSPI_SETUP0_READ_NORMAL |
+			QSPI_CMD_WRITE | QSPI_NUM_DUMMY_BITS);
+#endif
+	writel(memval, &qspi->spi_setup0);
 }
 
 void spi_set_speed(struct spi_slave *slave, uint hz)
@@ -149,6 +185,11 @@ struct spi_slave *spi_setup_slave(unsigned int bus, unsigned int cs,
 
 	spi_set_speed(&qslave->slave, max_hz);
 	qslave->mode = mode;
+
+#ifdef CONFIG_MMAP
+	spi_set_up_spi_register(&qslave->slave);
+#endif
+
 	debug("%s: bus:%i cs:%i mode:%i\n", __func__, bus, cs, mode);
 
 	return &qslave->slave;
@@ -188,10 +229,35 @@ int spi_xfer(struct spi_slave *slave, unsigned int bitlen, const void *dout,
 	const uchar *txp = dout;
 	uchar *rxp = din;
 	uint status;
-	int timeout;
+	int timeout, val;
 
 	debug("%s: bus:%i cs:%i bitlen:%i words:%i flags:%lx\n", __func__,
 		slave->bus, slave->cs, bitlen, words, flags);
+
+	qslave->dc = 0;
+	if (qslave->mode & SPI_CPHA)
+		qslave->dc |= QSPI_CKPHA(slave->cs);
+	if (qslave->mode & SPI_CPOL)
+		qslave->dc |= QSPI_CKPOL(slave->cs);
+	if (qslave->mode & SPI_CS_HIGH)
+		qslave->dc |= QSPI_CSPOL(slave->cs);
+
+	writel(qslave->dc, &qspi->spi_dc);
+
+	if (flags == SPI_XFER_MEM_MAP) {
+		writel(MM_SWITCH, &qspi->spi_switch);
+		val = readl(CORE_CTRL_IO);
+		val |= MEM_CS;
+		writel(val, CORE_CTRL_IO);
+		return 0;
+	} else if (flags == SPI_XFER_MEM_MAP_END) {
+		writel(~MM_SWITCH, &qspi->spi_switch);
+		val = readl(CORE_CTRL_IO);
+		val &= MEM_CS_UNSELECT;
+		writel(val, CORE_CTRL_IO);
+		return 0;
+	}
+
 	if (bitlen == 0)
 		return -1;
 
@@ -207,15 +273,6 @@ int spi_xfer(struct spi_slave *slave, unsigned int bitlen, const void *dout,
 	if (flags & SPI_3WIRE)
 		qslave->cmd |= QSPI_3_PIN;
 	qslave->cmd |= 0xfff;
-
-	/* setup device control reg */
-	qslave->dc = 0;
-	if (qslave->mode & SPI_CPHA)
-		qslave->dc |= QSPI_CKPHA(slave->cs);
-	if (qslave->mode & SPI_CPOL)
-		qslave->dc |= QSPI_CKPOL(slave->cs);
-	if (qslave->mode & SPI_CS_HIGH)
-		qslave->dc |= QSPI_CSPOL(slave->cs);
 
 	while (words--) {
 		if (txp) {

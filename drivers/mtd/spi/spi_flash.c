@@ -289,8 +289,12 @@ int spi_flash_cmd_read_quad(struct spi_flash *flash, u32 offset,
 
 	spi->quad_enable = 1;
 	/* Handle memory-mapped SPI */
-	if (flash->memory_map)
+	if (flash->memory_map) {
+		spi_xfer(flash->spi, 0, NULL, NULL, SPI_XFER_MEM_MAP);
 		memcpy(data, flash->memory_map + offset, len);
+		spi_xfer(flash->spi, 0, NULL, NULL, SPI_XFER_MEM_MAP_END);
+		return 0;
+	}
 
 	page_size = flash->page_size;
 	page_addr = offset / page_size;
@@ -330,8 +334,12 @@ int spi_flash_cmd_read_fast(struct spi_flash *flash, u32 offset,
 	int ret = -1;
 
 	/* Handle memory-mapped SPI */
-	if (flash->memory_map)
+	if (flash->memory_map) {
+		spi_xfer(flash->spi, 0, NULL, NULL, SPI_XFER_MEM_MAP);
 		memcpy(data, flash->memory_map + offset, len);
+		spi_xfer(flash->spi, 0, NULL, NULL, SPI_XFER_MEM_MAP_END);
+		return 0;
+	}
 
 	cmd[0] = CMD_READ_ARRAY_FAST;
 	cmd[4] = 0x00;

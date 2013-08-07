@@ -45,6 +45,11 @@
 #define SPI_XFER_BEGIN	0x01			/* Assert CS before transfer */
 #define SPI_XFER_END	0x02			/* Deassert CS after transfer */
 
+/* Header byte that marks the start of the message */
+#define SPI_PREAMBLE_END_BYTE	0xec
+
+#define SPI_XFER_MEM_MAP 0x05
+#define SPI_XFER_MEM_MAP_END 0x06
 /*-----------------------------------------------------------------------
  * Representation of a SPI slave, i.e. what we're communicating with.
  *
@@ -60,6 +65,7 @@ struct spi_slave {
 	unsigned int	cs;
 	unsigned int max_write_size;
 	bool quad_enable;
+	void *memory_map;
 };
 
 /*-----------------------------------------------------------------------
