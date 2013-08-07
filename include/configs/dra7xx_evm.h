@@ -61,6 +61,7 @@
 #define CONFIG_MMAP
 #define CONFIG_SF_DEFAULT_SPEED                48000000
 #define CONFIG_DEFAULT_SPI_MODE                SPI_MODE_3
+#define CONFIG_SPI_FLASH_BAR
 
 /* SPI SPL */
 #define CONFIG_SPL_SPI_SUPPORT
