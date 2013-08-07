@@ -72,6 +72,7 @@ static struct qspi_regs *qspi = (struct qspi_regs *)QSPI_BASE;
 #define QSPI_RD_SNGL			(1 << 16)
 #define QSPI_WR_SNGL			(2 << 16)
 #define QSPI_INVAL			(4 << 16)
+#define QSPI_RD_QUAD			(7 << 16)
 
 /* Device Control */
 #define QSPI_DD(m, n)			(m << (3 + n*8))
@@ -235,10 +236,17 @@ int spi_xfer(struct spi_slave *slave, unsigned int bitlen, const void *dout,
 			debug("tx done, status %08x\n", status);
 		}
 		if (rxp) {
-			debug("rx cmd %08x dc %08x\n",
-			      qslave->cmd | QSPI_RD_SNGL, qslave->dc);
-			writel(qslave->dc, &qspi->spi_dc);
-			writel(qslave->cmd | QSPI_RD_SNGL, &qspi->spi_cmd);
+			if (flags & SPI_6WIRE) {
+				debug("rx cmd %08x dc %08x\n",
+				      qslave->cmd | QSPI_RD_QUAD, qslave->dc);
+				writel(qslave->cmd | QSPI_RD_QUAD,
+				       &qspi->spi_cmd);
+			} else {
+				debug("rx cmd %08x dc %08x\n",
+				      qslave->cmd | QSPI_RD_SNGL, qslave->dc);
+				writel(qslave->cmd | QSPI_RD_SNGL,
+				       &qspi->spi_cmd);
+			}
 			status = readl(&qspi->spi_status);
 			timeout = QSPI_TIMEOUT;
 			while ((status & QSPI_WC_BUSY) != QSPI_XFER_DONE) {
@@ -250,7 +258,7 @@ int spi_xfer(struct spi_slave *slave, unsigned int bitlen, const void *dout,
 			}
 			*rxp++ = readl(&qspi->spi_data);
 			debug("rx done, status %08x, read %02x\n",
-			      status, *(rxp-1));
+				 status, *(rxp-1));
 		}
 	}
 

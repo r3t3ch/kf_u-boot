@@ -42,7 +42,13 @@ static int spi_flash_read_write(struct spi_slave *spi,
 		debug("SF: Failed to send command (%zu bytes): %d\n",
 				cmd_len, ret);
 	} else if (data_len != 0) {
-		ret = spi_xfer(spi, data_len * 8, data_out, data_in, SPI_XFER_END);
+		if (spi->quad_enable)
+			flags = SPI_6WIRE;
+		else
+			flags = 0;
+
+		ret = spi_xfer(spi, data_len * 8, data_out, data_in, flags |
+			       SPI_XFER_END);
 		if (ret)
 			debug("SF: Failed to transfer %zu bytes of data: %d\n",
 					data_len, ret);
@@ -271,6 +277,51 @@ int spi_flash_read_common(struct spi_flash *flash, const u8 *cmd,
 	return ret;
 }
 
+int spi_flash_cmd_read_quad(struct spi_flash *flash, u32 offset,
+		size_t len, void *data)
+{
+	struct spi_slave *spi = flash->spi;
+
+	unsigned long page_addr, byte_addr, page_size;
+	size_t chunk_len, actual;
+	int ret = 0;
+	u8 cmd[5];
+
+	spi->quad_enable = 1;
+	/* Handle memory-mapped SPI */
+	if (flash->memory_map)
+		memcpy(data, flash->memory_map + offset, len);
+
+	page_size = flash->page_size;
+	page_addr = offset / page_size;
+	byte_addr = offset % page_size;
+
+	cmd[0] = CMD_READ_ARRAY_QUAD;
+	for (actual = 0; actual < len; actual += chunk_len) {
+		chunk_len = min(len - actual, page_size - byte_addr);
+
+		cmd[1] = page_addr >> 8;
+		cmd[2] = page_addr;
+		cmd[3] = byte_addr;
+		cmd[4] = 0x0;
+
+		ret = spi_flash_read_common(flash, cmd, sizeof(cmd),
+				data + actual, chunk_len);
+		if (ret < 0) {
+			debug("SF: read failed");
+			break;
+		}
+
+		byte_addr += chunk_len;
+		if (byte_addr == page_size) {
+			page_addr++;
+			byte_addr = 0;
+		}
+	}
+
+	return ret;
+}
+
 int spi_flash_cmd_read_fast(struct spi_flash *flash, u32 offset,
 		size_t len, void *data)
 {
@@ -391,6 +442,56 @@ int spi_flash_bank_config(struct spi_flash *flash, u8 idcode0)
 	return 0;
 }
 #endif
+
+int spi_flash_en_quad_mode(struct spi_flash *flash)
+{
+	u8 stat, con, cd;
+	u16 cr;
+	int ret;
+	cd = CMD_WRITE_STATUS;
+
+	ret = spi_flash_cmd_write_enable(flash);
+	if (ret < 0) {
+		debug("SF: enabling write failed\n");
+		goto out;
+	}
+	ret = spi_flash_cmd(flash->spi, CMD_READ_STATUS, &stat, 1);
+	ret = spi_flash_cmd(flash->spi, CMD_READ_CONFIG, &con, 1);
+	if (ret < 0) {
+		debug("%s: SF: read CR failed\n", __func__);
+		goto out;
+	}
+	/* Byte 1 - status reg, Byte 2 - config reg */
+	cr = ((con | (0x1 << 1)) << 8) | (stat << 0);
+
+	ret = spi_flash_cmd_write(flash->spi, &cd, 1, &cr, 2);
+	if (ret) {
+		debug("SF: fail to write conf register\n");
+		goto out;
+	}
+
+	ret = spi_flash_cmd_wait_ready(flash, SPI_FLASH_PROG_TIMEOUT);
+	if (ret < 0) {
+		debug("SF: write conf register timed out\n");
+		goto out;
+	}
+
+	ret = spi_flash_cmd(flash->spi, CMD_READ_STATUS, &stat, 1);
+	ret = spi_flash_cmd(flash->spi, CMD_READ_CONFIG, &con, 1);
+	if (ret < 0) {
+		debug("%s: SF: read CR failed\n", __func__);
+		goto out;
+	}
+	debug("%s: *** CR = %x\n", __func__, con);
+
+	ret = spi_flash_cmd_write_disable(flash);
+	if (ret < 0) {
+		debug("SF: disabling write failed\n");
+		goto out;
+	}
+out:
+	return ret;
+}
 
 #ifdef CONFIG_OF_CONTROL
 int spi_flash_decode_fdt(const void *blob, struct spi_flash *flash)
@@ -543,6 +644,10 @@ struct spi_flash *spi_flash_probe(unsigned int bus, unsigned int cs,
 		goto err_manufacturer_probe;
 #endif
 
+#ifdef CONFIG_SF_QUAD_RD
+	spi_flash_en_quad_mode(flash);
+#endif
+
 #ifdef CONFIG_OF_CONTROL
 	if (spi_flash_decode_fdt(gd->fdt_blob, flash)) {
 		debug("SF: FDT decode error\n");
@@ -593,7 +698,11 @@ void *spi_flash_do_alloc(int offset, int size, struct spi_slave *spi,
 	flash->name = name;
 	flash->poll_cmd = CMD_READ_STATUS;
 
+#ifdef CONFIG_SF_QUAD_RD
+	flash->read = spi_flash_cmd_read_quad;
+#else
 	flash->read = spi_flash_cmd_read_fast;
+#endif
 	flash->write = spi_flash_cmd_write_multi;
 	flash->erase = spi_flash_cmd_erase;
 
