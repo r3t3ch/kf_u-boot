@@ -964,4 +964,11 @@ struct prcm_regs const dra7xx_prcm = {
 	.prm_vc_val_bypass			= 0x4ae07da0,
 	.prm_vc_cfg_i2c_mode			= 0x4ae07db4,
 	.prm_vc_cfg_i2c_clk			= 0x4ae07db8,
+
+	.prm_sldo_core_setup			= 0x4ae07dc4,
+	.prm_sldo_core_ctrl			= 0x4ae07dc8,
+	.prm_sldo_mpu_setup			= 0x4ae07dcc,
+	.prm_sldo_mpu_ctrl			= 0x4ae07dd0,
+	.prm_sldo_mm_setup			= 0x4ae07dd4,	// TRM uses GPU instead of MM
+	.prm_sldo_mm_ctrl			= 0x4ae07dd8,	// TRM uses GPU instead of MM
 };
