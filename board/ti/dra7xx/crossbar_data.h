@@ -40,6 +40,10 @@ const struct crossbar_entry mpu_irq_map[] = {
 	{143, 145},	/* DSP1 MMU1 */
 	{144, 146},	/* DSP2 MMU0 */
 	{145, 147},	/* DSP2 MMU1 */
+	{50, 334},	/* CPSW_RX_THRESH */
+	{51, 335},	/* CPSW_RX */
+	{52, 336},	/* CPSW_TX */
+	{53, 337},	/* CPSW_MISC */
 };
 
 const struct crossbar_entry sdma_dreq_map[] = {
