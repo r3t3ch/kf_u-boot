@@ -358,8 +358,9 @@ static void format_flash_cmd(char* cmd)
 {
 	int i;
 	char *parts[] = {"xloader", "bootloader", "boot", "system", "userdata",
-		            "cache", "recovery","environment", "zImage", "zimage"};	
-	for(i = 0;i < 10;i++) {
+		            "cache", "recovery","environment", "zImage", "zimage",
+					"misc", "efs", "crypto"};
+	for(i = 0;i < 13;i++) {
 		if(!strncmp(parts[i],cmd,strlen(parts[i]))) {
 			*(cmd + strlen(parts[i])) = '\0';
 			break;
@@ -719,6 +720,7 @@ static int fastboot_erase(const char *partition)
 {
 	struct fastboot_ptentry *ptn;
 	int status = 0;
+	unsigned int sectors;
 	char start[32], length[32];
 	char *dev[3] = { "mmc", "dev", "1" };
 	char *erase[4]	= { "mmc", "erase", NULL, NULL, };
@@ -732,9 +734,13 @@ static int fastboot_erase(const char *partition)
 		fastboot_tx_write_str("FAIL: partition doesn't exist");
 		status = -1;
 	} else {
-
-		sprintf(length, "0x%x", ptn->length);
-		sprintf(start, "0x%x", ptn->start);
+		sectors = ptn->length / 512;
+		/*Sectors should be aligned to 1024*/
+		if (sectors < 0x400) {
+			sectors = 0x400;
+		}
+		sprintf(length, "0x%x", sectors);
+		sprintf(start, "0x%x", (ptn->start & ~(0x400 - 1)));
 		erase[2] = start;
 		erase[3] = length;
 
