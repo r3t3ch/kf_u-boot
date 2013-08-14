@@ -44,6 +44,7 @@
 #endif
 
 #define CTRL_CORE_MPU_IRQ_159_REG			0x4a002b76
+#define CTRL_CORE_MPU_IRQ_158_REG			0x4a002b74
 #define CTRL_CORE_MPU_IRQ_155_REG			0x4a002b6e
 #define CTRL_CORE_MPU_IRQ_154_REG			0x4a002b6c
 #define CTRL_CORE_MPU_IRQ_156_REG			0x4a002b70
@@ -164,6 +165,7 @@ static void set_crossbar_mpu_irq(void)
 {
 	/* MPU_IRQ mapping to CROSSBAR_IRQ */
 	writew(217, CTRL_CORE_MPU_IRQ_159_REG); /* RTC_IRQ */
+	writew(354, CTRL_CORE_MPU_IRQ_158_REG); /* VPE_IRQ */
 	writew(150, CTRL_CORE_MPU_IRQ_155_REG); /* MCASP3_IRQ_AREVT */
 	writew(151, CTRL_CORE_MPU_IRQ_154_REG); /* MCASP3_IRQ_AXEVT */
 	writew(156, CTRL_CORE_MPU_IRQ_156_REG); /* MCASP6_IRQ_AREVT */
