@@ -174,7 +174,7 @@
 	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile};\0" \
 
 
-#ifdef SD_BOOT
+#ifndef CONFIG_CMD_FASTBOOT
 #define CONFIG_BOOTCOMMAND \
 	"run findfdt; " \
 	"mmc dev ${mmcdev}; if mmc rescan; then " \

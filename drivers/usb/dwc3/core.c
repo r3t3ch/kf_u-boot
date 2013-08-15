@@ -357,6 +357,9 @@ void dwc3_wrapper_init(void);
 int __devinit dwc3_probe(struct platform_device *pdev)
 {
 	struct dwc3		*dwc;
+	#if !defined(CONFIG_DRA7XX)
+	u8 vali;
+	#endif
 
 	int			ret = -ENOMEM;
 

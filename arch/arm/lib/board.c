@@ -656,7 +656,7 @@ void board_init_r(gd_t *id, ulong dest_addr)
 	/* Initialize from environment */
 	load_addr = getenv_ulong("loadaddr", 16, load_addr);
 
-#ifdef CONFIG_BOARD_LATE_INIT
+#if defined(CONFIG_BOARD_LATE_INIT) && defined(CONFIG_CMD_FASTBOOT)
 	board_late_init();
 #endif
 

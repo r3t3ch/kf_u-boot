@@ -1914,7 +1914,7 @@ bootimg_print_image_hdr (boot_img_hdr *hdr)
 		printf ("   id[%d]:   0x%x\n", i, hdr->id[i]);
 }
 
-#ifdef __CONFIG_DRA7XX_EVM_H
+#if defined(__CONFIG_DRA7XX_EVM_H) && defined(CONFIG_CMD_FASTBOOT)
 
 #define _ALIGN(n,pagesz) ((n + (pagesz - 1)) & (~(pagesz - 1)))
 

@@ -75,7 +75,6 @@
 #define CONFIG_USB_DWC3_WRAP_REGS_END		((void *)0x4888ffff)
 #ifdef CONFIG_USB_DWC3
 #define CONFIG_SYS_L2CACHE_OFF	1
-#define CONFIG_CMD_FASTBOOT	1
 #endif
 #define CONFIG_BOARD_MACH_TYPE		 4070
 #define MEMORY_BASE			         0x80000000
