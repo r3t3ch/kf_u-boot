@@ -65,10 +65,23 @@
 #include <bootimg.h>
 #include <mmc.h>
 #include <malloc.h>
+#include <asm/io.h>
 #include "g_fastboot.h"
 
 /* The 64 defined bytes plus \0 */
 #define RESPONSE_LEN	(64 + 1)
+#define CONTROL_STATUS	0x4A002134
+#define DEVICETYPE_MASK	 (0x7 << 6)
+/* omap-type */
+typedef enum {
+	OMAP_TYPE_TEST,
+	OMAP_TYPE_EMU,
+	OMAP_TYPE_SEC,
+	OMAP_TYPE_GP,
+	OMAP_TYPE_BAD,
+} omap_type;
+
+
 
 struct fastboot_config fb_cfg;
 
@@ -108,6 +121,32 @@ static void cb_reboot(struct usb_ep *ep, struct usb_request *req)
 static int strcmp_l1(const char *s1, const char *s2)
 {
 	return strncmp(s1, s2, strlen(s1));
+}
+
+static char *get_cpu_type(void)
+{
+	static char proc_type[8];
+	unsigned int value;
+
+	value = readl(CONTROL_STATUS);
+	value &= DEVICETYPE_MASK;
+	
+	switch (value >> 6) {
+	case OMAP_TYPE_EMU:
+		strcpy(proc_type, "EMU");
+		break;
+	case OMAP_TYPE_SEC:
+		strcpy(proc_type, "HS");
+		break;
+	case OMAP_TYPE_GP:
+		strcpy(proc_type, "GP");
+		break;
+	default:
+		strcpy(proc_type, "unknown");
+		break;
+	}
+
+	return proc_type;
 }
 
 static void cb_getvar(struct usb_ep *ep, struct usb_request *req)
@@ -158,7 +197,7 @@ static void cb_getvar(struct usb_ep *ep, struct usb_request *req)
 			strcpy(response, "FAILValue not set");
 	} else if (!strcmp_l1("secure", cmd)) {
 
-		s = fb_find_usb_string(FB_STR_PROC_TYPE_IDX);
+		s = get_cpu_type();
 		if (s)
 			strncat(response, s, sizeof(response));
 		else
@@ -171,6 +210,7 @@ static void cb_getvar(struct usb_ep *ep, struct usb_request *req)
 	}
 	fastboot_tx_write_str(response);
 }
+
 
 static unsigned int rx_bytes_expected(void)
 {
