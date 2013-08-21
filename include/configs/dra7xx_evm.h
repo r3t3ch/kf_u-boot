@@ -82,6 +82,13 @@
 #define CONFIG_ADDR_DOWNLOAD		 (MEMORY_BASE + 0x02000000)
 #define KERNEL_ENTRY                 0x80300000
 #define DEVICE_TREE	                 0x80f80000
+#define DRA7XX_PUBLIC_SAR_RAM_1_FREE           (0x4AE26000 + 0xFE0)
+#define DRA7XX_PRM_RSTCTRL_RESET_WARM_BIT      (1<<0)
+#define DRA7XX_PRM_RSTST                       0x4AE07D04
+#define DRA7XX_PRM_RSTCTRL                     0x4AE07D00
+#define DRA7XX_PRM_RSTST_CLR                   0xfff
+#define DRA7XX_REBOOT_REASON_SIZE              0xf
+
 
 /* CPSW Ethernet */
 #define CONFIG_CMD_NET

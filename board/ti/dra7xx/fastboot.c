@@ -1,85 +1,40 @@
 #include <common.h>
-#include <usb/fastboot.h>
 #include <asm/io.h>
+#include <asm-generic/gpio.h>
+#include <config.h>
 
-#define CONTROL_ID_CODE		0x4AE0C204
+#define FASTBOOT_BUTTON_GPIO 171
 
-
-char serialno[100];
-
-/* To support the Android-style naming of flash */
-#define MAX_PTN 16
-
-static fastboot_ptentry ptable[MAX_PTN];
-static unsigned int pcount = 0;
-
-static struct usb_string def_usb_fb_strings[] = {
-	{ FB_STR_SERIAL_IDX,            &serialno },
-	{  }
-};
-
-static struct usb_gadget_strings def_fb_strings = {
-	.language       = 0x0409, /* en-us */
-	.strings        = def_usb_fb_strings,
-};
-
-/*
- * Hardcoded memory region to stash data which comes over USB before it is
- * stored on media
- */
-DECLARE_GLOBAL_DATA_PTR;
-#define SZ_16M                          0x01000000
-#define SZ_512M                         0x20000000
-#define CFG_FASTBOOT_TRANSFER_BUFFER (void *)(gd->bd->bi_dram[0].start + SZ_16M)
-#define CFG_FASTBOOT_TRANSFER_BUFFER_SIZE (SZ_512M - SZ_16M)
-
-int fastboot_board_init(struct fastboot_config *interface,
-		struct usb_gadget_strings **str) {
-
-	u32 val[4] = { 0 };
-	u32 reg;
-
-	interface->transfer_buffer = CFG_FASTBOOT_TRANSFER_BUFFER;
-	interface->transfer_buffer_size = CFG_FASTBOOT_TRANSFER_BUFFER_SIZE;
-
-	/* Determine the serial number */
-	reg = CONTROL_ID_CODE;
-	val[2] = readl(reg + 0xC);
-	val[3] = readl(reg + 0x10);
-	printf("Device Serial Number: %08X%08X\n", val[3], val[2]);
-	sprintf(serialno, "%08X%08X", val[3], val[2]);
-
-	*str = &def_fb_strings;
-    
-	board_mmc_ftbtptn_init();
-	return 0;
-}
-
-fastboot_ptentry *fastboot_flash_find_ptn(const char *name)
+int check_fastboot(void)
 {
-	unsigned int n;
-
-	for (n = 0; n < MAX_PTN; n++) {
-		/* Make sure a substring is not accepted */
-		if (strlen(name) == strlen(ptable[n].name)) {
-			if (0 == strcmp(ptable[n].name, name))
-				return ptable + n;
+	if (!gpio_get_value(FASTBOOT_BUTTON_GPIO)) {
+		/* small debounce to make sure the button is really pressed */
+		udelay(200000);
+		if (!gpio_get_value(FASTBOOT_BUTTON_GPIO)) {
+			printf("Button press detected: go to fastboot mode\n");
+			return 1;
 		}
 	}
 
-	return NULL;
-}
-void fastboot_flash_reset_ptn(void)
-{
-	pcount = 0;
-}
-
-void fastboot_flash_add_ptn(fastboot_ptentry *ptn, int count)
-{
-	if(pcount < MAX_PTN) {
-	    memcpy(ptable + pcount, ptn, sizeof(*ptn));
-	    pcount++;
-	}
+	/* Check if we are coming from a warm reset */
+	if (__raw_readl(DRA7XX_PRM_RSTST) & DRA7XX_PRM_RSTCTRL_RESET_WARM_BIT)
+		if (!strncmp((const char *)DRA7XX_PUBLIC_SAR_RAM_1_FREE,
+			"bootloader", DRA7XX_REBOOT_REASON_SIZE)) {
+			strncpy((char *)DRA7XX_PUBLIC_SAR_RAM_1_FREE, "",
+				DRA7XX_REBOOT_REASON_SIZE);
+			return 1;
+		}
+	return 0;
 }
 
+void fastboot_reboot_bootloader(void) {
+	/* clear all reset events */
+	__raw_writel(DRA7XX_PRM_RSTST_CLR, PRM_RSTST);
+	strncpy((char *)DRA7XX_PUBLIC_SAR_RAM_1_FREE, "bootloader",
+			DRA7XX_REBOOT_REASON_SIZE - 1);
+	*(((char*)DRA7XX_PUBLIC_SAR_RAM_1_FREE) + 
+					DRA7XX_REBOOT_REASON_SIZE - 1) = '\0';
+	/* trigger warm reset */
+	__raw_writel(DRA7XX_PRM_RSTCTRL_RESET_WARM_BIT, DRA7XX_PRM_RSTCTRL);
+}
 

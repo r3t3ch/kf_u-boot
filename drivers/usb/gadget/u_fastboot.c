@@ -66,12 +66,14 @@
 #include <mmc.h>
 #include <malloc.h>
 #include <asm/io.h>
+#include <asm-generic/gpio.h>
 #include "g_fastboot.h"
 
 /* The 64 defined bytes plus \0 */
 #define RESPONSE_LEN	(64 + 1)
 #define CONTROL_STATUS	0x4A002134
 #define DEVICETYPE_MASK	 (0x7 << 6)
+
 /* omap-type */
 typedef enum {
 	OMAP_TYPE_TEST,
@@ -428,16 +430,24 @@ static void cb_erase(struct usb_ep *ep, struct usb_request *req)
 	}
 }
 
+void fastboot_reboot_bootloader(void) {
+}
+
+int check_fastboot(void) {
+	return 0;
+}
+
 static void cb_reboot_bootloader(struct usb_ep *ep, struct usb_request *req)
 {
-	char *cmd = req->buf + 6;
-	format_flash_cmd(cmd);
-	if(fastboot_erase(cmd) != 0) {
-		printf("Unable to erase partition\n");
-	}
+	fastboot_tx_write_str("OKAY");
+	fastboot_reboot_bootloader();
 }
 
 static struct cmd_dispatch_info cmd_dispatch_info[] = {
+	{
+		.cmd = "reboot-bootloader",
+		.cb  = cb_reboot_bootloader,
+	},
 	{
 		.cmd = "reboot",
 		.cb = cb_reboot,
@@ -465,10 +475,6 @@ static struct cmd_dispatch_info cmd_dispatch_info[] = {
 	{
 		.cmd = "erase",
 		.cb  = cb_erase,
-	},
-	{
-		.cmd = "reboot-bootloader",
-		.cb  = cb_reboot_bootloader,
 	}
 };
 

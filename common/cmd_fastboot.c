@@ -2,7 +2,7 @@
 #include <command.h>
 #include <usb/fastboot.h>
 
-static int do_fastboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
+int do_fastboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
 	int ret = 1;
 
