@@ -420,8 +420,8 @@ struct _partition {
 static struct _partition partitions[] = {
 	{ "-", 128 },
 	{ "xloader", 128 },
-	{ "bootloader", 256 },
-	{ "environment", 256 },
+	{ "bootloader", 384 },
+	{ "environment", 128 },
 	{ "misc", 128 },
 	{ "-", 384 },
 	{ "efs", 16384 },
