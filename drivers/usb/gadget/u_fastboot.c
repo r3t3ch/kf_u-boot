@@ -368,7 +368,7 @@ static void cb_oem(struct usb_ep *ep, struct usb_request *req)
 {
 	char buf[FORMAT_LEN];
 #ifdef CONFIG_SPL_SPI_SUPPORT
-	char *sf_erase[4] = {"sf", "erase", "0", "10000"};
+	char *sf_erase[4] = {"sf", "erase", "0", "20000"};
 	int status;
 	char *sf_probe[3] = {"sf", "probe", "0"};
 	if (strncmp(req->buf + 4, "spi", 3) == 0) {
@@ -640,7 +640,8 @@ static int fastboot_flash(const char *partition)
 
 #ifdef CONFIG_SPL_SPI_SUPPORT
 	char *sf_probe[3] = {"sf", "probe", "0"};
-	char *sf_write_xloader[5] = {"sf", "write", NULL, "0", "10000"};
+	char *sf_write_xloader[5] = {"sf", "write", NULL, "0", "20000"};
+	char *sf_update_xloader[5] = {"sf", "update", NULL, "0", "20000"};
 	char *sf_write_bootloader[5] = {"sf", "write", NULL, "80000", "80000"};
 	char *sf_update_bootloader[5] = {"sf", "update", NULL, "80000", "80000"};
 
