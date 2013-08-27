@@ -654,7 +654,17 @@ static int fastboot_flash(const char *partition)
 			return status;
 		}
 		sf_write_xloader[2] = source;
+		sf_update_xloader[2] = source;
 		sprintf(source, "0x%x", (unsigned int)fb_cfg.transfer_buffer);
+
+		printf("Updating X-LOADER to SPI\n");
+		status = do_spi_flash(NULL, 0, 5, sf_update_xloader);
+		if(status) {
+			fastboot_tx_write_str("FAIL:Could not update xloader to SPI");
+			return status;
+		}
+
+		printf("Writing X-LOADER to SPI\n");
 		status = do_spi_flash(NULL, 0, 5, sf_write_xloader);
 		if (status) {
 			fastboot_tx_write_str("FAIL:Could not write xloader to SPI");
