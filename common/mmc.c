@@ -18,7 +18,7 @@
  * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
  * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
  * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
  * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
@@ -58,7 +58,7 @@ static const u8 random_uuid[16] = {
 	0x97, 0x46, 0x59, 0x48, 0x69, 0xae, 0xc3, 0x4e,
 };
 
-	
+
 struct efi_entry {
 	u8 type_uuid[16];
 	u8 uniq_uuid[16];
@@ -97,7 +97,7 @@ struct ptable {
 		struct efi_header header;
 		u8 block[512];
 	};
-	struct efi_entry entry[EFI_ENTRIES];	
+	struct efi_entry entry[EFI_ENTRIES];
 };
 
 static void init_mbr(u8 *mbr, u32 blocks)
@@ -122,8 +122,6 @@ static void init_mbr(u8 *mbr, u32 blocks)
 
 	mbr[0x1fe] = 0x55;
 	mbr[0x1ff] = 0xaa;
-
-    
 }
 static void start_ptbl(struct ptable *ptbl, u64 blocks)
 {
@@ -228,7 +226,7 @@ static void import_efi_partition(struct efi_entry *entry, int count)
 
 	ret = memcmp(entry->type_uuid, partition_type, sizeof(partition_type));
 	if (ret != 0) {
-		//DBG("memcmp failed for count=%d, ret = %d. entry->type_uuid "
+		//DBG("memcmp failed for count=%d, ret = %d. entry->type_uuid"
 		//    "and partition_type are mismatched.\n", count, ret);
 		return;
 	}
@@ -245,10 +243,10 @@ static void import_efi_partition(struct efi_entry *entry, int count)
 
 	if (!strcmp(e.name, "environment"))
 		e.flags |= FASTBOOT_PTENTRY_FLAGS_WRITE_ENV;
-	
+
 	fastboot_flash_add_ptn(&e, count);
 
-	
+
 #ifdef DEBUG
 	if (e.length > 0x100000)
 		DBG("%8d %7dM %s\n", e.start,
@@ -257,7 +255,7 @@ static void import_efi_partition(struct efi_entry *entry, int count)
 		DBG("%8d %7dK %s\n", e.start,
 			(u32)(e.length/0x400), e.name);
 #endif
-	
+
 }
 
 static int load_ptbl(void)
@@ -267,21 +265,21 @@ static int load_ptbl(void)
 
 	struct ptable *gpt;
 	struct mmc* mmc = NULL;
-	
+
 	mmc = find_mmc_device(MMC_DEVICE);
-	if(mmc == NULL) {
+	if (mmc == NULL) {
 		printf("No MMC in slot 1\n");
 		return -1;
 	}
 	mmc->has_init = 0;
 	mmc_init(mmc);
-	if(r!= 0) {
+	if (r!= 0) {
 		printf("mmc init failed\n");
 		return r;
 	}
-	
+
 	int gpt_size = sizeof(struct ptable);
-	
+
 	gpt =  (struct ptable *) malloc(gpt_size);
 	if (!gpt) {
 		r = -1;
@@ -290,7 +288,7 @@ static int load_ptbl(void)
 
 	ptbl_sectors = (u64)(gpt_size / MMCSD_SECTOR_SIZE);
 
-	r = mmc->block_dev.block_read(1,0,ptbl_sectors,(void*)gpt);
+	r = mmc->block_dev.block_read(1, 0, ptbl_sectors,( void*)gpt);
 	if (r == -1) {
 		printf("error reading GPT\n");
 		goto fail;
@@ -348,28 +346,28 @@ static u64 get_entry_size_kb(struct efi_entry *entry, const char *ptn)
 
 char *get_ptn_size(char *buf, const char *ptn)
 {
-		u64 ptbl_sectors = 0;
+	u64 ptbl_sectors = 0;
 	int i = 0, r = 0;
 	u32 sz_mb;
 	u64 sz = 0;
 
 	struct ptable *gpt;
 	struct mmc* mmc = NULL;
-	
+
 	mmc = find_mmc_device(MMC_DEVICE);
-	if(mmc == NULL) {
+	if (mmc == NULL) {
 		printf("No MMC in slot 1\n");
 		return NULL;
 	}
 	mmc->has_init = 0;
 	mmc_init(mmc);
-	if(r!= 0) {
+	if (r!= 0) {
 		printf("mmc init failed\n");
 		return NULL;
 	}
-	
+
 	int gpt_size = sizeof(struct ptable);
-	
+
 	gpt =  (struct ptable *) malloc(gpt_size);
 	if (!gpt) {
 		r = -1;
@@ -392,10 +390,10 @@ char *get_ptn_size(char *buf, const char *ptn)
 
 	for (i = 0; i < EFI_ENTRIES; i++) {
 		sz = get_entry_size_kb(&gpt->entry[i], ptn);
-		if(sz)
+		if (sz)
 			break;
 	}
-	
+
 	if (sz >= 0xFFFFFFFF) {
 		sz_mb = (u32)(sz >> 20);
 		DBG("sz is > 0xFFFFFFFF\n");
@@ -444,32 +442,32 @@ static int do_format(void)
 	struct mmc* mmc = NULL;
 	int status = 0;
 	char *mmc_write[5]	= {"mmc", "write", NULL, NULL, NULL};
-	
+
 	char *dev[3] = { "mmc", "dev", "1" };
 	char source[32], dest[32], length[32];
 
 	mmc = find_mmc_device(MMC_DEVICE);
-	if(mmc == NULL) {
+	if (mmc == NULL) {
 		return -1;
 	}
 	mmc->has_init = 0;
 	status = mmc_init(mmc);
-	if(status != 0) {
+	if (status != 0) {
 		printf("mmc init failed\n");
 		return status;
 	}
 
-	status = do_mmcops(NULL, 0, 3, dev); 
-	if(status) {	
+	status = do_mmcops(NULL, 0, 3, dev);
+	if (status) {
 		printf("Unable to set MMC device\n");
 		return status;
 	}
 
 	blocks = mmc->block_dev.lba;
-	
+
 	ptbl = (struct ptable *) malloc(sizeof(struct ptable));
 
-	start_ptbl(ptbl, blocks);    
+	start_ptbl(ptbl, blocks);
 	n = 0;
 	next = 0;
 	for (n = 0, next = 0; partitions[n].name; n++) {
@@ -484,23 +482,20 @@ static int do_format(void)
 	    if (add_ptn(ptbl, next, next + sz - 1, partitions[n].name)) {
 	        printf("Add partition failed\n");
 			status = -1;
-	        goto fail;	        
+	        goto fail;
 		}
 		next += sz;
 	}
 	end_ptbl(ptbl);
-    
-
-	fastboot_flash_reset_ptn();     
-       
-
+	fastboot_flash_reset_ptn();
 	mmc_write[2] = source;
 	mmc_write[3] = dest;
 	mmc_write[4] = length;
 
 	sprintf(source, "0x%x", (unsigned int)ptbl);
 	sprintf(dest, "0x%x", 0x00);
-	sprintf(length, "0x%x", (unsigned int)((sizeof(struct ptable)/mmc->block_dev.blksz)+1));
+	sprintf(length, "0x%x", (unsigned int)
+			((sizeof(struct ptable)/mmc->block_dev.blksz) + 1));
 
 	if (do_mmcops(NULL, 0, 5, mmc_write)) {
 		printf("Writing mbr is FAILED!\n");
@@ -510,7 +505,7 @@ static int do_format(void)
 	}
 
 	load_ptbl();
-    
+
 fail:
 	free(ptbl);
 	return status;
@@ -534,6 +529,4 @@ int board_late_init(void)
 {
 	return load_ptbl();
 }
-
-
 

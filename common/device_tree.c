@@ -58,28 +58,8 @@ static int find_dev_tree(void);
 /**
  * find_dev_tree(void) - Find the device tree.
  *
- * This API will search multiple partitions looking for a device tree.
- * The search order is:
- * 1.  Look for a partition called device tree.  This would just be the
- *     device tree blob and will not have any associated header.  So whatever
- *     the contents is here is assumed to be a device tree.
- *
- * 2.  Look for an enviroment partition.  This partition may contain a device
- *     tree.  So if we find the partition there may or may not be a device tree
- *     contained within this partition.  Only if the device tree size is
- *     populated in the enviroment structure do we actually say we have a device
- *     tree.
- *
- * 3.  Finally look in the boot partition at the second data section.  The
- *     boot image may have contain a second data section.  Like the enviroment
- *     partition is the size is valid then we assume it to be device tree.
- *
- * Of course the code is not smart enough to actually tell if the data that
- * exists is a device tree.  But patches welcome for differentiation.
- *
- * Returns 0 if the device tree is found or -1 if no device tree is found.
  **/
- 
+
 static int find_dev_tree(void)
 {
 	struct fastboot_ptentry *pte;
@@ -130,16 +110,15 @@ u32 load_dev_tree(u32 atag_load_addr)
 		goto out;
 	}
 	mmc = find_mmc_device(1);
-	if(mmc == NULL) {
+	if (mmc == NULL) {
 		goto out;
 	}
-	
+
 	status = mmc_init(mmc);
-	if(status != 0) {
+	if (status != 0) {
 		printf("mmc init failed\n");
 		goto out;
 	}
-	
 
 	sector_sz = mmc->block_dev.blksz;
 	sector = dt_data->pte->start;
@@ -149,8 +128,9 @@ u32 load_dev_tree(u32 atag_load_addr)
 		num_sectors = (dt_data->dev_tree_sz / sector_sz);
 
 
-	status = mmc->block_dev.block_read(1,sector,num_sectors,(void *)dt_data->dev_tree_load_addr);
-	if(status < 0) {
+	status = mmc->block_dev.block_read(1, sector, num_sectors,
+			(void *)dt_data->dev_tree_load_addr);
+	if (status < 0) {
 		printf("mmc read failed\n");
 		goto out;
 	}
@@ -160,7 +140,7 @@ u32 load_dev_tree(u32 atag_load_addr)
 		dt_data->dev_tree_sz);
 
 out:
-	if (dt_data->dev_tree_load_addr) {		
+	if (dt_data->dev_tree_load_addr) {
 		dt_load_addr = dt_data->dev_tree_load_addr;
 	}
 
@@ -168,3 +148,4 @@ out:
 	return dt_load_addr;
 
 }
+

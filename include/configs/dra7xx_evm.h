@@ -76,12 +76,6 @@
 #ifdef CONFIG_USB_DWC3
 #define CONFIG_SYS_L2CACHE_OFF	1
 #endif
-#define CONFIG_BOARD_MACH_TYPE		 4070
-#define MEMORY_BASE			         0x80000000
-#define CONFIG_ADDR_ATAGS		     (MEMORY_BASE + 0x100)
-#define CONFIG_ADDR_DOWNLOAD		 (MEMORY_BASE + 0x02000000)
-#define KERNEL_ENTRY                 0x80300000
-#define DEVICE_TREE	                 0x80f80000
 #define DRA7XX_PUBLIC_SAR_RAM_1_FREE           (0x4AE26000 + 0xFE0)
 #define DRA7XX_PRM_RSTCTRL_RESET_WARM_BIT      (1<<0)
 #define DRA7XX_PRM_RSTST                       0x4AE07D04
