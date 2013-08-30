@@ -99,6 +99,8 @@ static unsigned int download_bytes;
 int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
 static int fastboot_erase(const char *partition);
 static int fastboot_flash(const char *cmdbuf);
+static int fastboot_update_zimage(void);
+
 
 fastboot_ptentry *fastboot_flash_find_ptn(const char *name);
 
@@ -415,7 +417,7 @@ static void cb_flash(struct usb_ep *ep, struct usb_request *req)
 {    
 	char *cmd = req->buf + 6;
 	format_flash_cmd(cmd);
-	if(fastboot_flash(cmd) != 0) {
+	if (fastboot_flash(cmd) != 0) {
 		printf("Unable to flash partition\n");
 	}
     return;
@@ -478,16 +480,13 @@ static struct cmd_dispatch_info cmd_dispatch_info[] = {
 	}
 };
 
-#ifdef ZIMAGE_FLASH
 static u32 fastboot_get_boot_ptn(boot_img_hdr *hdr, char *response,
 	                                   struct mmc* mmc)
 {
 	u32 hdr_sectors = 0;
-	int ret = -1;
 	u32 sector_size;
 	struct fastboot_ptentry *pte = NULL;
-	int status;
-
+	int status = 0;
 	strcpy(response, "OKAY");
 
 	pte = fastboot_flash_find_ptn("boot");
@@ -497,22 +496,19 @@ static u32 fastboot_get_boot_ptn(boot_img_hdr *hdr, char *response,
 	}
 
 	/* Read the boot image header */
-	sector_size = 512;
+	sector_size = mmc->block_dev.blksz;
 	hdr_sectors = (sizeof(struct boot_img_hdr)/sector_size) + 1;
-	status = mmc->block_dev.block_read(1,pte->start,
+	status = mmc->block_dev.block_read(1, pte->start,
 			hdr_sectors, (void *)hdr);
 
-	if(status) {
+	if (status < 0) {
 		strcpy(response, "FAILCannot read hdr from boot partition");
 		goto out;
 	}
-
 	if (memcmp(hdr->magic, BOOT_MAGIC, 8) != 0) {
 		printf("bad boot image magic\n");
 		strcpy(response, "FAILBoot partition not initialized");
 		goto out;
-	}else {
-		printf("Found boot magic\n");
 	}
 
 	return hdr_sectors;
@@ -521,10 +517,9 @@ out:
 	strcpy(response, "INFO");
 	fastboot_tx_write_str(response);
 
-	return ret;
+	return -1;
 }
 
-static void* read_buffer;
 #define CEIL(a, b) (((a) / (b)) + ((a % b) > 0 ? 1 : 0))
 
 static int fastboot_update_zimage(void)
@@ -539,29 +534,22 @@ static int fastboot_update_zimage(void)
 	struct mmc* mmc = NULL;
 	struct fastboot_ptentry *pte = NULL;
 	char response[128];
+	u32 addr = CONFIG_ADDR_DOWNLOAD;
 
 	strcpy(response, "OKAY");
-	printf("Flashing zImage...%d\n",download_bytes);
-	read_buffer = malloc(download_bytes);
-	printf("Created read_buffer\n");
-	if (read_buffer == NULL) {
-		printf("read buffer is null\n");
-		strcpy(response, "FAILINVALID read_buffer");
-		ret = -1;
-		goto out;
-	}
-	
+	printf("Flashing zImage...%d bytes\n", download_bytes);
+
 	mmc = find_mmc_device(1);
-	if(mmc == NULL) {		
+	if (mmc == NULL) {
 		strcpy(response, "FAILCannot find mmc at slot 1");
 		goto out;
 	}
-	if(mmc_init(mmc) != 0) {
+	if (mmc_init(mmc) != 0) {
 		strcpy(response, "FAILCannot init mmc at slot 1");
-		goto out;		
+		goto out;
 	}
 
-	hdr = (boot_img_hdr *) read_buffer;
+	hdr = (boot_img_hdr *) addr;
 
 	hdr_sectors = fastboot_get_boot_ptn(hdr, response, mmc);
 	if (hdr_sectors <= 0) {
@@ -571,10 +559,10 @@ static int fastboot_update_zimage(void)
 		goto out;
 	}
 	pte = fastboot_flash_find_ptn("boot");
-	if(pte == NULL) {
+	if (pte == NULL) {
 		sprintf(response + strlen(response),
 			"FAILINVALID partition");
-		ret = -1;		
+		ret = -1;
 		goto out;
 	}
 
@@ -588,9 +576,9 @@ static int fastboot_update_zimage(void)
 
 	ramdisk_buffer = (u8 *)hdr;
 	ramdisk_buffer += (hdr_sectors * mmc->block_dev.blksz);
-	printf("0x%x\n",ramdisk_sector_start);
-	if (mmc->block_dev.block_read(1,ramdisk_sector_start,
-		ramdisk_sectors, ramdisk_buffer)) {
+	ret = mmc->block_dev.block_read(1, ramdisk_sector_start,
+		ramdisk_sectors, ramdisk_buffer);
+	if (ret < 0) {
 		sprintf(response, "FAILCannot read ramdisk from boot "
 								"partition");
 		ret = -1;
@@ -599,8 +587,9 @@ static int fastboot_update_zimage(void)
 
 	/* Change the boot img hdr */
 	hdr->kernel_size = download_bytes;
-	if (mmc->block_dev.block_write(1,pte->start,
-		hdr_sectors, (void *)hdr)) {
+	ret = mmc->block_dev.block_write(1, pte->start,
+		hdr_sectors, (void *)hdr);
+	if (ret < 0) {
 		sprintf(response, "FAILCannot writeback boot img hdr");
 		ret = -1;
 		goto out;
@@ -610,8 +599,9 @@ static int fastboot_update_zimage(void)
 	kernel_sector_start = pte->start + sectors_per_page;
 	kernel_sectors = CEIL(hdr->kernel_size, hdr->page_size)*
 					sectors_per_page;
-	if (mmc->block_dev.block_write(1,kernel_sector_start, kernel_sectors,
-			fb_cfg.transfer_buffer)) {
+	ret = mmc->block_dev.block_write(1, kernel_sector_start, kernel_sectors,
+			fb_cfg.transfer_buffer);
+	if (ret < 0) {
 		sprintf(response, "FAILCannot write new kernel");
 		ret = -1;
 		goto out;
@@ -621,20 +611,20 @@ static int fastboot_update_zimage(void)
 	ramdisk_sector_start = pte->start + sectors_per_page;
 	ramdisk_sector_start += CEIL(hdr->kernel_size, hdr->page_size)*
 						sectors_per_page;
-	if (mmc->block_dev.block_write(1,ramdisk_sector_start, ramdisk_sectors,
-						ramdisk_buffer)) {
+	ret = mmc->block_dev.block_write(1, ramdisk_sector_start, ramdisk_sectors,
+						ramdisk_buffer);
+	if (ret < 0) {
 		sprintf(response, "FAILCannot write back original ramdisk");
 		ret = -1;
 		goto out;
 	}
+	fastboot_tx_write_str(response);
+	return 0;
 
 out:
-	free(read_buffer);
 	fastboot_tx_write_str(response);
-
 	return ret;
 }
-#endif
 
 static int fastboot_flash(const char *partition)
 {
@@ -695,7 +685,10 @@ static int fastboot_flash(const char *partition)
 		fastboot_tx_write_str("OKAY");
 		return 0;
 	}
-#endif	
+#endif
+	if (!strcmp(partition, "zImage") || !strcmp(partition, "zimage")) {
+		return fastboot_update_zimage();
+	}
 	ptn = fastboot_flash_find_ptn(partition);
 	
 	if (ptn == 0) {
