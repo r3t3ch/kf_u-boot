@@ -8,6 +8,8 @@
  * is a problem (and well your system already is broken), so err on the side
  * of caution in case we're dealing with slower SPI buses and/or processors.
  */
+#include <asm/sizes.h>
+
 #define SPI_FLASH_PROG_TIMEOUT		(2 * CONFIG_SYS_HZ)
 #define SPI_FLASH_PAGE_ERASE_TIMEOUT	(5 * CONFIG_SYS_HZ)
 #define SPI_FLASH_SECTOR_ERASE_TIMEOUT	(10 * CONFIG_SYS_HZ)
@@ -46,6 +48,8 @@
 # define CMD_EXTNADDR_RDEAR		0xC8
 #endif
 
+/* Workaround for TI QSPI controller read limitation */
+#define SF_MAX_CHUNK_LEN		SZ_4K
 /* Common status */
 #define STATUS_WIP			0x01
 #define STATUS_PEC			0x80
