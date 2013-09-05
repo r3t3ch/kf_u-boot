@@ -73,6 +73,7 @@
 #define RESPONSE_LEN	(64 + 1)
 #define CONTROL_STATUS	0x4A002134
 #define DEVICETYPE_MASK	 (0x7 << 6)
+#define FORMAT_LEN 7
 
 /* omap-type */
 typedef enum {
@@ -365,6 +366,7 @@ extern int do_spi_flash(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[
 
 static void cb_oem(struct usb_ep *ep, struct usb_request *req)
 {    
+	char buf[FORMAT_LEN];
 #ifdef CONFIG_SPL_SPI_SUPPORT
 	char *sf_erase[4] = {"sf", "erase", "0", "10000"};
 	int status;
@@ -388,8 +390,9 @@ static void cb_oem(struct usb_ep *ep, struct usb_request *req)
 		fastboot_tx_write_str("OKAY");
 		return;
 	}
-#endif	
-	if(fastboot_oem(req->buf + 4) == 0)
+#endif
+	strlcpy(buf, req->buf + 4, FORMAT_LEN);
+	if (fastboot_oem(buf) == 0)
 		fastboot_tx_write_str("OKAY");
 	else {
 		fastboot_tx_write_str("FAIL: Unable to create partitions");
