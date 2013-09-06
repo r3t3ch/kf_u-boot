@@ -29,18 +29,6 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-/*
- * struct crossbar_entry - map IRQ_CROSSBAR inputline <crossbar_irq> to
- * <module_irq> line for the corresponding INTC/DREQ.
- *
- * @module_irq:		Interrupt/DREQ line No. for corresponding module.
- * @crossbar_irq:	Input line no. of CROSSBAR
- */
-struct crossbar_entry {
-	u16 module_irq;
-	u16 crossbar_irq;
-};
-
 struct pad_conf_entry {
 	u32 offset;
 	u32 val;

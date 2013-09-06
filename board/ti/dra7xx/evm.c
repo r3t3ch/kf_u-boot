@@ -32,7 +32,6 @@
 #include <asm/arch/mmc_host_def.h>
 
 #include "mux_data.h"
-#include "crossbar_data.h"
 
 #ifdef CONFIG_USB_EHCI
 #include <usb.h>
@@ -43,6 +42,24 @@
 #ifdef CONFIG_DRIVER_TI_CPSW
 #include <cpsw.h>
 #endif
+
+#define CTRL_CORE_MPU_IRQ_159_REG			0x4a002b76
+#define CTRL_CORE_MPU_IRQ_155_REG			0x4a002b6e
+#define CTRL_CORE_MPU_IRQ_154_REG			0x4a002b6c
+#define CTRL_CORE_MPU_IRQ_156_REG			0x4a002b70
+#define CTRL_CORE_MPU_IRQ_157_REG			0x4a002b72
+#define CTRL_CORE_MPU_IRQ_136_REG			0x4a002b48
+#define CTRL_CORE_MPU_IRQ_141_REG			0x4a002b52
+#define CTRL_CORE_MPU_IRQ_142_REG			0x4a002b54
+#define CTRL_CORE_MPU_IRQ_143_REG			0x4a002b56
+#define CTRL_CORE_MPU_IRQ_144_REG			0x4a002b58
+#define CTRL_CORE_MPU_IRQ_145_REG			0x4a002b5a
+#define CTRL_CORE_MPU_IRQ_124_REG			0x4a002b34
+
+#define CTRL_CORE_DMA_SYSTEM_DREQ_79_REG		0x4a002c16
+#define CTRL_CORE_DMA_SYSTEM_DREQ_78_REG		0x4a002c14
+#define CTRL_CORE_DMA_SYSTEM_DREQ_63_REG		0x4a002bf6
+#define CTRL_CORE_DMA_SYSTEM_DREQ_62_REG		0x4a002bf4
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -139,74 +156,36 @@ int board_mmc_init(bd_t *bis)
 }
 #endif
 
-/*
- * MPU IRQs that are mapped to CROSSBAR are:
- * MPU_IRQ_4,
- * MPU_IRQ_7 to MPU_IRQ_130,
- * MPU_IRQ_133 to MPU_IRQ_159
- * Acccordingly the offset is calculated.
- */
-static u16 get_mpu_offset(u16 irq_no)
+static void set_crossbar_mpu_irq(void)
 {
-	u16 offset;
-	if (irq_no == 4)
-		offset = 0x00;
-	else if (irq_no == 7)
-		offset = 0x02;
-	else if (irq_no <= 130)
-		offset = (irq_no - 6) * 2;
-	else if ((irq_no <= 159) && (irq_no >= 133))
-		offset = (irq_no - 8) * 2;
-	else
-		offset = -1;
-
-	return offset;
+	/* MPU_IRQ mapping to CROSSBAR_IRQ */
+	writew(217, CTRL_CORE_MPU_IRQ_159_REG); /* RTC_IRQ */
+	writew(150, CTRL_CORE_MPU_IRQ_155_REG); /* MCASP3_IRQ_AREVT */
+	writew(151, CTRL_CORE_MPU_IRQ_154_REG); /* MCASP3_IRQ_AXEVT */
+	writew(156, CTRL_CORE_MPU_IRQ_156_REG); /* MCASP6_IRQ_AREVT */
+	writew(157, CTRL_CORE_MPU_IRQ_157_REG); /* MCASP6_IRQ_AXEVT */
+	writew(251, CTRL_CORE_MPU_IRQ_136_REG); /* MAILBOX5 */
+	writew(255, CTRL_CORE_MPU_IRQ_141_REG); /* MAILBOX6 */
+	writew(396, CTRL_CORE_MPU_IRQ_142_REG); /* IPU2 MMU */
+	writew(145, CTRL_CORE_MPU_IRQ_143_REG); /* DSP1 MMU1 */
+	writew(146, CTRL_CORE_MPU_IRQ_144_REG); /* DSP2 MMU0 */
+	writew(147, CTRL_CORE_MPU_IRQ_145_REG); /* DSP2 MMU1 */
+	writew(343, CTRL_CORE_MPU_IRQ_124_REG); /* QSPI */
 }
 
-/*
- * DREQ lines associated with DMA_CROSSBAR are:
- * DMA_SYSTEM	: 0-126
- */
-static inline u16 get_dma_offset(u16 irq_no)
+static void set_crossbar_sdma_dreq(void)
 {
-	return irq_no * 2;
-}
-
-static void do_set_crossbar(u32 base, struct crossbar_entry const *array,
-			  int size, int module)
-{
-	u16 i, offset;
-	struct crossbar_entry *irq = (struct crossbar_entry *)array;
-
-	for (i = 0; i < size; i++, irq++) {
-		switch (module) {
-		case CROSSBAR_MPU_IRQ:
-			offset = get_mpu_offset(irq->module_irq);
-			break;
-		case CROSSBAR_SDMA:
-			offset = get_dma_offset(irq->module_irq);
-			break;
-		default:
-			offset = -1;
-		}
-
-		if (offset == -1)
-			printf("Mapping of %d line cannot be done\n",
-			       irq->module_irq);
-		else
-			writew(irq->crossbar_irq, base + offset);
-	}
+	/* SDMA_DREQ mapping to CROSSBAR_IRQ */
+	writew(132, CTRL_CORE_DMA_SYSTEM_DREQ_79_REG);  /* MCASP3_DREQ_RX */
+	writew(133, CTRL_CORE_DMA_SYSTEM_DREQ_78_REG);  /* MCASP3_DREQ_TX */
+	writew(138, CTRL_CORE_DMA_SYSTEM_DREQ_63_REG);  /* MCASP6_DREQ_RX */
+	writew(139, CTRL_CORE_DMA_SYSTEM_DREQ_62_REG);  /* MCASP6_DREQ_TX */
 }
 
 void set_crossbar_regs(void)
 {
-	do_set_crossbar((*ctrl)->control_core_mpu_irq_base, mpu_irq_map,
-			sizeof(mpu_irq_map)/sizeof(struct crossbar_entry),
-			CROSSBAR_MPU_IRQ);
-	do_set_crossbar((*ctrl)->control_core_sdma_dreq_base,
-			sdma_dreq_map,
-			sizeof(sdma_dreq_map)/sizeof(struct crossbar_entry),
-			CROSSBAR_SDMA);
+	set_crossbar_mpu_irq();
+	set_crossbar_sdma_dreq();
 }
 
 #ifdef CONFIG_DRIVER_TI_CPSW

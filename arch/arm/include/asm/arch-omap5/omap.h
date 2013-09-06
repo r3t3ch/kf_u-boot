@@ -180,10 +180,6 @@ struct s32ktimer {
 #define SRCODE_OVERRIDE_SEL_XS_SHIFT	0
 #define SRCODE_OVERRIDE_SEL_XS_MASK	(1 << 0)
 
-/* CROSSBAR */
-#define CROSSBAR_MPU_IRQ		0x0
-#define CROSSBAR_SDMA			0x1
-
 /* IO Delay module defines */
 #define CFG_IO_DELAY_BASE		0x4844A000
 #define CFG_IO_DELAY_LOCK		(CFG_IO_DELAY_BASE + 0x02C)
