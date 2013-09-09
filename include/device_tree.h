@@ -33,6 +33,7 @@
 #define ENVIRO_MAGIC_SIZE 12
 #define ENVIRO_NAME_SIZE 16
 #define ENVIRO_ARGS_SIZE 512
+#define DEVICE_TREE 	0x81f80000
 
 
 typedef struct enviro_img_hdr enviro_img_hdr;

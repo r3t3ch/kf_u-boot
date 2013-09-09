@@ -25,8 +25,8 @@
  * MA 02111-1307 USA
  */
 
-#ifndef __CONFIG_DRA7XX_EVM_H
-#define __CONFIG_DRA7XX_EVM_H
+#ifndef __CONFIG_DRA7XX_EVM_ANDROID_H
+#define __CONFIG_DRA7XX_EVM_ANDROID_H
 
 #define CONFIG_ENV_IS_NOWHERE		/* For now. */
 
@@ -87,4 +87,27 @@
 #define CONFIG_PHYLIB
 #define CONFIG_PHY_ADDR			2
 
-#endif /* __CONFIG_DRA7XX_EVM_H */
+#define CONFIG_USB_DWC3		1
+#define CONFIG_USB_DWC3_UDC_REGS		((void *)0x48890000)
+#define CONFIG_USB_DWC3_UDC_REGS_END		((void *)0x4889ffff)
+#define CONFIG_USB_DWC3_WRAP_REGS		((void *)0x48880000)
+#define CONFIG_USB_DWC3_WRAP_REGS_END		((void *)0x4888ffff)
+#ifdef CONFIG_USB_DWC3
+#define CONFIG_SYS_L2CACHE_OFF	1
+#endif
+
+#define DRA7XX_PUBLIC_SAR_RAM_1_FREE           (0x4AE26000 + 0xFE0)
+#define DRA7XX_PRM_RSTCTRL_RESET_WARM_BIT      (1<<0)
+#define DRA7XX_PRM_RSTST                       0x4AE07D04
+#define DRA7XX_PRM_RSTCTRL                     0x4AE07D00
+#define DRA7XX_PRM_RSTST_CLR                   0xfff
+#define DRA7XX_REBOOT_REASON_SIZE              0xf
+
+#define CONFIG_BOARD_MACH_TYPE			4070
+#define MEMORY_BASE 				0x80000000
+#define CONFIG_ADDR_ATAGS			(MEMORY_BASE + 0x100)
+#define CONFIG_ADDR_DOWNLOAD			(MEMORY_BASE + 0x02000000)
+#define KERNEL_ENTRY				0x80300000
+#define DEVICE_TREE 				0x81f80000
+
+#endif /* __CONFIG_DRA7XX_EVM_ANDROID_H   */

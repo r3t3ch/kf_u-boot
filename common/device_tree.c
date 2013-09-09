@@ -28,7 +28,6 @@
 
 
 #include <bootimg.h>
-#include <configs/dra7xx_evm.h>
 #include <malloc.h>
 #include <device_tree.h>
 #include <usb/fastboot.h>
