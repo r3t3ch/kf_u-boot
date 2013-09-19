@@ -135,7 +135,7 @@ static char *get_cpu_type(void)
 
 	value = readl(CONTROL_STATUS);
 	value &= DEVICETYPE_MASK;
-	
+
 	switch (value >> 6) {
 	case OMAP_TYPE_EMU:
 		strcpy(proc_type, "EMU");
@@ -208,7 +208,7 @@ static void cb_getvar(struct usb_ep *ep, struct usb_request *req)
 		else
 			strcpy(response, "FAILValue not set");
 	} else if (!strcmp_l1("userdata_size", cmd)) {
-		strncat(response,get_ptn_size(userdata_sz, "userdata"),sizeof(response));
+		strncat(response, get_ptn_size(userdata_sz, "userdata"), sizeof(response));
 
 	} else {
 		strcpy(response, "FAILVariable not implemented");
@@ -227,9 +227,9 @@ static unsigned int rx_bytes_expected(void)
 	if (rx_remain > EP_BUFFER_SIZE) {
 		return EP_BUFFER_SIZE;
 	}
-	if(rx_remain < 512) {
+	if (rx_remain < 512) {
 		rx_remain = 512;
-	}else if(rx_remain % 512 != 0) {
+	}else if (rx_remain % 512 != 0) {
 		rem = rx_remain % 512;
 		rx_remain = rx_remain + (512 - rem);
 	}
@@ -282,7 +282,7 @@ static void rx_handler_dl_image(struct usb_ep *ep, struct usb_request *req)
 		printf(".");
 		if (!(download_bytes % (74 * BYTES_PER_DOT)))
 				printf("\n");
-	
+
 	}*/
 	req->actual = 0;
 	usb_ep_queue(ep, req, 0);
@@ -308,7 +308,7 @@ static void cb_download(struct usb_ep *ep, struct usb_request *req)
 	strsep(&cmd, ":");
 
 	/*HACK: Zero terminate the command string*/
-	strlcpy(cmd,cmd,9);
+	strlcpy(cmd, cmd, 9);
 	download_size = simple_strtoul(cmd, NULL, 16);
 	download_bytes = 0;
 
@@ -365,27 +365,27 @@ extern int do_spi_flash(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[
 #endif
 
 static void cb_oem(struct usb_ep *ep, struct usb_request *req)
-{    
+{
 	char buf[FORMAT_LEN];
 #ifdef CONFIG_SPL_SPI_SUPPORT
 	char *sf_erase[4] = {"sf", "erase", "0", "10000"};
 	int status;
 	char *sf_probe[3] = {"sf", "probe", "0"};
-	if(strncmp(req->buf + 4,"spi",3) == 0) {
+	if (strncmp(req->buf + 4, "spi", 3) == 0) {
 		boot_from_spi = 1;
 		status = do_spi_flash(NULL, 0, 3, sf_probe);
-		if(status) {
+		if (status) {
 			fastboot_tx_write_str("FAIL:Could not probe SPI");
 			return;
 		}
 		status = do_spi_flash(NULL, 0, 4, sf_erase);
-		if(status) {
+		if (status) {
 			fastboot_tx_write_str("FAIL:Could not erase SPI");
 			return;
 		}
 		fastboot_tx_write_str("OKAY");
 		return;
-	}else if(strncmp(req->buf + 4,"mmc",3) == 0) {
+	}else if (strncmp(req->buf + 4, "mmc", 3) == 0) {
 		boot_from_spi = 0;
 		fastboot_tx_write_str("OKAY");
 		return;
@@ -401,23 +401,23 @@ static void cb_oem(struct usb_ep *ep, struct usb_request *req)
 }
 
 /*HACK : Fastboot doesn't seem to be null terminating the flash command. Do it ourselves*/
-static void format_flash_cmd(char* cmd) 
+static void format_flash_cmd(char* cmd)
 {
 	int i;
 	char *parts[] = {"xloader", "bootloader", "boot", "system", "userdata",
 		            "cache", "recovery","environment", "zImage", "zimage",
 					"misc", "efs", "crypto"};
 	for(i = 0;i < 13;i++) {
-		if(!strncmp(parts[i],cmd,strlen(parts[i]))) {
+		if (!strncmp(parts[i], cmd, strlen(parts[i]))) {
 			*(cmd + strlen(parts[i])) = '\0';
 			break;
 		}
 	}
-	
+
 }
 
 static void cb_flash(struct usb_ep *ep, struct usb_request *req)
-{    
+{
 	char *cmd = req->buf + 6;
 	format_flash_cmd(cmd);
 	if (fastboot_flash(cmd) != 0) {
@@ -430,7 +430,7 @@ static void cb_erase(struct usb_ep *ep, struct usb_request *req)
 {
 	char *cmd = req->buf + 6;
 	format_flash_cmd(cmd);
-	if(fastboot_erase(cmd) != 0) {
+	if (fastboot_erase(cmd) != 0) {
 		printf("Unable to erase partition\n");
 	}
 }
@@ -456,19 +456,19 @@ static struct cmd_dispatch_info cmd_dispatch_info[] = {
 	{
 		.cmd = "reboot",
 		.cb = cb_reboot,
-	}, 
+	},
 	{
 		.cmd = "getvar:",
 		.cb = cb_getvar,
-	}, 
+	},
 	{
 		.cmd = "download:",
 		.cb = cb_download,
-	}, 
+	},
 	{
 		.cmd = "boot",
 		.cb = cb_boot,
-	}, 
+	},
 	{
 		.cmd = "flash",
 		.cb = cb_flash,
@@ -632,12 +632,12 @@ out:
 static int fastboot_flash(const char *partition)
 {
 	int status = 0;
-	struct fastboot_ptentry *ptn;	
-	char source[32], dest[32], length[32];	
+	struct fastboot_ptentry *ptn;
+	char source[32], dest[32], length[32];
 	char *dev[3] = { "mmc", "dev", "1" };
 	char *mmc_write[5]  = {"mmc", "write", NULL, NULL, NULL};
 	char *mmc_init[2] = {"mmc", "rescan",};
-	
+
 #ifdef CONFIG_SPL_SPI_SUPPORT
 	char *sf_probe[3] = {"sf", "probe", "0"};
 	char *sf_write_xloader[5] = {"sf", "write", NULL, "0", "10000"};
@@ -646,45 +646,45 @@ static int fastboot_flash(const char *partition)
 
 
 	/*Check if this is for xloader or bootloader. Also, check if we have to flash to SPI*/
-	if(strcmp(partition,"xloader") == 0 && boot_from_spi) {
-		printf("Flashing %s to SPI\n",partition);
+	if (strcmp(partition, "xloader") == 0 && boot_from_spi) {
+		printf("Flashing %s to SPI\n", partition);
 		status = do_spi_flash(NULL, 0, 3, sf_probe);
-		if(status) {
+		if (status) {
 			fastboot_tx_write_str("FAIL:Could not probe SPI");
 			return status;
 		}
 		sf_write_xloader[2] = source;
 		sprintf(source, "0x%x", (unsigned int)fb_cfg.transfer_buffer);
 		status = do_spi_flash(NULL, 0, 5, sf_write_xloader);
-		if(status) {
+		if (status) {
 			fastboot_tx_write_str("FAIL:Could not write xloader to SPI");
 			return status;
 		}
 		fastboot_tx_write_str("OKAY");
 		return 0;
 	}
-	if(strcmp(partition,"bootloader") == 0 && boot_from_spi) {
-		printf("Flashing %s to SPI\n",partition);
+	if (strcmp(partition, "bootloader") == 0 && boot_from_spi) {
+		printf("Flashing %s to SPI\n", partition);
 		status = do_spi_flash(NULL, 0, 3, sf_probe);
-		if(status) {
+		if (status) {
 			fastboot_tx_write_str("FAIL:Could not probe SPI");
 			return status;
-		}		
+		}
 		sf_write_bootloader[2] = source;
 		sf_update_bootloader[2] = source;
 		sprintf(source, "0x%x", (unsigned int)fb_cfg.transfer_buffer);
 		printf("Updating bootloader to SPI\n");
 		status = do_spi_flash(NULL, 0, 5, sf_update_bootloader);
-		if(status) {
+		if (status) {
 			fastboot_tx_write_str("FAIL:Could not update bootloader to SPI");
 			return status;
-		}		
+		}
 		printf("Writing bootloader to SPI\n");
 		status = do_spi_flash(NULL, 0, 5, sf_write_bootloader);
-		if(status) {
+		if (status) {
 			fastboot_tx_write_str("FAIL:Could not write bootloader to SPI");
 			return status;
-		}		
+		}
 		fastboot_tx_write_str("OKAY");
 		return 0;
 	}
@@ -693,7 +693,7 @@ static int fastboot_flash(const char *partition)
 		return fastboot_update_zimage();
 	}
 	ptn = fastboot_flash_find_ptn(partition);
-	
+
 	if (ptn == 0) {
 		printf("Partition:[%s] does not exist\n", partition);
 		fastboot_tx_write_str("FAIL:Partition does not exist");
@@ -705,7 +705,7 @@ static int fastboot_flash(const char *partition)
 		source[0] = '\0';
 		dest[0] = '\0';
 		length[0] = '\0';
- 
+
 		mmc_write[2] = source;
 		mmc_write[3] = dest;
 		mmc_write[4] = length;
@@ -714,15 +714,15 @@ static int fastboot_flash(const char *partition)
 		sprintf(dest, "0x%x", ptn->start);
 		sprintf(length, "0x%x", (download_bytes/512) + 1);
 
- 
-		status = do_mmcops(NULL, 0, 3, dev); 
-		if(status) {	
+
+		status = do_mmcops(NULL, 0, 3, dev);
+		if (status) {
 			printf("Unable to set MMC device\n");
 			fastboot_tx_write_str("FAIL: init of MMC");
 			goto exit;
 		}
  		status = do_mmcops(NULL, 0, 2, mmc_init);
-		if(status) {
+		if (status) {
 			fastboot_tx_write_str("FAIL:Init of MMC card");
 			goto exit;
 		}
@@ -732,18 +732,18 @@ static int fastboot_flash(const char *partition)
 			status = do_unsparse(fb_cfg.transfer_buffer,
 					ptn->start,
 					ptn->length);
-			if(status) {
+			if (status) {
 				printf("Writing '%s' FAILED!\n", ptn->name);
 				fastboot_tx_write_str("FAIL: Write partition");
-			} else {	
+			} else {
 				printf("Writing sparsed: '%s' DONE!\n", ptn->name);
 				printf("Writing '%s' DONE!\n", ptn->name);
 				fastboot_tx_write_str("OKAY");
-			}				
+			}
 		} else {
 			printf("Writing non-sparsed format '%s'\n", ptn->name);
 			status = do_mmcops(NULL, 0, 5, mmc_write);
-			if(status) {
+			if (status) {
 				printf("Writing '%s' FAILED!\n", ptn->name);
 				fastboot_tx_write_str("FAIL: Write partition");
 				goto exit;
@@ -786,33 +786,33 @@ static int fastboot_erase(const char *partition)
 		erase[2] = start;
 		erase[3] = length;
 
- 		status = do_mmcops(NULL, 0, 3, dev); 
-		if(status) {	
+ 		status = do_mmcops(NULL, 0, 3, dev);
+		if (status) {
 			printf("Unable to set MMC device\n");
 			fastboot_tx_write_str("FAIL: init of MMC");
 			goto exit;
 		}
 
  		status = do_mmcops(NULL, 0, 2, mmc_init);
-		if(status) {	
+		if (status) {
 			fastboot_tx_write_str("FAIL: init of MMC");
 			goto exit;
 		}
 
 		printf("Erasing '%s'\n", ptn->name);
 		status = do_mmcops(NULL, 0, 4, erase);
-		if(status) {
+		if (status) {
 			printf("Erasing '%s' FAILED! %d\n", ptn->name,status);
 			fastboot_tx_write_str("FAIL: Eraze of partition");
 		} else {
 			printf("Erasing '%s' DONE!\n", ptn->name);
 			fastboot_tx_write_str("OKAY");
 		}
-		
+
 	fastboot_tx_write_str("OKAY");
 
 	}
-exit:	
+exit:
 	return status;
 }
 

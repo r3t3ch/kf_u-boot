@@ -32,8 +32,8 @@ int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
 int _unsparse(unsigned char *source, u32 sector, u32 section_size)
 {
 	sparse_header_t *header = (void*) source;
-	u32 i, outlen = 0;	
-	char *dev[3] = { "mmc", "dev", "1" };	
+	u32 i, outlen = 0;
+	char *dev[3] = { "mmc", "dev", "1" };
 	char *mmc_init[2] = {"mmc", "rescan",};
 	struct mmc* mmc = NULL;
 	int status = 0;
@@ -57,12 +57,12 @@ int _unsparse(unsigned char *source, u32 sector, u32 section_size)
 		return 1;
 	}
 
-	status = do_mmcops(NULL, 0, 3, dev); 
-	if(status) { 
+	status = do_mmcops(NULL, 0, 3, dev);
+	if(status) {
 		printf("Unable to set MMC device\n");
-		return status;				
+		return status;
 	}
-	
+
 	status = do_mmcops(NULL, 0, 2, mmc_init);
 	if(status) {
 		return status;
@@ -142,4 +142,4 @@ u8 do_unsparse(unsigned char *source, u32 sector, u32 section_size)
 
 	return 0;
 }
-			
+
