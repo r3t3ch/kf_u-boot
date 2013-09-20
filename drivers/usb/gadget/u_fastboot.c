@@ -660,6 +660,7 @@ static int fastboot_flash(const char *partition)
 			fastboot_tx_write_str("FAIL:Could not write xloader to SPI");
 			return status;
 		}
+		printf("Writing xloader DONE\n");
 		fastboot_tx_write_str("OKAY");
 		return 0;
 	}
@@ -685,6 +686,7 @@ static int fastboot_flash(const char *partition)
 			fastboot_tx_write_str("FAIL:Could not write bootloader to SPI");
 			return status;
 		}
+		printf("Writing bootloader DONE\n");
 		fastboot_tx_write_str("OKAY");
 		return 0;
 	}
