@@ -270,6 +270,9 @@ static void ddr3_leveling(u32 base, const struct emif_regs *regs)
 
 	/* Read data eye leveling no of samples */
 	config_data_eye_leveling_samples(base);
+
+	/* Disable leveling */
+	writel(0x0, &emif->emif_rd_wr_lvl_rmp_ctl);
 }
 
 static void ddr3_init(u32 base, const struct emif_regs *regs)
