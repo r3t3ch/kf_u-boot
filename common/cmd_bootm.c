@@ -1996,8 +1996,6 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 		bootimg_print_image_hdr(hdr);
 
-		hdr->kernel_addr = KERNEL_ENTRY;
-
 		/* read kernel */
 		printf("\nHeader: Kernel Addr:0x%x", hdr->kernel_addr);
 		printf("\nHeader: Kernel Size:0x%x", hdr->kernel_size);
