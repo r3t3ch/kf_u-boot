@@ -110,6 +110,37 @@ static void dra7xx_adj_io_delay(const struct io_delay *io_dly)
 }
 
 /**
+ * PMIC configuration to select 32KHz clock output
+ *
+ * @return 0
+ */
+#define I2C_PMIC_ADR			0x58
+#define I2C_PMIC_CLK32AUDIO_CTRL	0xD5
+#define I2C_PMIC_PAD2			0xFB
+int pmic_set_32Khz_clock(void)
+{
+	u8 data;
+
+	/* set i2c bus number */
+	if (i2c_set_bus_num(0) != 0)
+		return -1;
+
+	/* probe i2c device */
+	if (i2c_probe(I2C_PMIC_ADR) != 0)
+		return -1;
+
+	/* select CLK32KGA as GPIO_5 output */
+	data = 0x2b;
+	i2c_write(I2C_PMIC_ADR, I2C_PMIC_PAD2, 1, &data, 1);
+
+	/* enable CLK32K */
+	data = 0x01;
+	i2c_write(I2C_PMIC_ADR, I2C_PMIC_CLK32AUDIO_CTRL, 1, &data, 1);
+
+	return 0;
+}
+
+/**
  * @brief board_init
  *
  * @return 0
@@ -118,6 +149,9 @@ int board_init(void)
 {
 	gpmc_init();
 	gd->bd->bi_boot_params = (0x80000000 + 0x100); /* boot param addr */
+
+	/* workaround to enable PMIC 32Khz output to wlink8 module */
+	pmic_set_32Khz_clock();
 
 	return 0;
 }
