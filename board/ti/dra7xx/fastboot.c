@@ -7,15 +7,6 @@
 
 int check_fastboot(void)
 {
-	if (!gpio_get_value(FASTBOOT_BUTTON_GPIO)) {
-		/* small debounce to make sure the button is really pressed */
-		udelay(200000);
-		if (!gpio_get_value(FASTBOOT_BUTTON_GPIO)) {
-			printf("Button press detected: go to fastboot mode\n");
-			return 1;
-		}
-	}
-
 	/* Check if we are coming from a warm reset */
 	if (__raw_readl(DRA7XX_PRM_RSTST) & DRA7XX_PRM_RSTCTRL_RESET_WARM_BIT)
 		if (!strncmp((const char *)DRA7XX_PUBLIC_SAR_RAM_1_FREE,
