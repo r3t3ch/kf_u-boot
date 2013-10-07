@@ -26,6 +26,7 @@
 /* Platform-specific defines */
 #include <linux/compiler.h>
 #include <asm/spl.h>
+#include <mmc.h>
 
 /* Boot type */
 #define MMCSD_MODE_UNDEFINED	0
@@ -75,7 +76,7 @@ void spl_spi_load_image(void);
 
 /* Ethernet SPL functions */
 void spl_net_load_image(const char *device);
-
+void spl_mmc_init(struct mmc **mmc);
 #ifdef CONFIG_SPL_BOARD_INIT
 void spl_board_init(void);
 #endif
