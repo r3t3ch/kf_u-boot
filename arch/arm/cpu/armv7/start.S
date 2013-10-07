@@ -34,6 +34,9 @@
 #include <version.h>
 #include <asm/system.h>
 #include <linux/linkage.h>
+#if defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_USB_BOOT_SUPPORT)
+#include <configs/omap5_common.h>
+#endif
 
 .globl _start
 _start: b	reset
@@ -141,11 +144,44 @@ reset:
 	orr	r0, r0, #0xc0		@ disable FIQ and IRQ
 	msr	cpsr,r0
 
+#if defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_USB_BOOT_SUPPORT)
+	/* obtain address of where _start was loaded */
+	adr r0, _start
+	ldr r1, =(NON_SECURE_SRAM_START)
+	cmp r0, r1
+	bne setup_vector
+
+	adr r2, _end_ofs
+	ldr r2, [r2]
+
+	ldr r3, =(CONFIG_SPL_IMAGE_OFFSET)
+
+	adr r5, setup_vector
+	add r5, r3, r5
+
+	/* R0 image end (source) */
+	add r0, r2, r0
+
+	/* R1 image end (destination) */
+	add r1, r2, r1
+	add r1, r3, r1
+
+	ldr r2, =_start
+
+copy:
+	ldr r3, [r0], #-4
+	str r3, [r1], #-4
+	cmp r2, r1
+	bne copy
+	bx r5
+#endif
+
 /*
  * Setup vector:
  * (OMAP4 spl TEXT_BASE is not 32 byte aligned.
  * Continue to use ROM code vector only in OMAP4 spl)
  */
+setup_vector:
 #if !(defined(CONFIG_OMAP44XX) && defined(CONFIG_SPL_BUILD))
 	/* Set V=0 in CP15 SCTRL register - for VBAR to point to vector */
 	mrc	p15, 0, r0, c1, c0, 0	@ Read CP15 SCTRL Register
