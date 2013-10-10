@@ -59,3 +59,23 @@ ENTRY(set_l2_aux_ctrl_reg)
 				@ call ROM Code API to set control register
 	POP	{r4-r11, pc}
 ENDPROC(set_l2_aux_ctrl_reg)
+
+/**
+ * u32 hal_pub_to_sec_dispatcher(u32 id, u32 falg, u32 params)
+ * OMAP low level routine to call a secure service/HAL
+ * @id: Application ID of HAL API
+ * @flag: Flag to indicate the criticality of operation
+ * @params: Physical address of parameter list starting
+ *          with number of parametrs
+ */
+
+ENTRY(hal_pub_to_sec_dispatcher)
+	PUSH	{r4-r11, lr}	@ save registers - ROM code may pollute
+	mov r6, #0xff		@ set new task
+	mov r12, #0		@ Secure Service ID
+	dsb
+	isb
+	dmb
+	.word   0xe1600070	@ SMC #0 - hand assembled
+	POP     {r4-r11, pc}
+ENDPROC(hal_pub_to_sec_dispatcher)

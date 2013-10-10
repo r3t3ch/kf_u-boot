@@ -39,6 +39,8 @@ struct omap_sysinfo {
 };
 extern const struct omap_sysinfo sysinfo;
 
+u32 hal_pub_to_sec_dispatcher(u32 appid, u32 procid, u32 flag, void *args);
+
 void gpmc_init(void);
 void watchdog_init(void);
 u32 get_device_type(void);
