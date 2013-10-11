@@ -230,6 +230,12 @@ COBJS-$(CONFIG_SPL_NET_SUPPORT) += env_common.o
 COBJS-$(CONFIG_SPL_NET_SUPPORT) += env_flags.o
 COBJS-$(CONFIG_SPL_NET_SUPPORT) += env_nowhere.o
 COBJS-$(CONFIG_SPL_NET_SUPPORT) += miiphyutil.o
+ifdef CONFIG_SPL_USB_BOOT_SUPPORT
+COBJS-$(CONFIG_CMD_FASTBOOT) += fastboot.o
+COBJS-$(CONFIG_CMD_FASTBOOT) += mmc.o
+COBJS-$(CONFIG_CMD_FASTBOOT) += cmd_mmc.o
+COBJS-$(CONFIG_CMD_FASTBOOT) += cmd_sf.o
+endif
 endif
 COBJS-$(CONFIG_BOUNCE_BUFFER) += bouncebuf.o
 COBJS-y += console.o

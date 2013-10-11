@@ -83,6 +83,13 @@ LIBS-$(CONFIG_SPL_ETH_SUPPORT) += drivers/net/libnet.o
 LIBS-$(CONFIG_SPL_ETH_SUPPORT) += drivers/net/phy/libphy.o
 LIBS-$(CONFIG_SPL_MUSB_NEW_SUPPORT) += drivers/usb/musb-new/libusb_musb-new.o
 LIBS-$(CONFIG_SPL_USBETH_SUPPORT) += drivers/usb/gadget/libusb_gadget.o
+ifdef CONFIG_SPL_USB_BOOT_SUPPORT
+LIBS-$(CONFIG_CMD_FASTBOOT) += drivers/usb/gadget/f_fastboot.o
+LIBS-$(CONFIG_CMD_FASTBOOT) += drivers/usb/gadget/u_fastboot.o
+LIBS-$(CONFIG_CMD_FASTBOOT) += drivers/usb/gadget/usbstring.o
+LIBS-$(CONFIG_CMD_FASTBOOT) += drivers/usb/gadget/epautoconf.o
+LIBS-$(CONFIG_USB_DWC3) += drivers/usb/dwc3/libdwc3.o
+endif
 
 ifneq ($(CONFIG_AM33XX)$(CONFIG_OMAP34XX)$(CONFIG_OMAP44XX)$(CONFIG_OMAP54XX)$(CONFIG_TI814X),)
 LIBS-y += $(CPUDIR)/omap-common/libomap-common.o

@@ -33,6 +33,9 @@
 #include <malloc.h>
 #include <linux/compiler.h>
 
+#include <usb/fastboot.h>
+#include <asm/arch/sys_proto.h>
+
 DECLARE_GLOBAL_DATA_PTR;
 
 #ifndef CONFIG_SYS_UBOOT_START
@@ -153,6 +156,9 @@ static void spl_ram_load_image(void)
 
 void board_init_r(gd_t *dummy1, ulong dummy2)
 {
+#if defined(CONFIG_SPL_USB_BOOT_SUPPORT) && defined(CONFIG_CMD_FASTBOOT)
+	struct mmc *mmc;
+#endif
 	u32 boot_device;
 	debug(">>spl:board_init_r()\n");
 
@@ -178,9 +184,22 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 	switch (boot_device) {
 #ifdef CONFIG_SPL_USB_BOOT_SUPPORT
 	case BOOT_DEVICE_USB:
+#ifdef CONFIG_CMD_FASTBOOT
+		spl_mmc_init(&mmc);
+		gd->bd->bi_dram[0].start = CONFIG_SYS_SDRAM_BASE;
+		gd->bd->bi_dram[0].size = omap_sdram_size();
+		if (!fastboot_init()) {
+			while (1) {
+				if (fastboot_poll())
+					break;
+			}
+		}
+		fastboot_shutdown();
+#else
 		puts("Device successfully booted, looping...\n");
 		while (1)
 			;
+#endif
 		break;
 #endif
 #ifdef CONFIG_SPL_RAM_DEVICE
