@@ -63,6 +63,9 @@
 #define CONFIG_DEFAULT_SPI_MODE                SPI_MODE_3
 #define CONFIG_SPI_FLASH_BAR
 
+/* Defines for SPL */
+#ifdef CONFIG_SPL
+
 /* SPI SPL */
 #define CONFIG_SPL_SPI_SUPPORT
 #define CONFIG_SPL_SPI_LOAD
@@ -70,6 +73,7 @@
 #define CONFIG_SPL_SPI_BUS		0
 #define CONFIG_SPL_SPI_CS		0
 #define CONFIG_SYS_SPI_U_BOOT_OFFS	0x80000
+#endif
 
 /* CPSW Ethernet */
 #define CONFIG_CMD_NET
