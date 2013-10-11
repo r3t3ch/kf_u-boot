@@ -65,6 +65,7 @@
 
 /* Defines for SPL */
 #ifdef CONFIG_SPL
+#define CONFIG_SPL_USB_BOOT_SUPPORT
 
 /* SPI SPL */
 #define CONFIG_SPL_SPI_SUPPORT
