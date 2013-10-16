@@ -69,6 +69,8 @@ void get_ioregs(const struct ctrl_ioregs **regs);
 void srcomp_enable(void);
 void setup_warmreset_time(void);
 void set_crossbar_regs(void);
+u32 get_l2_aux_ctrl_reg(void);
+void set_l2_aux_ctrl_reg(u32 val);
 
 static inline u32 running_from_sdram(void)
 {
