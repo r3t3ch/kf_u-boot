@@ -456,12 +456,22 @@ CONFIG_SYS_UBOOT_START := 0
 endif
 
 $(obj)u-boot.img:	$(obj)u-boot.bin
+ifdef MSHIELD_DK_DIR
+		truncate -c $< --size +280
+endif
 		$(obj)tools/mkimage -A $(ARCH) -T firmware -C none \
 		-O u-boot -a $(CONFIG_SYS_TEXT_BASE) \
 		-e $(CONFIG_SYS_UBOOT_START) \
 		-n $(shell sed -n -e 's/.*U_BOOT_VERSION//p' $(VERSION_FILE) | \
 			sed -e 's/"[	 ]*$$/ for $(BOARD) board"/') \
 		-d $< $@
+ifdef MSHIELD_DK_DIR
+		truncate -c $@ --size -280
+		$(MSHIELD_DK_DIR)/ift/ift M -chip OMAP5430_ES2 -cert_sign \
+		-input $@ -out $@.signed -certkey keys/rsa2048_6.pem \
+		-certkeyid e -certkeytype 0 -certsignerinfo CERT_U-BOOT \
+		-certsiginfo 0x53544255
+endif
 
 $(obj)u-boot.imx: $(obj)u-boot.bin depend
 		$(MAKE) -C $(SRCTREE)/arch/arm/imx-common $(OBJTREE)/u-boot.imx

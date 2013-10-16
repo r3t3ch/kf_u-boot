@@ -197,7 +197,7 @@ void __weak arm_errata_798870(void)
  */
 void s_init(void)
 {
-#ifdef CONFIG_BOOTIPU1
+#if defined(CONFIG_BOOTIPU1) && defined(CONFIG_SPL_BUILD)
 	volatile u32 spl_time = read_fast_counter();
 #endif
 	/*

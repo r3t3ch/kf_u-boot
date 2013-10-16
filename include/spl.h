@@ -34,27 +34,6 @@
 #define MMCSD_MODE_RAW		1
 #define MMCSD_MODE_FAT		2
 
-#if 0
-struct spl_kernel_boot_info {
-	u8 magic[BOOT_MAGIC_SIZE];
-	u32 ramdisk_size; /* size in bytes */
-	u32 ramdisk_addr; /* physical load addr */
-
-	u32 second_size;  /* size in bytes */
-	u32 second_addr;  /* physical load addr */
-
-	u32 tags_addr;    /* physical addr for kernel tags */
-	u32 page_size;    /* flash page size we assume */
-	u32 unused[2];    /* future expansion: should be 0 */
-
-	u8 name[ANDR_BOOT_NAME_SIZE]; /* asciiz product name */
-
-	u8 cmdline[ANDR_BOOT_ARGS_SIZE];
-
-	u32 id[8]; /* timestamp / checksum / sha1 / etc */
-};
-#endif
-
 struct spl_image_info {
 	const char *name;
 	u8 os;

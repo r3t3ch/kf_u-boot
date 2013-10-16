@@ -77,6 +77,8 @@ void arm_errata_798870(void);
 u32 read_fast_counter(void);
 u32 omap_sysboot(void);
 
+u32 authenticate_image_signature(u32 start_address, u32 size);
+
 static inline u32 running_from_sdram(void)
 {
 	u32 pc;

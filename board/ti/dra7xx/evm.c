@@ -685,3 +685,101 @@ int board_eth_init(bd_t *bis)
 	return ret;
 }
 #endif
+
+#define API_HAL_BASE_INDEX				0x0
+#define API_HAL_KM_VERIFYCERTIFICATESIGNATURE_INDEX	API_HAL_BASE_INDEX + 0xE
+#define CERT_U_BOOT_MAGIC				0x53544255
+#define CERT_KERNEL_MAGIC				0x534C4E4B
+#define CERT_RAMDSK_MAGIC				0x534B4452
+#define CERT_DTB_MAGIC					0x53425444
+#define CERT_RIGHTS_OTHER				0x20
+#define CL_RSA_KEY_MAX_SIZE				256
+#define GP_DEVICE					0x3
+
+#ifdef CONFIG_HS_AUTH
+struct ti_signed_cert {
+    u8  signer_info[16];
+    u32 signature_info;
+    u32 key_id;
+    u8  signature[CL_RSA_KEY_MAX_SIZE];
+};
+
+
+static u32 ti_rom_auth(void *cert, u32 len, void *sign, u32 rights)
+{
+	u32 params[5];
+
+	params[0] = 4;
+	params[1] = (u32)cert;
+	params[2] = len;
+	params[3] = (u32)sign;
+	params[4] = rights;
+
+       return hal_pub_to_sec_dispatcher(
+		API_HAL_KM_VERIFYCERTIFICATESIGNATURE_INDEX, 0, 0, &params[0]);
+}
+
+u32 authenticate_image_signature(u32 start_addr, u32 size)
+{
+	u32 cert_size, result;
+	struct ti_signed_cert *cert_ptr = NULL;
+	u8 buf[5];
+	u32 *tmp = (u32 *)&buf[0];
+
+	if (get_device_type() != GP_DEVICE) {
+		if ((u32)cert_ptr % 4 == 0) {
+			cert_size = sizeof(struct ti_signed_cert);
+			cert_ptr = (struct ti_signed_cert *)
+					(start_addr + size - cert_size);
+		} else {
+			printf("Size 0x%x from image loaded @ 0x%x ",
+					start_addr, size);
+			puts("is not word aligned! Sign image correctly\n");
+			goto exit_error;
+		}
+
+		/* Magic u32 to string */
+		*tmp = cert_ptr->signature_info;
+		buf[4]='\0';
+
+		switch (cert_ptr->signature_info) {
+		case CERT_U_BOOT_MAGIC:
+		case CERT_KERNEL_MAGIC:
+		case CERT_RAMDSK_MAGIC:
+		case CERT_DTB_MAGIC:
+			debug("Authenticating %s\n", buf);
+			result = ti_rom_auth(
+					(void *)start_addr, size - cert_size,
+					(void *)cert_ptr, CERT_RIGHTS_OTHER);
+			if (result != 0) {
+				printf("%s authentication failed!\n", buf);
+				goto exit_error;
+			} else {
+				debug("%s authentication passed\n", buf);
+			}
+			break;
+		default:
+			printf("Unknown Magic [%s], image not authenticated\n",
+				buf);
+			goto exit_error;
+		}
+	} else {
+		debug("GP device does not support image authentication\n");
+		result = 1;
+	}
+	return result;
+
+exit_error:
+#ifdef CONFIG_HS_ENFORCE_AUTH
+	hang();
+#else
+	puts("WARNING - Not enforcing image authentication\n");
+#endif
+	return 1;
+}
+#else
+u32 authenticate_image_signature(u32 start_addr, u32 size)
+{
+	return 1;
+}
+#endif

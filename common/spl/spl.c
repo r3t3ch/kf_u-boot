@@ -298,6 +298,9 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 	default:
 		debug("Unsupported OS image.. Jumping nevertheless..\n");
 	}
+
+	/* Authenticate loaded image before jumping execution */
+	authenticate_image_signature(spl_image.load_addr, spl_image.size);
 	jump_to_image_no_args(&spl_image);
 }
 
