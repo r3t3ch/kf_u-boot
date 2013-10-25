@@ -249,8 +249,8 @@ static void import_efi_partition(struct efi_entry *entry, int count)
 
 #ifdef DEBUG
 	if (e.length > 0x100000)
-		DBG("%8d %7dM %s\n", e.start,
-			(u32)(e.length/0x100000), e.name);
+		DBG("%8d %8lluM %s\n", e.start,
+			(e.length/(u64)0x100000), e.name);
 	else
 		DBG("%8d %7dK %s\n", e.start,
 			(u32)(e.length/0x400), e.name);

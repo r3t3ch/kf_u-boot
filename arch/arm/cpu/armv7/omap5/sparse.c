@@ -29,10 +29,11 @@
 #define SPARSE_HEADER_MAJOR_VER 1
 int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
 
-int _unsparse(unsigned char *source, u32 sector, u32 section_size)
+int _unsparse(unsigned char *source, u32 sector, u64 section_size)
 {
 	sparse_header_t *header = (void*) source;
-	u32 i, outlen = 0;
+	u32 i = 0;
+	u64 outlen = 0ULL;
 	char *dev[3] = { "mmc", "dev", "1" };
 	char *mmc_init[2] = {"mmc", "rescan",};
 	struct mmc* mmc = NULL;
@@ -40,7 +41,7 @@ int _unsparse(unsigned char *source, u32 sector, u32 section_size)
 
 
 	if ((header->total_blks * header->blk_sz) > section_size) {
-		printf("sparse: section size %d MB limit: exceeded\n",
+		printf("sparse: section size %llu MB limit: exceeded\n",
 				section_size/(1024*1024));
 		return 1;
 	}
@@ -89,7 +90,7 @@ int _unsparse(unsigned char *source, u32 sector, u32 section_size)
 
 			outlen += len;
 			if (outlen > section_size) {
-				printf("sparse: section size %d MB limit: exceeded\n", section_size/(1024*1024));
+				printf("sparse: section size %llu MB limit: exceeded\n", section_size/(1024*1024));
 				return 1;
 			}
 #ifdef DEBUG
@@ -120,7 +121,7 @@ int _unsparse(unsigned char *source, u32 sector, u32 section_size)
 
 			outlen += len;
 			if (outlen > section_size) {
-				printf("sparse: section size %d MB limit: exceeded\n", section_size/(1024*1024));
+				printf("sparse: section size %llu MB limit: exceeded\n", section_size/(1024*1024));
 				return 1;
 			}
 			sector += (len / 512);
@@ -135,7 +136,7 @@ int _unsparse(unsigned char *source, u32 sector, u32 section_size)
 	return 0;
 }
 
-u8 do_unsparse(unsigned char *source, u32 sector, u32 section_size)
+u8 do_unsparse(unsigned char *source, u32 sector, u64 section_size)
 {
 	if (_unsparse(source, sector, section_size))
 		return 1;
