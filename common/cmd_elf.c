@@ -24,7 +24,7 @@
 DECLARE_GLOBAL_DATA_PTR;
 #endif
 
-static unsigned long load_elf_image_phdr(unsigned long addr);
+unsigned long load_elf_image_phdr(unsigned long addr);
 static unsigned long load_elf_image_shdr(unsigned long addr);
 
 /* Allow ports to override the default behavior */
@@ -273,10 +273,13 @@ int do_bootvx(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
  * A very simple elf loader, assumes the image is valid, returns the
  * entry point address.
  * ====================================================================== */
-static unsigned long load_elf_image_phdr(unsigned long addr)
+unsigned long load_elf_image_phdr(unsigned long addr)
 {
 	Elf32_Ehdr *ehdr;		/* Elf header structure pointer     */
 	Elf32_Phdr *phdr;		/* Program header structure pointer */
+#ifdef CONFIG_BOOTIPU1
+	Elf32_Phdr proghdr;
+#endif
 	int i;
 
 	ehdr = (Elf32_Ehdr *) addr;
@@ -284,6 +287,31 @@ static unsigned long load_elf_image_phdr(unsigned long addr)
 
 	/* Load each program header */
 	for (i = 0; i < ehdr->e_phnum; ++i) {
+#ifdef CONFIG_BOOTIPU1
+		memcpy(&proghdr, phdr, sizeof(Elf32_Phdr));
+		if (proghdr.p_paddr < 0x4000) {
+			/* L2_BOOT mapping of IPU1: Cortex M4 - VA 0x0 = PA 0x58820000 */
+			proghdr.p_paddr += 0x58820000;
+		} else if (proghdr.p_paddr >= 0x00300000 && proghdr.p_paddr < 0x00320000) {
+			/* OCMC mapping of Cortex M4 - VA 0x00300000 = PA 0x40300000 */
+			proghdr.p_paddr += 0x40000000;
+		} else if (proghdr.p_paddr >= 0x20004000 &&  proghdr.p_paddr < 0x20040000) {
+			/* L2_RAM mapping of IPU1: Cortex M4 - VA 0x20004000 = PA 0x58824000 */
+			proghdr.p_paddr += 0x38820000; /* section.addr - 0x20000000 + 0x58820000; */
+		}
+		void *dst = (void *)(uintptr_t) proghdr.p_paddr;
+		void *src = (void *) addr + proghdr.p_offset;
+		debug("Loading phdr %i to 0x%p (%i bytes)\n",
+			i, dst, proghdr.p_filesz);
+		if (proghdr.p_filesz)
+			memcpy(dst, src, proghdr.p_filesz);
+		if ((proghdr.p_filesz != proghdr.p_memsz) && (proghdr.p_paddr-0x58820000) > 0x4000 && proghdr.p_memsz>9 )
+			memset(dst + proghdr.p_filesz, 0x00,
+				   proghdr.p_memsz - proghdr.p_filesz);
+		/*Don't have to flush cache if greater than 15MB */
+		if (proghdr.p_memsz < 15*1024*1024)
+			flush_cache((unsigned long)dst, proghdr.p_filesz);
+#else
 		void *dst = (void *)(uintptr_t) phdr->p_paddr;
 		void *src = (void *) addr + phdr->p_offset;
 		debug("Loading phdr %i to 0x%p (%i bytes)\n",
@@ -294,6 +322,7 @@ static unsigned long load_elf_image_phdr(unsigned long addr)
 			memset(dst + phdr->p_filesz, 0x00,
 				phdr->p_memsz - phdr->p_filesz);
 		flush_cache((unsigned long)dst, phdr->p_filesz);
+#endif
 		++phdr;
 	}
 

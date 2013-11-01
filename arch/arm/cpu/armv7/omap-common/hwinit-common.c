@@ -182,6 +182,9 @@ void __weak arm_errata_798870(void)
  */
 void s_init(void)
 {
+#ifdef CONFIG_BOOTIPU1
+	volatile u32 spl_time = read_fast_counter();
+#endif
 	/*
 	 * Save the boot parameters passed from romcode.
 	 * We cannot delay the saving further than this,
@@ -216,6 +219,9 @@ void s_init(void)
 #endif
 #ifndef CONFIG_SPL_BUILD
 	set_crossbar_regs();
+#endif
+#ifdef CONFIG_BOOTIPU1
+	printf("Time at start of SPL is %010X = %5d ms\n", spl_time, ((int)(spl_time*1000/32768.0)));
 #endif
 }
 

@@ -92,4 +92,14 @@
 #define CONFIG_PHYLIB
 #define CONFIG_PHY_ADDR			2
 
+/* Enable this flag if you want IPU based early camera */
+#undef CONFIG_BOOTIPU1
+
+#ifdef CONFIG_BOOTIPU1
+#undef CONFIG_BOOTDELAY
+#define CONFIG_BOOTDELAY		0
+#define CONFIG_CMD_ELF
+#define IPU_LOAD_ADDR		0xa0fff000
+#endif
+
 #endif /* __CONFIG_DRA7XX_EVM_H */

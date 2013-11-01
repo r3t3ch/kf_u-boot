@@ -42,6 +42,8 @@
 #include <bootimg.h>
 #include <config.h>
 #include <device_tree.h>
+#include <elf.h>
+#include <asm/arch/sys_proto.h>
 
 
 #if defined(CONFIG_CMD_USB)
@@ -106,6 +108,13 @@ static image_header_t *image_get_kernel(ulong img_addr, int verify);
 #if defined(CONFIG_FIT)
 static int fit_check_kernel(const void *fit, int os_noffset, int verify);
 #endif
+
+#if defined(CONFIG_BOOTIPU1)
+void reset_ipu(void);
+int find_ipu_image(void);
+u32 load_ipu_image(void);
+#endif
+
 
 static void *boot_get_kernel(cmd_tbl_t *cmdtp, int flag, int argc,
 				char * const argv[], bootm_headers_t *images,
@@ -1942,6 +1951,11 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	char* fdt_chosen[4] = { "fdt", "chosen", NULL, NULL};
 	char start[32];
 	char end[32];
+#ifdef CONFIG_BOOTIPU1
+	volatile u32 reg_time=0;
+	bool boot_ipu1 = false;
+	unsigned ipu_load_addr;
+#endif
 
 	void (*theKernel)(int zero, int arch, void *);
 
@@ -1984,6 +1998,29 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			goto fail;
 		}
 
+#ifdef CONFIG_BOOTIPU1
+		ipu_load_addr = load_ipu_image();
+		if(ipu_load_addr) {
+			reg_time = read_fast_counter();
+			printf("Time before loading M4 ELF image is %010X = %5d ms\n",
+				reg_time, ((int)(reg_time*1000/32768.0)));
+
+			if (valid_elf_image(ipu_load_addr))
+				load_elf_image_phdr(ipu_load_addr);
+			else
+				printf("Not a valid elf image at 0x%x\n", ipu_load_addr);
+
+			reg_time = read_fast_counter();
+			printf("Time after loading M4 ELF image is %010X = %5d ms\n",
+				reg_time, ((int)(reg_time*1000/32768.0)));
+			reset_ipu();
+			reg_time = read_fast_counter();
+			printf("Time at which Cortex-M4 code starts executing is %010X = %5d ms\n",
+				reg_time, ((int)(reg_time*1000/32768.0)));
+		} else {
+			printf("IPU1 not loaded.\n");
+		}
+#endif
 		dbt_addr = load_dev_tree(dbt_addr);
 
 		num_sectors =  1;
@@ -2025,11 +2062,10 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			printf("booti: Could not read ramdisk\n");
 			goto fail;
 		}
-
 	}
+
 	printf("kernel   @ %08x (%d)\n", hdr->kernel_addr, hdr->kernel_size);
 	printf("ramdisk  @ %08x (%d)\n", hdr->ramdisk_addr, hdr->ramdisk_size);
-
 
 	//Set the initrd_start and initrd_end inside the FDT
 	status = do_fdt(NULL, 0, 3, fdt_addr);
