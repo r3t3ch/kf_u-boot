@@ -61,6 +61,8 @@
 #define CTRL_CORE_MPU_IRQ_51_REG			0x4a002aa2
 #define CTRL_CORE_MPU_IRQ_52_REG			0x4a002aa4
 #define CTRL_CORE_MPU_IRQ_53_REG			0x4a002aa6
+#define CTRL_CORE_MPU_IRQ_81_REG			0X4a002ade
+#define CTRL_CORE_MPU_IRQ_82_REG			0X4a002ae0
 
 #define CTRL_CORE_DMA_SYSTEM_DREQ_79_REG		0x4a002c16
 #define CTRL_CORE_DMA_SYSTEM_DREQ_78_REG		0x4a002c14
@@ -217,6 +219,8 @@ static void set_crossbar_mpu_irq(void)
 	writew(335, CTRL_CORE_MPU_IRQ_51_REG);  /* CPSW_RX */
 	writew(336, CTRL_CORE_MPU_IRQ_52_REG);  /* CPSW_TX */
 	writew(337, CTRL_CORE_MPU_IRQ_53_REG);  /* CPSW_MISC */
+	writew(222, CTRL_CORE_MPU_IRQ_81_REG);  /* DCAN1_INT0 */
+	writew(225, CTRL_CORE_MPU_IRQ_82_REG);  /* DCAN2_INT0 */
 }
 
 static void set_crossbar_sdma_dreq(void)
