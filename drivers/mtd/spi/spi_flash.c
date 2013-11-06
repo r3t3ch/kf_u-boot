@@ -282,7 +282,7 @@ int spi_flash_cmd_read_quad(struct spi_flash *flash, u32 offset,
 {
 	struct spi_slave *spi = flash->spi;
 
-	unsigned long page_addr, byte_addr, page_size;
+	unsigned long byte_addr;
 	size_t chunk_len, actual;
 	int ret = 0;
 	u8 cmd[5];
@@ -296,18 +296,15 @@ int spi_flash_cmd_read_quad(struct spi_flash *flash, u32 offset,
 		return 0;
 	}
 
-	page_size = flash->page_size;
-	page_addr = offset / page_size;
-	byte_addr = offset % page_size;
-
 	cmd[0] = CMD_READ_ARRAY_QUAD;
+	cmd[4] = 0x00;
+	byte_addr = offset % SF_MAX_CHUNK_LEN;
 	for (actual = 0; actual < len; actual += chunk_len) {
-		chunk_len = min(len - actual, page_size - byte_addr);
+		/* HACK: Read in chunks of SF_MAX_CHUNK_LEN */
+		chunk_len = min(len - actual, SF_MAX_CHUNK_LEN - byte_addr);
 
-		cmd[1] = page_addr >> 8;
-		cmd[2] = page_addr;
-		cmd[3] = byte_addr;
-		cmd[4] = 0x0;
+		spi_flash_addr (offset + actual, cmd);
+
 
 		ret = spi_flash_read_common(flash, cmd, sizeof(cmd),
 				data + actual, chunk_len);
@@ -317,10 +314,7 @@ int spi_flash_cmd_read_quad(struct spi_flash *flash, u32 offset,
 		}
 
 		byte_addr += chunk_len;
-		if (byte_addr == page_size) {
-			page_addr++;
-			byte_addr = 0;
-		}
+		byte_addr %= SF_MAX_CHUNK_LEN;
 	}
 
 	return ret;
@@ -330,8 +324,9 @@ int spi_flash_cmd_read_fast(struct spi_flash *flash, u32 offset,
 		size_t len, void *data)
 {
 	u8 cmd[5], bank_sel = 0;
-	u32 remain_len, read_len;
 	int ret = -1;
+	unsigned long byte_addr;
+	size_t chunk_len, actual;
 
 	/* Handle memory-mapped SPI */
 	if (flash->memory_map) {
@@ -343,10 +338,14 @@ int spi_flash_cmd_read_fast(struct spi_flash *flash, u32 offset,
 
 	cmd[0] = CMD_READ_ARRAY_FAST;
 	cmd[4] = 0x00;
+	byte_addr = offset % SF_MAX_CHUNK_LEN;
+	for (actual = 0; actual < len; actual += chunk_len) {
+		/* HACK: Read in chunks of SF_MAX_CHUNK_LEN */
+		chunk_len = min(len - actual, SF_MAX_CHUNK_LEN - byte_addr);
 
-	while (len) {
+		spi_flash_addr (offset + actual, cmd);
 #ifdef CONFIG_SPI_FLASH_BAR
-		bank_sel = offset / SPI_FLASH_16MB_BOUN;
+		bank_sel = (offset + actual) / SPI_FLASH_16MB_BOUN;
 
 		ret = spi_flash_cmd_bankaddr_write(flash, bank_sel);
 		if (ret) {
@@ -354,26 +353,16 @@ int spi_flash_cmd_read_fast(struct spi_flash *flash, u32 offset,
 			return ret;
 		}
 #endif
-		remain_len = (SPI_FLASH_16MB_BOUN * (bank_sel + 1) - offset);
-		if (len < remain_len)
-			read_len = len;
-		else
-			read_len = remain_len;
-
-		spi_flash_addr(offset, cmd);
 
 		ret = spi_flash_read_common(flash, cmd, sizeof(cmd),
-							data, read_len);
+				data + actual, chunk_len);
 		if (ret < 0) {
 			debug("SF: read failed\n");
 			break;
 		}
-
-		offset += read_len;
-		len -= read_len;
-		data += read_len;
+		byte_addr += chunk_len;
+		byte_addr %= SF_MAX_CHUNK_LEN;
 	}
-
 	return ret;
 }
 
