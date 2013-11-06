@@ -741,7 +741,7 @@ static int fastboot_flash(const char *partition)
 		}
 		if ( ((sparse_header_t *)fb_cfg.transfer_buffer)->magic
 				== SPARSE_HEADER_MAGIC) {
-			printf("fastboot: %s is in sparse format %u %u \n", ptn->name, ptn->start, ptn->length);
+			printf("fastboot: %s is in sparse format %u %llu \n", ptn->name, ptn->start, ptn->length);
 			status = do_unsparse(fb_cfg.transfer_buffer,
 					ptn->start,
 					ptn->length);
