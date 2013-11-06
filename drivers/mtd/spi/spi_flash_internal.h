@@ -46,6 +46,8 @@
 # define CMD_BANKADDR_BRRD		0x16
 # define CMD_EXTNADDR_WREAR		0xC5
 # define CMD_EXTNADDR_RDEAR		0xC8
+/* Extended address mask for BAR register */
+#define SF_EN_EXT_ADDR			0x01 << 7
 #endif
 
 /* Workaround for TI QSPI controller read limitation */
