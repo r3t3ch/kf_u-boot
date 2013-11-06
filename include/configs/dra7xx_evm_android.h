@@ -62,6 +62,7 @@
 #define CONFIG_SF_DEFAULT_SPEED                48000000
 #define CONFIG_DEFAULT_SPI_MODE                SPI_MODE_3
 #define CONFIG_SPI_FLASH_BAR
+#define CONFIG_CH_QSPI
 
 /* Defines for SPL */
 #ifdef CONFIG_SPL
