@@ -585,6 +585,15 @@ void scale_vcores(struct vcores_data const *vcores)
 	val = optimize_vcore_voltage(&vcores->mpu);
 	do_scale_vcore(vcores->mpu.addr, val, vcores->mpu.pmic);
 
+	/* Configure MPU ABB LDO after scale */
+	abb_setup((*ctrl)->control_std_fuse_opp_vdd_mpu_2,
+		  (*ctrl)->control_wkup_ldovbb_mpu_voltage_ctrl,
+		  (*prcm)->prm_abbldo_mpu_setup,
+		  (*prcm)->prm_abbldo_mpu_ctrl,
+		  (*prcm)->prm_irqstatus_mpu_2,
+		  OMAP_ABB_MPU_TXDONE_MASK,
+		  OMAP_ABB_FAST_OPP);
+
 	val = optimize_vcore_voltage(&vcores->mm);
 	do_scale_vcore(vcores->mm.addr, val, vcores->mm.pmic);
 
