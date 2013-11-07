@@ -96,7 +96,7 @@ static struct qspi_regs *qspi = (struct qspi_regs *)QSPI_BASE;
 #define	QSPI_CMD_READ_QUAD			(0x6b << 0)
 #define	QSPI_CMD_READ_FAST			(0x0b << 0)
 
-#define	QSPI_SETUP0_NUM_A_BYTES			(0x3 << 8)
+#define	QSPI_SETUP0_NUM_A_BYTES			(0x2 << 8)
 #define	QSPI_SETUP0_NUM_D_BYTES_NO_BITS		(0x0 << 10)
 #define	QSPI_SETUP0_NUM_D_BYTES_8_BITS		(0x1 << 10)
 #define	QSPI_SETUP0_READ_NORMAL			(0x0 << 12)
@@ -137,7 +137,7 @@ void spi_set_up_spi_register(struct spi_slave *slave)
 		QSPI_SETUP0_NUM_D_BYTES_8_BITS | QSPI_SETUP0_READ_QUAD |
 			QSPI_CMD_WRITE | QSPI_NUM_DUMMY_BITS);
 #else
-	memval |= (QSPI_CMD_READ_FAST | QSPI_SETUP0_NUM_A_BYTES |
+	memval |= (QSPI_CMD_READ | QSPI_SETUP0_NUM_A_BYTES |
 		QSPI_SETUP0_NUM_D_BYTES_NO_BITS | QSPI_SETUP0_READ_NORMAL |
 			QSPI_CMD_WRITE | QSPI_NUM_DUMMY_BITS);
 #endif

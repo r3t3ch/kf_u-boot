@@ -283,20 +283,13 @@ int spi_flash_cmd_read_quad(struct spi_flash *flash, u32 offset,
 	struct spi_slave *spi = flash->spi;
 
 	unsigned long byte_addr;
-	size_t chunk_len, actual, bank_sel = 0;
+	size_t chunk_len, actual;
 	int ret = 0;
 	u8 cmd[5];
 
 	spi->quad_enable = 1;
 	/* Handle memory-mapped SPI */
 	if (flash->memory_map) {
-#ifdef CONFIG_SPI_FLASH_BAR
-		ret = spi_flash_cmd_bankaddr_write(flash, SF_EN_EXT_ADDR);
-		if (ret) {
-			debug("SF: fail to enable extended Addressing\n");
-			return ret;
-		}
-#endif
 		spi_xfer(flash->spi, 0, NULL, NULL, SPI_XFER_MEM_MAP);
 		memcpy(data, flash->memory_map + offset, len);
 		spi_xfer(flash->spi, 0, NULL, NULL, SPI_XFER_MEM_MAP_END);
@@ -312,15 +305,6 @@ int spi_flash_cmd_read_quad(struct spi_flash *flash, u32 offset,
 
 		spi_flash_addr (offset + actual, cmd);
 
-#ifdef CONFIG_SPI_FLASH_BAR
-		bank_sel = (offset + actual) / SPI_FLASH_16MB_BOUN;
-
-		ret = spi_flash_cmd_bankaddr_write(flash, bank_sel);
-		if (ret) {
-			debug("SF: fail to set bank%d\n", bank_sel);
-			return ret;
-		}
-#endif
 
 		ret = spi_flash_read_common(flash, cmd, sizeof(cmd),
 				data + actual, chunk_len);
@@ -346,13 +330,6 @@ int spi_flash_cmd_read_fast(struct spi_flash *flash, u32 offset,
 
 	/* Handle memory-mapped SPI */
 	if (flash->memory_map) {
-#ifdef CONFIG_SPI_FLASH_BAR
-		ret = spi_flash_cmd_bankaddr_write(flash, SF_EN_EXT_ADDR);
-		if (ret) {
-			debug("SF: fail to enable extended Addressing\n");
-			return ret;
-		}
-#endif
 		spi_xfer(flash->spi, 0, NULL, NULL, SPI_XFER_MEM_MAP);
 		memcpy(data, flash->memory_map + offset, len);
 		spi_xfer(flash->spi, 0, NULL, NULL, SPI_XFER_MEM_MAP_END);
