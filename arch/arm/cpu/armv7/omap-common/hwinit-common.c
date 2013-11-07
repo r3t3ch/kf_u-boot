@@ -162,6 +162,10 @@ void __weak set_crossbar_regs(void)
 {
 }
 
+void __weak arm_errata_798870(void)
+{
+}
+
 /*
  * Routine: s_init
  * Description: Does early system init of watchdog, muxing,  andclocks
