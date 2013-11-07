@@ -406,8 +406,8 @@ static void format_flash_cmd(char* cmd)
 	int i;
 	char *parts[] = {"xloader", "bootloader", "boot", "system", "userdata",
 		            "cache", "recovery","environment", "zImage", "zimage",
-					"misc", "efs", "crypto"};
-	for(i = 0;i < 13;i++) {
+					"misc", "efs", "crypto", "ipu"};
+	for(i = 0;i < 14;i++) {
 		if (!strncmp(parts[i], cmd, strlen(parts[i]))) {
 			*(cmd + strlen(parts[i])) = '\0';
 			break;
