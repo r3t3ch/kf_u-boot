@@ -72,6 +72,7 @@ void set_crossbar_regs(void);
 u32 get_l2_aux_ctrl_reg(void);
 void set_l2_aux_ctrl_reg(u32 val);
 void arm_errata_798870(void);
+u32 read_fast_counter(void);
 
 static inline u32 running_from_sdram(void)
 {
