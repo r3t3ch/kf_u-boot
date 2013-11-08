@@ -2031,13 +2031,8 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			goto fail;
 		}
 
-		bootimg_print_image_hdr(hdr);
-
 		/* read kernel */
-		printf("\nHeader: Kernel Addr:0x%x", hdr->kernel_addr);
-		printf("\nHeader: Kernel Size:0x%x", hdr->kernel_size);
-		printf("\nHeader: Ramdisk Addr:0x%x", hdr->ramdisk_addr);
-		printf("\nHeader: Ramdisk Size:0x%x", hdr->ramdisk_size);
+		bootimg_print_image_hdr(hdr);
 		printf("\n\nramdisk sector count:%d", (int)(hdr->ramdisk_size /
 												mmc->block_dev.blksz));
 
