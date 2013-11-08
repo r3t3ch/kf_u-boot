@@ -90,6 +90,7 @@ LIBS-$(CONFIG_CMD_FASTBOOT) += drivers/usb/gadget/usbstring.o
 LIBS-$(CONFIG_CMD_FASTBOOT) += drivers/usb/gadget/epautoconf.o
 LIBS-$(CONFIG_USB_DWC3) += drivers/usb/dwc3/libdwc3.o
 endif
+LIBS-$(CONFIG_OF_LIBFDT) += lib/libfdt/libfdt.o
 
 ifneq ($(CONFIG_AM33XX)$(CONFIG_OMAP34XX)$(CONFIG_OMAP44XX)$(CONFIG_OMAP54XX)$(CONFIG_TI814X),)
 LIBS-y += $(CPUDIR)/omap-common/libomap-common.o
@@ -100,7 +101,6 @@ LIBS-y += arch/$(ARCH)/cpu/$(SOC)-common/lib$(SOC)-common.o
 LIBS-y += arch/$(ARCH)/cpu/tegra-common/libcputegra-common.o
 LIBS-y += $(CPUDIR)/tegra-common/libtegra-common.o
 endif
-
 # Add GCC lib
 ifeq ("$(USE_PRIVATE_LIBGCC)", "yes")
 PLATFORM_LIBGCC = $(SPLTREE)/arch/$(ARCH)/lib/libgcc.o

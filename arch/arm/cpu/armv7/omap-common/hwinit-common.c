@@ -231,13 +231,14 @@ void s_init(void)
 #ifdef CONFIG_SPL_BUILD
 	/* For regular u-boot sdram_init() is called from dram_init() */
 	sdram_init();
+	gd->bd->bi_dram[0].start = CONFIG_SYS_SDRAM_BASE;
+	gd->bd->bi_dram[0].size = omap_sdram_size();
 #endif
-#ifndef CONFIG_SPL_BUILD
+#if defined(CONFIG_SPL_EARLY_BOOT) || !defined(CONFIG_SPL_BUILD)
 	set_crossbar_regs();
 #endif
-#ifdef CONFIG_BOOTIPU1
-	printf("Time at start of SPL is %010X = %5d ms\n", spl_time, ((int)(spl_time*1000/32768.0)));
-#endif
+	printf("Time at start of SPL: %5d ms\n", ((int)(spl_time*1000/32768.0)));
+
 }
 
 /*

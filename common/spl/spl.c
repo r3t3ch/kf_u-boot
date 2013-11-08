@@ -38,6 +38,15 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+#ifdef CONFIG_SPL_EARLY_BOOT
+extern u32 spl_boot_linux(void);
+# ifdef CONFIG_BOOTIPU1
+extern u32 spl_boot_ipu(void);
+# endif
+#endif
+
+
+
 #ifndef CONFIG_SYS_UBOOT_START
 #define CONFIG_SYS_UBOOT_START	CONFIG_SYS_TEXT_BASE
 #endif
@@ -46,7 +55,6 @@ DECLARE_GLOBAL_DATA_PTR;
 #endif
 
 u32 *boot_params_ptr = NULL;
-struct spl_image_info spl_image;
 
 /* Define board data structure */
 static bd_t bdata __attribute__ ((section(".data")));
@@ -86,6 +94,7 @@ __weak void spl_board_prepare_for_linux(void)
 {
 	/* Nothing to do! */
 }
+
 
 void spl_parse_image_header(const struct image_header *header)
 {
@@ -156,7 +165,7 @@ static void spl_ram_load_image(void)
 
 void board_init_r(gd_t *dummy1, ulong dummy2)
 {
-#if defined(CONFIG_SPL_USB_BOOT_SUPPORT) && defined(CONFIG_CMD_FASTBOOT)
+#if defined(CONFIG_SPL_USB_BOOT_SUPPORT) || defined(CONFIG_CMD_FASTBOOT)
 	struct mmc *mmc;
 #endif
 	u32 boot_device;
@@ -181,13 +190,30 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 
 	boot_device = spl_boot_device();
 	debug("boot device - %d\n", boot_device);
+
+#ifdef CONFIG_SPL_EARLY_BOOT
+	if (omap_sysboot() == SYS_BOOT_QSPI_PROD) {
+# ifdef CONFIG_BOOTIPU1
+		spl_mmc_init(&mmc);
+		/* Clock and MMU initialization done in spl_board_init */
+		spl_mmc_load_image_raw(mmc, LOAD_IPU);
+		if (spl_boot_ipu()){
+			puts("Error loading IPU!, fall back to u-boot...\n");
+		} else {
+# else
+		{
+# endif
+			if (spl_boot_linux())
+				puts("Error booting Linux, fall back to u-boot...\n");
+		}
+	}
+#endif
+
 	switch (boot_device) {
 #ifdef CONFIG_SPL_USB_BOOT_SUPPORT
 	case BOOT_DEVICE_USB:
 #ifdef CONFIG_CMD_FASTBOOT
 		spl_mmc_init(&mmc);
-		gd->bd->bi_dram[0].start = CONFIG_SYS_SDRAM_BASE;
-		gd->bd->bi_dram[0].size = omap_sdram_size();
 		if (!fastboot_init()) {
 			while (1) {
 				if (fastboot_poll())
@@ -202,6 +228,7 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 #endif
 		break;
 #endif
+
 #ifdef CONFIG_SPL_RAM_DEVICE
 	case BOOT_DEVICE_RAM:
 		spl_ram_load_image();

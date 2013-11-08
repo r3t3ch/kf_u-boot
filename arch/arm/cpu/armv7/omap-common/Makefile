@@ -42,10 +42,8 @@ COBJS	+= boot-common.o
 SOBJS	+= lowlevel_init.o
 endif
 
-ifndef CONFIG_SPL_BUILD
 ifneq ($(CONFIG_OMAP44XX)$(CONFIG_OMAP54XX),)
 COBJS	+= mem-common.o
-endif
 endif
 
 SRCS	:= $(SOBJS:.o=.S) $(COBJS:.o=.c)

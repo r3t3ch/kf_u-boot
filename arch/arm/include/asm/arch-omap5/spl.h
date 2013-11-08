@@ -35,6 +35,25 @@
 #define BOOT_DEVICE_UART	0x43
 #define BOOT_DEVICE_USB		0x45
 
+#define SYS_BOOT_DEVICE		0x3F
+#define SYS_BOOT_QSPI_PROD	0x36
+
+#define LOAD_U_BOOT		0
+#define LOAD_KERNEL		1
+#define LOAD_RAMDISK		2
+#define LOAD_DTB		3
+#define LOAD_IPU		4
+
+/*
+ * TODO: Remove these hardcoded addresses by introducing a simple
+ *       image header into the binaries. Current method used by
+ *       fastboot loads the entire partition; these images are
+ *       significantly smaller. This method adds lots of load time.
+ */
+#define DBT_IMAGE_SIZE		0x7A79	/*  48KB */
+#define IPU_IMAGE_SIZE		0x80000	/* 512KB */
+
+
 #define MMC_BOOT_DEVICES_START	BOOT_DEVICE_MMC1
 #define MMC_BOOT_DEVICES_END	BOOT_DEVICE_MMC2_2
 #endif

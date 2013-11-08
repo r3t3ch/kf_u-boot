@@ -27,11 +27,33 @@
 #include <linux/compiler.h>
 #include <asm/spl.h>
 #include <mmc.h>
+#include <android_image.h>
 
 /* Boot type */
 #define MMCSD_MODE_UNDEFINED	0
 #define MMCSD_MODE_RAW		1
 #define MMCSD_MODE_FAT		2
+
+#if 0
+struct spl_kernel_boot_info {
+	u8 magic[BOOT_MAGIC_SIZE];
+	u32 ramdisk_size; /* size in bytes */
+	u32 ramdisk_addr; /* physical load addr */
+
+	u32 second_size;  /* size in bytes */
+	u32 second_addr;  /* physical load addr */
+
+	u32 tags_addr;    /* physical addr for kernel tags */
+	u32 page_size;    /* flash page size we assume */
+	u32 unused[2];    /* future expansion: should be 0 */
+
+	u8 name[ANDR_BOOT_NAME_SIZE]; /* asciiz product name */
+
+	u8 cmdline[ANDR_BOOT_ARGS_SIZE];
+
+	u32 id[8]; /* timestamp / checksum / sha1 / etc */
+};
+#endif
 
 struct spl_image_info {
 	const char *name;
@@ -45,6 +67,7 @@ struct spl_image_info {
 #define SPL_COPY_PAYLOAD_ONLY	1
 
 extern struct spl_image_info spl_image;
+extern struct boot_img_hdr spl_kernel_boot;
 
 /* SPL common functions */
 void preloader_console_init(void);
@@ -66,7 +89,9 @@ void spl_onenand_load_image(void);
 void spl_nor_load_image(void);
 
 /* MMC SPL functions */
+void spl_mmc_init(struct mmc **mmc);
 void spl_mmc_load_image(void);
+void spl_mmc_load_image_raw(struct mmc *mmc, u8 image_type);
 
 /* YMODEM SPL functions */
 void spl_ymodem_load_image(void);
@@ -76,7 +101,6 @@ void spl_spi_load_image(void);
 
 /* Ethernet SPL functions */
 void spl_net_load_image(const char *device);
-void spl_mmc_init(struct mmc **mmc);
 #ifdef CONFIG_SPL_BOARD_INIT
 void spl_board_init(void);
 #endif

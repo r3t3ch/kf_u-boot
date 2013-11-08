@@ -215,7 +215,7 @@ int fdt_chosen(void *fdt, int force)
 {
 	int   nodeoffset;
 	int   err;
-	char  *str;		/* used to set string properties */
+	char  *str = NULL;		/* used to set string properties */
 	const char *path;
 
 	err = fdt_check_header(fdt);
@@ -249,7 +249,9 @@ int fdt_chosen(void *fdt, int force)
 	 * If the property exists, update it only if the "force" parameter
 	 * is true.
 	 */
+#ifndef CONFIG_SPL_BUILD
 	str = getenv("bootargs");
+#endif
 	if (str != NULL) {
 		path = fdt_getprop(fdt, nodeoffset, "bootargs", NULL);
 		if ((path == NULL) || force) {

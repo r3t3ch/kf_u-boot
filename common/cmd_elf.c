@@ -25,34 +25,6 @@ DECLARE_GLOBAL_DATA_PTR;
 #endif
 
 unsigned long load_elf_image_phdr(unsigned long addr);
-static unsigned long load_elf_image_shdr(unsigned long addr);
-
-/* Allow ports to override the default behavior */
-__attribute__((weak))
-unsigned long do_bootelf_exec(ulong (*entry)(int, char * const[]),
-			       int argc, char * const argv[])
-{
-	unsigned long ret;
-
-	/*
-	 * QNX images require the data cache is disabled.
-	 * Data cache is already flushed, so just turn it off.
-	 */
-	int dcache = dcache_status();
-	if (dcache)
-		dcache_disable();
-
-	/*
-	 * pass address parameter as argv[0] (aka command name),
-	 * and all remaining args
-	 */
-	ret = entry(argc, argv);
-
-	if (dcache)
-		dcache_enable();
-
-	return ret;
-}
 
 /* ======================================================================
  * Determine if a valid ELF image exists at the given memory location.
@@ -85,6 +57,36 @@ int valid_elf_image(unsigned long addr)
 #endif
 
 	return 1;
+}
+
+#ifndef CONFIG_SPL_BUILD
+static unsigned long load_elf_image_shdr(unsigned long addr);
+
+/* Allow ports to override the default behavior */
+__attribute__((weak))
+unsigned long do_bootelf_exec(ulong (*entry)(int, char * const[]),
+			       int argc, char * const argv[])
+{
+	unsigned long ret;
+
+	/*
+	 * QNX images require the data cache is disabled.
+	 * Data cache is already flushed, so just turn it off.
+	 */
+	int dcache = dcache_status();
+	if (dcache)
+		dcache_disable();
+
+	/*
+	 * pass address parameter as argv[0] (aka command name),
+	 * and all remaining args
+	 */
+	ret = entry(argc, argv);
+
+	if (dcache)
+		dcache_enable();
+
+	return ret;
 }
 
 /* ======================================================================
@@ -268,6 +270,7 @@ int do_bootvx(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	puts("## vxWorks terminated\n");
 	return 1;
 }
+#endif
 
 /* ======================================================================
  * A very simple elf loader, assumes the image is valid, returns the
@@ -329,6 +332,7 @@ unsigned long load_elf_image_phdr(unsigned long addr)
 	return ehdr->e_entry;
 }
 
+#ifndef CONFIG_SPL_BUILD
 static unsigned long load_elf_image_shdr(unsigned long addr)
 {
 	Elf32_Ehdr *ehdr;		/* Elf header structure pointer     */
@@ -396,3 +400,4 @@ U_BOOT_CMD(
 	"Boot vxWorks from an ELF image",
 	" [address] - load address of vxWorks ELF image."
 );
+#endif

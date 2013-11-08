@@ -302,6 +302,19 @@ struct ipu_image_data {
 
 static struct ipu_image_data *ipu_data;
 
+extern int valid_elf_image(unsigned long addr);
+extern unsigned long load_elf_image_phdr(unsigned long addr);
+
+u32 spl_boot_ipu(void){
+	if (valid_elf_image(IPU_LOAD_ADDR)) {
+		load_elf_image_phdr(IPU_LOAD_ADDR);
+		reset_ipu();
+		return 0;
+	} else {
+		printf("Not a valid elf image at 0x%x\n", IPU_LOAD_ADDR);
+	}
+	return 1;
+}
 
 /**
  * find_ipu_image(void) - Find the ipu image.

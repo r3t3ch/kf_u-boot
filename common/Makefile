@@ -219,8 +219,6 @@ COBJS-$(CONFIG_CMD_GPT) += cmd_gpt.o
 endif
 
 ifdef CONFIG_SPL_BUILD
-COBJS-y += cmd_nvedit.o
-COBJS-y += env_common.o
 COBJS-$(CONFIG_ENV_IS_IN_FLASH) += env_flash.o
 COBJS-$(CONFIG_SPL_YMODEM_SUPPORT) += xyzModem.o
 COBJS-$(CONFIG_SPL_NET_SUPPORT) += cmd_nvedit.o
@@ -235,6 +233,8 @@ COBJS-$(CONFIG_CMD_FASTBOOT) += fastboot.o
 COBJS-$(CONFIG_CMD_FASTBOOT) += mmc.o
 COBJS-$(CONFIG_CMD_FASTBOOT) += cmd_mmc.o
 COBJS-$(CONFIG_CMD_FASTBOOT) += cmd_sf.o
+COBJS-$(CONFIG_OF_LIBFDT) += fdt_support.o
+COBJS-$(CONFIG_CMD_ELF) += cmd_elf.o
 endif
 endif
 COBJS-$(CONFIG_BOUNCE_BUFFER) += bouncebuf.o
