@@ -124,7 +124,7 @@
 
 #ifdef CONFIG_BOOTIPU1
 #undef CONFIG_BOOTDELAY
-#define CONFIG_BOOTDELAY		0
+#define CONFIG_BOOTDELAY		3
 #define CONFIG_CMD_ELF
 #define IPU_LOAD_ADDR		0xa0fff000
 #endif
