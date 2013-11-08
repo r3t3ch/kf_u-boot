@@ -107,6 +107,7 @@
 
 #define DRA7XX_PUBLIC_SAR_RAM_1_FREE           (0x4AE26000 + 0xFE0)
 #define DRA7XX_PRM_RSTCTRL_RESET_WARM_BIT      (1<<0)
+#define DRA7XX_PRM_RSTST_RESET_WARM_BIT        (1<<1)
 #define DRA7XX_PRM_RSTST                       0x4AE07D04
 #define DRA7XX_PRM_RSTCTRL                     0x4AE07D00
 #define DRA7XX_PRM_RSTST_CLR                   0xfff
