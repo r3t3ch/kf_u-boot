@@ -46,6 +46,8 @@
 #ifdef CONFIG_BOOTIPU1
 #include <usb/fastboot.h>
 #include <mmc.h>
+#include <malloc.h>
+
 #endif
 
 
@@ -253,14 +255,6 @@ void ipu_systemReset(void)
 	__raw_writel(0x3, RM_IPU1_RSTCTRL);
 
 	while((__raw_readl(RM_IPU1_RSTST) & 0x4) != 0x4);
-}
-
-void turnoff_MMU()
-{
-	 __asm("mrc  p15, 0, r1, c1, c0, 0");        //Read Control Register
-	 __asm("bic  r1, r1, #0x01");                // clear bit 0 (--MMU-)
-	 __asm("mcr  p15, 0, r1, c1, c0, 0");        // Write back the Control Register
-
 }
 
 void setup_ipu_mmu(void)

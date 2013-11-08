@@ -111,8 +111,9 @@ static int fit_check_kernel(const void *fit, int os_noffset, int verify);
 
 #if defined(CONFIG_BOOTIPU1)
 void reset_ipu(void);
-int find_ipu_image(void);
 u32 load_ipu_image(void);
+int valid_elf_image(unsigned long);
+unsigned long load_elf_image_phdr(unsigned long);
 #endif
 
 
@@ -1953,7 +1954,6 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	char end[32];
 #ifdef CONFIG_BOOTIPU1
 	volatile u32 reg_time=0;
-	bool boot_ipu1 = false;
 	unsigned ipu_load_addr;
 #endif
 
