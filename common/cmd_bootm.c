@@ -1902,6 +1902,43 @@ U_BOOT_CMD(
 );
 #endif	/* CONFIG_CMD_BOOTZ */
 
+#ifdef CONFIG_BOOTIPU1
+static int do_boot_ipu(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	volatile u32 reg_time = 0;
+	if (argc < 2)
+		return -1;
+
+	ulong ipu_load_addr = simple_strtoul(argv[1], NULL, 16);
+
+	reg_time = read_fast_counter();
+	debug("Time before loading M4 ELF image is %010X = %5d ms\n",
+		reg_time, ((int)(reg_time*1000/32768.0)));
+
+	if (valid_elf_image(ipu_load_addr))
+		load_elf_image_phdr(ipu_load_addr);
+	else {
+		printf("Not a valid elf image at 0x%x\n", (unsigned)(ipu_load_addr));
+		return -1;
+	}
+
+	reg_time = read_fast_counter();
+	debug("Time after loading M4 ELF image is %010X = %5d ms\n",
+		reg_time, ((int)(reg_time*1000/32768.0)));
+	reset_ipu();
+	reg_time = read_fast_counter();
+	debug("Time at which Cortex-M4 code starts executing is %010X = %5d ms\n",
+		reg_time, ((int)(reg_time*1000/32768.0)));
+	return 0;
+}
+
+U_BOOT_CMD(
+	bootipu,	3,	1,	do_boot_ipu,
+	"bootipu   - boot IPU image from memory\n",
+	"<addr>\n    - boot application image stored in memory\n"
+	"\t'addr' should be the address of boot image\n"
+);
+#endif
 
 void
 bootimg_print_image_hdr (boot_img_hdr *hdr)
@@ -1953,8 +1990,9 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	char start[32];
 	char end[32];
 #ifdef CONFIG_BOOTIPU1
-	volatile u32 reg_time=0;
 	unsigned ipu_load_addr;
+	char* ipu_boot[2] = { "bootipu", NULL };
+	char ipu_addr[32];
 #endif
 
 	void (*theKernel)(int zero, int arch, void *);
@@ -2001,22 +2039,9 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 #ifdef CONFIG_BOOTIPU1
 		ipu_load_addr = load_ipu_image();
 		if(ipu_load_addr) {
-			reg_time = read_fast_counter();
-			printf("Time before loading M4 ELF image is %010X = %5d ms\n",
-				reg_time, ((int)(reg_time*1000/32768.0)));
-
-			if (valid_elf_image(ipu_load_addr))
-				load_elf_image_phdr(ipu_load_addr);
-			else
-				printf("Not a valid elf image at 0x%x\n", ipu_load_addr);
-
-			reg_time = read_fast_counter();
-			printf("Time after loading M4 ELF image is %010X = %5d ms\n",
-				reg_time, ((int)(reg_time*1000/32768.0)));
-			reset_ipu();
-			reg_time = read_fast_counter();
-			printf("Time at which Cortex-M4 code starts executing is %010X = %5d ms\n",
-				reg_time, ((int)(reg_time*1000/32768.0)));
+			ipu_boot[1] = ipu_addr;
+			sprintf(ipu_addr, "0x%x", (unsigned int)ipu_load_addr);
+			do_boot_ipu(NULL, 0, 2, ipu_boot);
 		} else {
 			printf("IPU1 not loaded.\n");
 		}
