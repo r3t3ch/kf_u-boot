@@ -88,9 +88,11 @@ void spl_mmc_load_image_raw(struct mmc *mmc, u8 image_type)
 	} else if (image_type == LOAD_DTB) {
 		dest = DEVICE_TREE;
 		image_size_sectors = (DBT_IMAGE_SIZE + mmc->read_bl_len - 1) / mmc->read_bl_len;
+#ifdef CONFIG_BOOTIPU1
 	} else if ( image_type == LOAD_IPU) {
 		dest = IPU_LOAD_ADDR;
 		image_size_sectors = (IPU_IMAGE_SIZE + mmc->read_bl_len - 1) / mmc->read_bl_len;
+#endif
 	} else {
 			src +=(_ALIGN(spl_image.size, spl_kernel_boot.page_size) + spl_kernel_boot.page_size)/
 							mmc->block_dev.blksz;
