@@ -398,7 +398,7 @@ u32 load_ipu_image(void)
 		ipu_data->ipu_image_sz);
 
 out:
-	if (ipu_data->ipu_image_load_addr) {
+	if (ipu_data && ipu_data->ipu_image_load_addr) {
 		ipu_load_addr = ipu_data->ipu_image_load_addr;
 	}
 
