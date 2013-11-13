@@ -237,8 +237,9 @@ void s_init(void)
 #if defined(CONFIG_SPL_EARLY_BOOT) || !defined(CONFIG_SPL_BUILD)
 	set_crossbar_regs();
 #endif
+#ifdef CONFIG_BOOTIPU1
 	printf("Time at start of SPL: %5d ms\n", ((int)(spl_time*1000/32768.0)));
-
+#endif
 }
 
 /*
