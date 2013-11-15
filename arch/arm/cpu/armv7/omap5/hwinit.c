@@ -331,15 +331,17 @@ void init_omap_revision(void)
 	 * Also, ES1 and ES2 have different ARM revisions
 	 * So use ARM revision for identification
 	 */
-	unsigned int rev = cortex_rev();
+	unsigned int rev;
 
 	switch (readl(CONTROL_ID_CODE)) {
 	case OMAP5430_CONTROL_ID_CODE_ES1_0:
+		 rev = cortex_rev();
 		*omap_si_rev = OMAP5430_ES1_0;
 		if (rev == MIDR_CORTEX_A15_R2P2)
 			*omap_si_rev = OMAP5430_ES2_0;
 		break;
 	case OMAP5432_CONTROL_ID_CODE_ES1_0:
+		 rev = cortex_rev();
 		*omap_si_rev = OMAP5432_ES1_0;
 		if (rev == MIDR_CORTEX_A15_R2P2)
 			*omap_si_rev = OMAP5432_ES2_0;
