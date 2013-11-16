@@ -233,12 +233,12 @@ void s_init(void)
 	sdram_init();
 	gd->bd->bi_dram[0].start = CONFIG_SYS_SDRAM_BASE;
 	gd->bd->bi_dram[0].size = omap_sdram_size();
+#ifdef CONFIG_BOOTIPU1
+	printf("Time at start of SPL: %5d ms\n", ((int)(spl_time*1000/32768.0)));
+#endif
 #endif
 #if defined(CONFIG_SPL_EARLY_BOOT) || !defined(CONFIG_SPL_BUILD)
 	set_crossbar_regs();
-#endif
-#ifdef CONFIG_BOOTIPU1
-	printf("Time at start of SPL: %5d ms\n", ((int)(spl_time*1000/32768.0)));
 #endif
 }
 
