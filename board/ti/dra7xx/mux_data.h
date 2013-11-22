@@ -37,6 +37,18 @@ const struct pad_conf_entry core_padconf_array_essential[] = {
 	{MMC1_DAT3, (IEN | PTU | PDIS | M0)},
 	{MMC1_SDCD, (FSC | IEN | PTU | PDIS | M0)},
 	{MMC1_SDWP, (FSC | IEN | PTD | PEN | M14)},
+#ifdef CONFIG_XIP_NOR
+	{GPMC_A19, (IEN | M0)}, /* GPMC_A19 */
+	{GPMC_A20, (IEN | M0)}, /* GPMC_A20 */
+	{GPMC_A21, (IEN | M0)}, /* GPMC_A21 */
+	{GPMC_A22, (IEN | M0)}, /* GPMC_A22 */
+	{GPMC_A23, (IEN | M0)}, /* GPMC_A23 */
+	{GPMC_A24, (IEN | M0)}, /* GPMC_A24 */
+	{GPMC_A25, (IEN | M0)}, /* GPMC_A25 */
+	{GPMC_A26, (IEN | M0)}, /* GPMC_A26 */
+	{GPMC_A27, (IEN | M0)}, /* GPMC_A27 */
+#endif
+#ifndef CONFIG_XIP_NOR
 	{GPMC_A19, (IEN | PTU | M1)}, /* mmc2_dat4 */
 	{GPMC_A20, (IEN | PTU | M1)}, /* mmc2_dat5 */
 	{GPMC_A21, (IEN | PTU | M1)}, /* mmc2_dat6 */
@@ -47,12 +59,14 @@ const struct pad_conf_entry core_padconf_array_essential[] = {
 	{GPMC_A26, (IEN | PTU | M1)}, /* mmc2_dat2 */
 	{GPMC_A27, (IEN | PTU | M1)}, /* mmc2_dat3 */
 	{GPMC_CS1, (IEN | PTU | M1)}, /* mmm2_cmd */
+#endif
 	{UART1_RXD, (FSC | IEN | PTU | PDIS | M0)},
 	{UART1_TXD, (FSC | IEN | PTU | PDIS | M0)},
 	{UART1_CTSN, (IEN | PTU | PDIS | M3)},
 	{UART1_RTSN, (IEN | PTU | PDIS | M3)},
 	{I2C1_SDA, (IEN | PTU | PDIS | M0)},
 	{I2C1_SCL, (IEN | PTU | PDIS | M0)},
+#ifndef CONFIG_XIP_NOR
 	{GPMC_A13, (IEN | PDIS | M1)},  /* QSPI1_RTCLK */
 	{GPMC_A14, (IEN | PDIS | M1)},  /* QSPI1_D[3] */
 	{GPMC_A15, (IEN | PDIS | M1)},  /* QSPI1_D[2] */
@@ -64,6 +78,7 @@ const struct pad_conf_entry core_padconf_array_essential[] = {
 	{GPMC_CS0, (IEN | PTU | PDIS | M15)},
 	{GPMC_CS2, (IEN | PTU | PDIS | M1)},    /* QSPI1_CS0 */
 	{GPMC_CS3, (IEN | PTU | PDIS | M1)},    /* QSPI1_CS1*/
+#endif
 	{MDIO_MCLK, (PTU | PEN | M0)},		/* MDIO_MCLK  */
 	{MDIO_D, (IEN | PTU | PEN | M0)},	/* MDIO_D  */
 	{RGMII0_TXC, (M0) },

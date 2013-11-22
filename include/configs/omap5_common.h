@@ -259,6 +259,7 @@
 
 #define CONFIG_BOARD_LATE_INIT
 
+#ifndef CONFIG_XIP_NOR
 /* Defines for SPL */
 #define CONFIG_SPL
 #define CONFIG_SPL_FRAMEWORK
@@ -305,5 +306,7 @@
 #define CONFIG_SYS_SPL_MALLOC_START	0x84100000
 #define CONFIG_SYS_SPL_MALLOC_SIZE	0x100000	/* 1 MB */
 #define CONFIG_SPL_GPIO_SUPPORT
+
+#endif
 
 #endif /* __CONFIG_OMAP5_COMMON_H */

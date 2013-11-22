@@ -222,8 +222,11 @@ void s_init(void)
 	set_mux_conf_regs();
 #ifdef CONFIG_SPL_BUILD
 	srcomp_enable();
+#endif
+#if defined(CONFIG_SPL_BUILD) || defined(CONFIG_XIP_NOR)
 	setup_clocks_for_console();
-
+#endif
+#ifdef CONFIG_SPL_BUILD
 	gd = &gdata;
 
 	preloader_console_init();
