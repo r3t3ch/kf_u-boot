@@ -102,4 +102,8 @@
 #define IPU_LOAD_ADDR		0xa0fff000
 #endif
 
+#ifdef CONFIG_HS_AUTH
+#define CONFIG_HS_ENFORCE_AUTH
+#endif
+
 #endif /* __CONFIG_DRA7XX_EVM_H */
