@@ -668,6 +668,15 @@ int do_bootm(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	printf("%s\n", ret ? "failed" : "passed");
 #endif
 
+#ifdef CONFIG_HS_AUTH
+	printf("Authenticating kernel...");
+#endif
+       ret = authenticate_image_signature(images.os.image_start,
+               images.os.image_len);
+#ifdef CONFIG_HS_AUTH
+	printf("%s\n", ret ? "failed" : "passed");
+#endif
+
 	/*
 	 * We have reached the point of no return: we are going to
 	 * overwrite all exception vector code, so we cannot easily
