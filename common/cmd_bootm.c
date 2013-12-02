@@ -655,6 +655,19 @@ int do_bootm(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	if (bootm_start(cmdtp, flag, argc, argv))
 		return 1;
 
+	/* authenticate the image signature, 280 bytes
+	 * is size of certificate, needed to calculate
+	 * exact location of certificate in the image
+	 */
+#ifdef CONFIG_HS_AUTH
+	printf("Authenticating dtb...");
+#endif
+	ret = authenticate_image_signature(images.ft_addr,
+		images.ft_len + ((4 - images.ft_len % 4) % 4) + 280);
+#ifdef CONFIG_HS_AUTH
+	printf("%s\n", ret ? "failed" : "passed");
+#endif
+
 	/*
 	 * We have reached the point of no return: we are going to
 	 * overwrite all exception vector code, so we cannot easily
