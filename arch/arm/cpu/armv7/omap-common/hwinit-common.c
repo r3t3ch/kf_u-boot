@@ -126,6 +126,11 @@ void __weak srcomp_enable(void)
 {
 }
 
+u32 __weak authenticate_image_signature(u32 start_addr, u32 size)
+{
+	return 1;
+}
+
 static void save_omap_boot_params(void)
 {
 	u32 rom_params = *((u32 *)OMAP_SRAM_SCRATCH_BOOT_PARAMS);

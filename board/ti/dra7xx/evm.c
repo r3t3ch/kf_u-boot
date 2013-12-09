@@ -777,9 +777,4 @@ exit_error:
 #endif
 	return 1;
 }
-#else
-u32 authenticate_image_signature(u32 start_addr, u32 size)
-{
-	return 1;
-}
 #endif
