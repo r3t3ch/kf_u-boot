@@ -37,7 +37,8 @@ void gpmc_init(void)
 	writel(0, &gpmc_cfg->irqenable); /* isr's sources masked */
 	writel(0, &gpmc_cfg->timeout_control);/* timeout disable */
 
-#if defined(CONFIG_XIP_NOR) && defined(CONFIG_DRA7XX)
+#if (defined(CONFIG_XIP_NOR) || defined(CONFIG_USE_NOR)) && \
+	defined(CONFIG_DRA7XX)
 	/*
 	 * On DRA7XX it was found that the ROM code configured
 	 * it to access only 16Mb of flash where as it has 64Mb

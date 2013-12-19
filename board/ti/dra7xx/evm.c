@@ -477,6 +477,21 @@ int pmic_set_32Khz_clock(void)
 	return 0;
 }
 
+#ifdef CONFIG_USE_NOR
+static void nor_config()
+{
+	struct gpmc *gpmc_cfg = (struct gpmc *)GPMC_BASE;
+
+	/* Configure the GPMC config register to access the NOR */
+	writel(0x41041010, &gpmc_cfg->cs[0].config1);
+	writel(0x001E1C01, &gpmc_cfg->cs[0].config2);
+	writel(0x00000000, &gpmc_cfg->cs[0].config3);
+	writel(0x0F071C03, &gpmc_cfg->cs[0].config4);
+	writel(0x041B1F1F, &gpmc_cfg->cs[0].config5);
+	writel(0x8F070000, &gpmc_cfg->cs[0].config6);
+}
+#endif
+
 /**
  * @brief board_init
  *
@@ -496,6 +511,11 @@ int board_init(void)
 	ipu_systemReset();
 	setup_ipu_mmu();
 #endif
+
+#ifdef CONFIG_USE_NOR
+	nor_config();
+#endif
+
 	return 0;
 }
 
