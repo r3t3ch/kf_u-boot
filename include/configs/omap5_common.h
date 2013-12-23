@@ -262,7 +262,15 @@
 /* Defines for SPL */
 #define CONFIG_SPL
 #define CONFIG_SPL_FRAMEWORK
+#ifdef CONFIG_USE_UART3
+/*
+ * For peripheral booting the flash loader image is
+ * downloaded into internal RAM from address 0x40300000.
+ */
+#define CONFIG_SPL_TEXT_BASE		0x40300000
+#else
 #define CONFIG_SPL_TEXT_BASE		0x40300350
+#endif
 #define CONFIG_SPL_IMAGE_OFFSET		0x00000350
 #define CONFIG_SPL_MAX_SIZE		0x20000	/* 128K */
 #define CONFIG_SPL_STACK		CONFIG_SYS_INIT_SP_ADDR
