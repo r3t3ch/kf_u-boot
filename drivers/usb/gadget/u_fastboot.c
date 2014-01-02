@@ -98,6 +98,7 @@ static unsigned int download_bytes;
 #endif /* DEBUG */
 
 int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
+int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 static int fastboot_erase(const char *partition);
 static int fastboot_flash(const char *cmdbuf);
 static int fastboot_update_zimage(void);
@@ -336,10 +337,10 @@ static char boot_addr_start[32];
 static void do_bootm_on_complete(struct usb_ep *ep, struct usb_request *req)
 {
 	req->complete = NULL;
-	fastboot_shutdown();
-	printf("Booting kernel..\n");
-
-	//do_bootm(NULL, 0, 2, bootm_args);
+#ifndef CONFIG_SPL_BUILD
+	char *booti_args[3] = {"booti", "ram", boot_addr_start};
+	do_booti(NULL, 0, 3, booti_args);
+#endif
 
 	/* This only happens if image is somehow faulty so we start over */
 	do_reset(NULL, 0, 0, NULL);
@@ -348,7 +349,6 @@ static void do_bootm_on_complete(struct usb_ep *ep, struct usb_request *req)
 static void cb_boot(struct usb_ep *ep, struct usb_request *req)
 {
 	sprintf(boot_addr_start, "0x%p", fb_cfg.transfer_buffer);
-
 	req_in->complete = do_bootm_on_complete;
 	fastboot_tx_write_str("OKAY");
 	return;

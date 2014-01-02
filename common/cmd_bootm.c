@@ -1999,7 +1999,8 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	u32 addr;
 	char *ptn = "boot";
-	int mmcc = -1;
+	int mmcc = 1;
+	int boot_from_mmc = 0;
 	boot_img_hdr *hdr;
 	unsigned dbt_addr = CONFIG_ADDR_ATAGS;
 	unsigned cfg_machine_type = CONFIG_BOARD_MACH_TYPE;
@@ -2022,14 +2023,16 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	if (argc < 2)
 		return -1;
 
-	if (!strcmp(argv[1], "mmc0")) {
-		mmcc = 0;
-	} else if (!strcmp(argv[1], "mmc1")) {
-		mmcc = 1;
-	} else {
-		return -1;
+	if (!(strcmp(argv[1], "ram"))) {
+		boot_from_mmc = 0;
+		if (argc < 3)
+			return -1;
+		addr = simple_strtoul(argv[2], NULL, 16);
 	}
-
+	else {
+		boot_from_mmc = 1;
+		addr = CONFIG_ADDR_DOWNLOAD;
+	}
 	if (check_fastboot()) {
 		goto fail;
 	}
@@ -2043,72 +2046,81 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		return status;
 	}
 
-	addr = CONFIG_ADDR_DOWNLOAD;
 	hdr = (boot_img_hdr *) addr;
-	if (argc > 2)
-		ptn = argv[2];
 
-	if (mmcc != -1) {
-		struct fastboot_ptentry *pte;
+	dbt_addr = load_dev_tree(dbt_addr);
+
+	if (boot_from_mmc) {
+		struct fastboot_ptentry *pte = NULL;
 		unsigned sector;
-
 		pte = fastboot_flash_find_ptn(ptn);
 		if (!pte) {
 			printf("booti: cannot find '%s' partition\n", ptn);
 			goto fail;
 		}
-
-#ifdef CONFIG_BOOTIPU1
-		ipu_load_addr = load_ipu_image();
-		if(ipu_load_addr) {
-			ipu_boot[1] = ipu_addr;
-			sprintf(ipu_addr, "0x%x", (unsigned int)ipu_load_addr);
-			do_boot_ipu(NULL, 0, 2, ipu_boot);
-		} else {
-			printf("IPU1 not loaded.\n");
-		}
-#endif
-		dbt_addr = load_dev_tree(dbt_addr);
-
 		num_sectors =  1;
 		mmc->block_dev.block_read(mmcc, pte->start,num_sectors, (void*)hdr);
-
 		if (memcmp(hdr->magic, BOOT_MAGIC, 8)) {
 			printf("booti: bad boot image magic\n");
 			goto fail;
 		}
-
 		/* read kernel */
 		bootimg_print_image_hdr(hdr);
 		printf("\n\nramdisk sector count:%d", (int)(hdr->ramdisk_size /
 												mmc->block_dev.blksz));
-
 		sector = pte->start + (hdr->page_size / mmc->block_dev.blksz);
 		num_sectors = ((hdr->kernel_size/mmc->block_dev.blksz) + 1);
-
 		status = mmc->block_dev.block_read(mmcc,sector, num_sectors,
 												(void*)hdr->kernel_addr);
 		if (status < 0) {
 			printf("booti: Could not read kernel image\n");
 			goto fail;
 		}
-
 		/* read ramdisk */
 		sector += _ALIGN(hdr->kernel_size, hdr->page_size) /
 							mmc->block_dev.blksz;
 		num_sectors = ((hdr->ramdisk_size/mmc->block_dev.blksz) + 1);
-
 		status = mmc->block_dev.block_read(mmcc, sector, num_sectors,
 					(void*)hdr->ramdisk_addr);
 		if(status < 0) {
 			printf("booti: Could not read ramdisk\n");
 			goto fail;
 		}
+	}else {
+		u32 kaddr, raddr;
+
+		printf("Boot image downloaded using fastboot\n");
+
+		status = memcmp(hdr->magic, BOOT_MAGIC, 8);
+		if (status != 0) {
+			printf("booti: bad boot image magic\n");
+			goto fail;
+		}
+
+		kaddr = addr + hdr->page_size;
+
+		raddr = kaddr + _ALIGN(hdr->kernel_size, hdr->page_size);
+
+		memmove((void *) hdr->kernel_addr, (void *)kaddr,
+							hdr->kernel_size);
+		memmove((void *) hdr->ramdisk_addr, (void *)raddr,
+							hdr->ramdisk_size);
+
 	}
 
 	printf("kernel   @ %08x (%d)\n", hdr->kernel_addr, hdr->kernel_size);
 	printf("ramdisk  @ %08x (%d)\n", hdr->ramdisk_addr, hdr->ramdisk_size);
 
+#ifdef CONFIG_BOOTIPU1
+	ipu_load_addr = load_ipu_image();
+	if(ipu_load_addr) {
+		ipu_boot[1] = ipu_addr;
+		sprintf(ipu_addr, "0x%x", (unsigned int)ipu_load_addr);
+		do_boot_ipu(NULL, 0, 2, ipu_boot);
+	} else {
+		printf("IPU1 not loaded.\n");
+	}
+#endif
 	//Set the initrd_start and initrd_end inside the FDT
 	status = do_fdt(NULL, 0, 3, fdt_addr);
 	if (status) {
