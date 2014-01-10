@@ -25,6 +25,11 @@
 #ifndef OMAP_MMC_H_
 #define OMAP_MMC_H_
 
+struct mmc_adma_desc_table {
+	u32 desc_length_attr;
+	u32 desc_addr;
+};
+
 struct hsmmc {
 	unsigned char res1[0x10];
 	unsigned int sysconfig;		/* 0x10 */
@@ -47,6 +52,8 @@ struct hsmmc {
 	unsigned int ie;		/* 0x134 */
 	unsigned char res4[0x8];
 	unsigned int capa;		/* 0x140 */
+	unsigned char res5[0x14];
+	unsigned int adamasal;		/* 0x258 */
 };
 
 /*
@@ -138,6 +145,130 @@ struct hsmmc {
 #define IE_DEB				(0x01 << 22)
 #define IE_CERR				(0x01 << 28)
 #define IE_BADA				(0x01 << 29)
+#define MMCADMA_HCTL_DMAS_32BIT                (1 << 4)
+#define MMCADMA_CONN_DMA_MNS           (1 << 20)
+#define MMC_STAT_TC                    (1 << 1)
+#define MMC_STAT_CC                    (1 << 0)
+#define MMC_STAT_ERR                   (1 << 15)
+
+#define MMC_ADMA_MAX_XFER (60 * 1024)
+#define HSMMC_BLK_NBLK_MASK	0xFFFF0000
+#define HSMMC_BLK_NBLK_SHIFT	16
+
+/* Decriptor table defines */
+#define MMCADMA_DESC_TBL_VALID         (1 << 0)
+#define MMCADMA_DESC_TBL_END           (1 << 1)
+#define MMCADMA_DESC_TBL_INT           (1 << 2)
+#define MMCADMA_DESC_TBL_ACT1          (1 << 4)
+#define MMCADMA_DESC_TBL_ACT2          (1 << 5)
+
+/* MMC Command defines */
+#define MMCHS__MMCHS_CMD__CMD_TYPE__NORMAL	0x0
+#define MMCHS__MMCHS_CMD__CMD_TYPE		0xC00000
+#define MMCHS__MMCHS_CMD__RSP_TYPE__LGHT48	0x2
+#define MMCHS__MMCHS_CMD__RSP_TYPE		0x30000
+#define MMCHS__MMCHS_CMD__RSP_TYPE__POS		16
+#define MMCHS__MMCHS_CMD__CCCE__CHECK		0x1
+#define MMCHS__MMCHS_CMD__CCCE			0x80000
+#define MMCHS__MMCHS_CMD__CCCE__POS		19
+
+#define MMCHS_MMCHS_CMD_CCCE_CHECK		\
+				SET_FIELD(MMCHS__MMCHS_CMD__CCCE__CHECK, \
+						MMCHS__MMCHS_CMD__CCCE)
+
+#define MMCHS_MMCHS_CMD_RSP_TYPE_LGHT48		\
+				SET_FIELD(MMCHS__MMCHS_CMD__RSP_TYPE__LGHT48, \
+						MMCHS__MMCHS_CMD__RSP_TYPE)
+
+#define MMCHS__MMCHS_CMD__CICE			0x100000
+#define MMCHS__MMCHS_CMD__CICE__POS		20
+
+#define MMCHS__MMCHS_CMD__CICE__CHECK		0x1
+#define MMCHS_MMCHS_CMD_CICE_CHECK		\
+					SET_FIELD(MMCHS__MMCHS_CMD__CICE__CHECK, \
+							MMCHS__MMCHS_CMD__CICE)
+
+#define MMCSD_CMDRSP_TYPE_R1		(MMCHS_MMCHS_CMD_RSP_TYPE_LGHT48 | \
+					MMCHS_MMCHS_CMD_CCCE_CHECK | \
+					MMCHS_MMCHS_CMD_CICE_CHECK)
+
+#define MMCHS__MMCHS_CMD__BCE			0x2
+#define MMCHS__MMCHS_CMD__BCE__POS		1
+
+#define MMCHS__MMCHS_CMD__BCE__ENABLE		0x1
+#define MMCHS_MMCHS_CMD_BCE_ENABLE		\
+				SET_FIELD(MMCHS__MMCHS_CMD__BCE__ENABLE, \
+						MMCHS__MMCHS_CMD__BCE)
+
+#define MMCHS__MMCHS_CMD__MSBS			0x20
+#define MMCHS__MMCHS_CMD__MSBS__POS		5
+
+#define MMCHS__MMCHS_CMD__CMD_TYPE__POS		22
+
+#define MMCHS__MMCHS_CMD__MSBS__MULTIBLK	0x1
+#define MMCHS_MMCHS_CMD_MSBS_MULTIBLK \
+				SET_FIELD(MMCHS__MMCHS_CMD__MSBS__MULTIBLK, \
+						MMCHS__MMCHS_CMD__MSBS)
+
+#define MMCHS__MMCHS_CMD__DE			0x1
+#define MMCHS__MMCHS_CMD__DE__POS		0
+
+#define MMCHS__MMCHS_CMD__DE__ENABLE		0x1
+#define MMCHS_MMCHS_CMD_DE_ENABLE		\
+				SET_FIELD(MMCHS__MMCHS_CMD__DE__ENABLE, \
+						MMCHS__MMCHS_CMD__DE)
+
+#define MMCHS_MMCHS_CMD_CMD_TYPE_NORMAL		\
+				SET_FIELD(MMCHS__MMCHS_CMD__CMD_TYPE__NORMAL, \
+						MMCHS__MMCHS_CMD__CMD_TYPE)
+
+#define MMCSD_CMDTYPE_NORMAL		(MMCHS_MMCHS_CMD_CMD_TYPE_NORMAL)
+
+#define MMCHS__MMCHS_CMD__DP			0x200000
+#define MMCHS__MMCHS_CMD__DP__POS		21
+
+#define MMCHS__MMCHS_CMD__INDX			0x3F000000
+#define MMCHS__MMCHS_CMD__INDX__POS		24
+
+#define MMCHS__MMCHS_CMD__DP__DATA		0x1
+#define MMCHS_MMCHS_CMD_DP_DATA			\
+				SET_FIELD(MMCHS__MMCHS_CMD__DP__DATA, \
+						MMCHS__MMCHS_CMD__DP)
+
+#define MMCHS__MMCHS_CMD__DDIR			0x10
+#define MMCHS__MMCHS_CMD__DDIR__POS		4
+
+#define MMCHS__MMCHS_CMD__DDIR__WRITE		0x0
+#define MMCHS_MMCHS_CMD_DDIR_WRITE		\
+				SET_FIELD(MMCHS__MMCHS_CMD__DDIR__WRITE, \
+						MMCHS__MMCHS_CMD__DDIR)
+
+#define MMCHS__MMCHS_CMD__DDIR__READ		0x1
+#define MMCHS_MMCHS_CMD_DDIR_READ		\
+				SET_FIELD(MMCHS__MMCHS_CMD__DDIR__READ, \
+						MMCHS__MMCHS_CMD__DDIR)
+
+#define SET_FIELD(VAR, FIELD)			((VAR << FIELD##__POS) & FIELD)
+#define MMCHS__MMCHS_CMD__INDX			0x3F000000
+#define MMCSD_CMDINDEX(i)		SET_FIELD(i, MMCHS__MMCHS_CMD__INDX)
+#define MMCSD_CMDDP_DATA		(MMCHS_MMCHS_CMD_DP_DATA)
+
+#define MMCSD_CMDDIR_READ		(MMCHS_MMCHS_CMD_DDIR_READ)
+#define MMCHS__MMCHS_CMD__ACEN			0xC
+#define MMCHS__MMCHS_CMD__ACEN__POS		2
+
+#define MMCHS__MMCHS_CMD__ACEN__ENABLECMD12	0x1
+#define MMCHS_MMCHS_CMD_ACEN_ENABLECMD12 \
+				SET_FIELD(MMCHS__MMCHS_CMD__ACEN__ENABLECMD12, \
+						MMCHS__MMCHS_CMD__ACEN)
+
+
+#define MMCSD_CMD18			(MMCSD_CMDINDEX(18) |	\
+					MMCSD_CMDTYPE_NORMAL | \
+					MMCSD_CMDRSP_TYPE_R1 | \
+					MMCSD_CMDDP_DATA     | \
+					MMCSD_CMDDIR_READ)
+
 
 #define VS30_3V0SUP			(1 << 25)
 #define VS18_1V8SUP			(1 << 26)
