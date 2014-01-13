@@ -77,6 +77,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #if defined(CONFIG_CMD_FASTBOOT)
 extern int do_fastboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[]);
+char* fastboot_get_serialno(void);
 #endif
 
 #ifdef CONFIG_BZIP2
@@ -1993,6 +1994,8 @@ bootimg_print_image_hdr (boot_img_hdr *hdr)
 
 #define TOSTRING(x) #x
 #define STR(x) TOSTRING(x)
+#define MAX_BOOTARGS_SIZE 512
+
 int do_fdt(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 
 int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
@@ -2010,6 +2013,8 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	char* fdt_addr[3] = { "fdt", "addr", STR(DEVICE_TREE) };
 	char* fdt_resize[2] = { "fdt", "resize"};
 	char* fdt_chosen[4] = { "fdt", "chosen", NULL, NULL};
+	char* fdt_bootargs[5] = { "fdt", "set", "/chosen", "bootargs", NULL};
+	char bootargs_str[MAX_BOOTARGS_SIZE];
 	char start[32];
 	char end[32];
 #ifdef CONFIG_BOOTIPU1
@@ -2143,7 +2148,14 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		printf("booti: Could not set initrd_start and initrd_end\n");
 		goto fail;
 	}
-
+	fdt_bootargs[4] = bootargs_str;
+	sprintf(bootargs_str, "androidboot.serialno=%s ", fastboot_get_serialno());
+	if (strlen((char*)hdr->cmdline))
+		strcat(bootargs_str, (char*)hdr->cmdline);
+	status = do_fdt(NULL, 0, 5, fdt_bootargs);
+	if (status) {
+		printf("booti: Warning: Could not set bootargs\n");
+	}
 
 	theKernel = (void (*)(int, int, void *))(hdr->kernel_addr);
 

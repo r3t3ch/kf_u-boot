@@ -53,7 +53,6 @@ int fastboot_board_init(struct fastboot_config *interface,
 	sprintf(serialno, "%08X%08X", val[3], val[2]);
 
 	*str = &def_fb_strings;
-    
 	board_mmc_ftbtptn_init();
 	return 0;
 }
@@ -85,4 +84,16 @@ void fastboot_flash_add_ptn(fastboot_ptentry *ptn, int count)
 	}
 }
 
+char* fastboot_get_serialno(void)
+{
+	u32 val[4] = { 0 };
+	u32 reg;
+
+	/* Determine the serial number */
+	reg = CONTROL_ID_CODE;
+	val[2] = readl(reg + 0xC);
+	val[3] = readl(reg + 0x10);
+	sprintf(serialno, "%08X%08X", val[3], val[2]);
+	return serialno;
+}
 
