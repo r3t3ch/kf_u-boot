@@ -209,8 +209,7 @@ void emif_update_timings(u32 base, const struct emif_regs *regs)
 	writel(regs->temp_alert_config, &emif->emif_temp_alert_config);
 	writel(regs->emif_ddr_phy_ctlr_1, &emif->emif_ddr_phy_ctrl_1_shdw);
 
-	if ((omap_revision() >= OMAP5430_ES1_0) ||
-				(omap_revision() == DRA752_ES1_0)) {
+	if ((omap_revision() >= OMAP5430_ES1_0) || is_dra7xx()) {
 		writel(EMIF_L3_CONFIG_VAL_SYS_10_MPU_5_LL_0,
 			&emif->emif_l3_config);
 	} else if (omap_revision() >= OMAP4460_ES1_0) {
@@ -304,7 +303,7 @@ static void ddr3_init(u32 base, const struct emif_regs *regs)
 	/* enable leveling */
 	writel(regs->emif_rd_wr_lvl_rmp_ctl, &emif->emif_rd_wr_lvl_rmp_ctl);
 
-	if (omap_revision() == DRA752_ES1_0)
+	if (is_dra7xx())
 		ddr3_sw_leveling(base, regs);
 	else
 		ddr3_leveling(base, regs);
@@ -1095,7 +1094,7 @@ static void do_sdram_init(u32 base)
 	if (warm_reset() && (emif_sdram_type() == EMIF_SDRAM_TYPE_DDR3)) {
 		set_lpmode_selfrefresh(base);
 		emif_reset_phy(base);
-		if (omap_revision() == DRA752_ES1_0)
+		if (is_dra7xx())
 			ddr3_sw_leveling(base, regs);
 		else
 			ddr3_leveling(base, regs);

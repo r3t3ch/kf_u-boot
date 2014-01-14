@@ -261,6 +261,7 @@ static void emif_get_reg_dump_sdp(u32 emif_nr, const struct emif_regs **regs)
 		*regs = &emif_regs_ddr3_532_mhz_1cs_es2;
 		break;
 	case DRA752_ES1_0:
+	case DRA752_ES1_1:
 		switch (emif_nr) {
 		case 1:
 			*regs = &emif_1_regs_ddr3_532_mhz_1cs_dra_es1;
@@ -289,6 +290,7 @@ static void emif_get_dmm_regs_sdp(const struct dmm_lisa_map_regs
 		*dmm_lisa_regs = &lisa_map_4G_x_2_x_2;
 		break;
 	case DRA752_ES1_0:
+	case DRA752_ES1_1:
 	default:
 		*dmm_lisa_regs = &lisa_map_2G_x_2_x_2_2G_x_1_x_2;
 	}
@@ -461,6 +463,7 @@ static void emif_get_ext_phy_ctrl_const_regs(u32 emif_nr, const u32 **regs)
 		*regs = ddr3_ext_phy_ctrl_const_base_es2;
 		break;
 	case DRA752_ES1_0:
+	case DRA752_ES1_1:
 		if (emif_nr == 1)
 			*regs = dra_ddr3_ext_phy_ctrl_const_base_es1_emif1;
 		else
