@@ -37,7 +37,47 @@ const struct pad_conf_entry core_padconf_array_essential[] = {
 	{MMC1_DAT3, (IEN | PTU | PDIS | M0)},
 	{MMC1_SDCD, (FSC | IEN | PTU | PDIS | M0)},
 	{MMC1_SDWP, (FSC | IEN | PTD | PEN | M14)},
-#ifdef CONFIG_XIP_NOR
+#ifdef CONFIG_USE_NOR
+	{GPMC_AD0, (IEN | PTD | PEN | M0)}, /* GPMC_AD0 */
+	{GPMC_AD1, (IEN | PTD | PEN | M0)}, /* GPMC_AD1 */
+	{GPMC_AD2, (IEN | PTD | PEN | M0)}, /* GPMC_AD2 */
+	{GPMC_AD3, (IEN | PTD | PEN | M0)}, /* GPMC_AD3 */
+	{GPMC_AD4, (IEN | PTD | PEN | M0)}, /* GPMC_AD4 */
+	{GPMC_AD5, (IEN | PTD | PEN | M0)}, /* GPMC_AD5 */
+	{GPMC_AD6, (IEN | PTD | PEN | M0)}, /* GPMC_AD6 */
+	{GPMC_AD7, (IEN | PTD | PEN | M0)}, /* GPMC_AD7 */
+	{GPMC_AD8, (IEN | PTD | PEN | M0)}, /* GPMC_AD8 */
+	{GPMC_AD9, (IEN | PTD | PEN | M0)}, /* GPMC_AD9 */
+	{GPMC_AD10, (IEN | PTD | PEN | M0)}, /* GPMC_AD10 */
+	{GPMC_AD11, (IEN | PTD | PEN | M0)}, /* GPMC_AD11 */
+	{GPMC_AD12, (IEN | PTD | PEN | M0)}, /* GPMC_AD12 */
+	{GPMC_AD13, (IEN | PTD | PEN | M0)}, /* GPMC_AD13 */
+	{GPMC_AD14, (IEN | PTD | PEN | M0)}, /* GPMC_AD14 */
+	{GPMC_AD15, (IEN | PTD | PEN | M0)}, /* GPMC_AD15 */
+	{GPMC_A0, (IEN | M0)}, /* GPMC_A0 */
+	{GPMC_A1, (IEN | M0)}, /* GPMC_A1 */
+	{GPMC_A2, (IEN | M0)}, /* GPMC_A2 */
+	{GPMC_A3, (IEN | M0)}, /* GPMC_A3 */
+	{GPMC_A4, (IEN | M0)}, /* GPMC_A4 */
+	{GPMC_A5, (IEN | M0)}, /* GPMC_A5 */
+	{GPMC_A6, (IEN | M0)}, /* GPMC_A6 */
+	{GPMC_A7, (IEN | M0)}, /* GPMC_A7 */
+	{GPMC_A8, (IEN | M0)}, /* GPMC_A8 */
+	{GPMC_A9, (IEN | M0)}, /* GPMC_A9 */
+	{GPMC_A10, (IEN | M0)}, /* GPMC_A10 */
+	{GPMC_A11, (IEN | M0)}, /* GPMC_A11 */
+	{GPMC_A12, (IEN | M0)}, /* GPMC_A12 */
+	{GPMC_A13, (IEN | M0)}, /* GPMC_A13 */
+	{GPMC_A14, (IEN | M0)}, /* GPMC_A14 */
+	{GPMC_A15, (IEN | M0)}, /* GPMC_A15 */
+	{GPMC_A16, (IEN | M0)}, /* GPMC_A16 */
+	{GPMC_A17, (IEN | M0)}, /* GPMC_A17 */
+	{GPMC_A18, (IEN | M0)}, /* GPMC_A87 */
+	{GPMC_CS0, (IEN | PTU | PDIS | M0)}, /* gpmc_cs0 */
+	{GPMC_OEN_REN, (IEN | PTU | PEN | M0)}, /* gpmc_oen_ren */
+	{GPMC_WEN, (IEN | PTU | PEN | M0)}, /* gpmc_wen */
+#endif
+#if defined(CONFIG_USE_NOR) || defined(CONFIG_XIP_NOR)
 	{GPMC_A19, (IEN | M0)}, /* GPMC_A19 */
 	{GPMC_A20, (IEN | M0)}, /* GPMC_A20 */
 	{GPMC_A21, (IEN | M0)}, /* GPMC_A21 */
@@ -48,7 +88,7 @@ const struct pad_conf_entry core_padconf_array_essential[] = {
 	{GPMC_A26, (IEN | M0)}, /* GPMC_A26 */
 	{GPMC_A27, (IEN | M0)}, /* GPMC_A27 */
 #endif
-#ifndef CONFIG_XIP_NOR
+#if !defined(CONFIG_USE_NOR) && !defined(CONFIG_XIP_NOR)
 	{GPMC_A19, (IEN | PTU | M1)}, /* mmc2_dat4 */
 	{GPMC_A20, (IEN | PTU | M1)}, /* mmc2_dat5 */
 	{GPMC_A21, (IEN | PTU | M1)}, /* mmc2_dat6 */
@@ -66,7 +106,7 @@ const struct pad_conf_entry core_padconf_array_essential[] = {
 	{UART1_RTSN, (IEN | PTU | PDIS | M3)},
 	{I2C1_SDA, (IEN | PTU | PDIS | M0)},
 	{I2C1_SCL, (IEN | PTU | PDIS | M0)},
-#ifndef CONFIG_XIP_NOR
+#if !defined(CONFIG_USE_NOR) && !defined(CONFIG_XIP_NOR)
 	{GPMC_A13, (IEN | PDIS | M1)},  /* QSPI1_RTCLK */
 	{GPMC_A14, (IEN | PDIS | M1)},  /* QSPI1_D[3] */
 	{GPMC_A15, (IEN | PDIS | M1)},  /* QSPI1_D[2] */
