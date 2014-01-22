@@ -50,7 +50,7 @@
  *       fastboot loads the entire partition; these images are
  *       significantly smaller. This method adds lots of load time.
  */
-#define DBT_IMAGE_SIZE		0x7A79	/*  48KB */
+#define DBT_IMAGE_SIZE		0xC000	/*  48KB */
 #define IPU_IMAGE_SIZE		0x80000	/* 512KB */
 
 
