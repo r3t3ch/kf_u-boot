@@ -119,7 +119,7 @@
 #define MEMORY_BASE 				0x80000000
 #define CONFIG_ADDR_ATAGS			(MEMORY_BASE + 0x100)
 #define CONFIG_ADDR_DOWNLOAD			(MEMORY_BASE + 0x02000000)
-#define DEVICE_TREE 				0x81f80000
+#define DEVICE_TREE 				0x82f80000
 
 
 /* Enable this flag if you want IPU based early camera */
