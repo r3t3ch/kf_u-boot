@@ -25,31 +25,34 @@ include $(TOPDIR)/config.mk
 
 LIB	= $(obj)lib$(BOARD).o
 
-COBJS	:= sdp.o
-
-ifdef CONFIG_CMD_FASTBOOT
-COBJS   += mmc.o
-COBJS   += device_tree.o
-COBJS   += fastboot.o
-endif
+COBJS	:= kc1.o
+COBJS	+= kc1_board.o
 
 # Drivers
-COBJS	+= dpi_panel.o
+COBJS	+= kc1_leds.o
+COBJS	+= kc1_panel.o
+COBJS	+= kc1_twl6030.o
 COBJS	+= fg_bq27541.o
-COBJS   += pmic_smb347.o
-COBJS	+= led_pwm.o
+COBJS	+= pmic_smb347.o
+COBJS	+= omap4_spi.o
+
+ifdef CONFIG_CMD_FASTBOOT
+COBJS	+= mmc.o
+COBJS	+= device_tree.o
+COBJS	+= fastboot.o
+endif
 
 SRCS	:= $(COBJS:.o=.c)
 OBJS	:= $(addprefix $(obj),$(COBJS)) splash.o lowbattery.o
+
+$(LIB):	$(obj).depend $(OBJS)
+	$(call cmd_link_o_target, $(OBJS))
 
 splash.o:
 	$(OBJCOPY) -I binary -O elf32-littlearm -B arm initlogo.rle $@
 
 lowbattery.o:
 	$(OBJCOPY) -I binary -O elf32-littlearm -B arm lowbattery.rle $@
-
-$(LIB):	$(obj).depend $(OBJS)
-	$(call cmd_link_o_target, $(OBJS))
 
 #########################################################################
 
