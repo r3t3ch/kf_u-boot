@@ -27,7 +27,7 @@
 #include <asm/arch/sys_proto.h>
 #include <asm/arch/mmc_host_def.h>
 
-#include "sdp4430_mux_data.h"
+#include "kc1_mux_data.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -64,7 +64,7 @@ int board_eth_init(bd_t *bis)
  */
 int misc_init_r(void)
 {
-#ifdef CONFIG_TWL6030_POWER
+#if defined(CONFIG_TWL6030_POWER) || defined(CONFIG_SMB347_POWER)
 	twl6030_init_battery_charging();
 #endif
 	return 0;
@@ -113,7 +113,6 @@ void set_muxconf_regs_non_essential(void)
 int board_mmc_init(bd_t *bis)
 {
 	omap_mmc_init(0, 0, 0, -1, -1);
-	omap_mmc_init(1, 0, 0, -1, -1);
 	return 0;
 }
 #endif
