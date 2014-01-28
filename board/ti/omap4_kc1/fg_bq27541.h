@@ -29,7 +29,7 @@
 /* Battery REGISTERS */
 
 /* Function*/
-int get_bat_voltage();
-int get_bat_temperature();
-int get_bat_current();
-int get_bat_capacity();
+int get_bat_voltage(void);
+int get_bat_temperature(void);
+int get_bat_current(void);
+int get_bat_capacity(void);
