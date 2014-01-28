@@ -31,12 +31,12 @@ DECLARE_GLOBAL_DATA_PTR;
 
 struct spl_image_info spl_image;
 
+#ifdef CONFIG_SPL_BUILD
+
 u32 omap_sysboot(void)
 {
 	return ((*(u32 *)(CTRL_CORE_BOOTSTRAP)) & SYS_BOOT_DEVICE);
 }
-
-#ifdef CONFIG_SPL_BUILD
 
 u32 spl_boot_device(void)
 {
