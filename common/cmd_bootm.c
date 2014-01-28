@@ -2001,7 +2001,7 @@ int do_fdt(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	u32 addr;
-	char *ptn = "boot";
+	char ptn[16];
 	int mmcc = 1;
 	int boot_from_mmc = 0;
 	boot_img_hdr *hdr;
@@ -2041,6 +2041,10 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	if (check_fastboot()) {
 		goto fail;
 	}
+	if (check_recovery())
+		strcpy(ptn, "recovery");
+	else
+		strcpy(ptn, "boot");
 	mmc = find_mmc_device(mmcc);
 	if (mmc == NULL) {
 		return -1;

@@ -18,6 +18,19 @@ int check_fastboot(void)
 	return 0;
 }
 
+int check_recovery(void)
+{
+	/* Check if we are coming from a warm reset */
+	if (__raw_readl(DRA7XX_PRM_RSTST) & DRA7XX_PRM_RSTST_RESET_WARM_BIT)
+		if (!strncmp((const char *)DRA7XX_PUBLIC_SAR_RAM_1_FREE,
+			"recovery", DRA7XX_REBOOT_REASON_SIZE)) {
+			strncpy((char *)DRA7XX_PUBLIC_SAR_RAM_1_FREE, "",
+				DRA7XX_REBOOT_REASON_SIZE);
+			return 1;
+		}
+	return 0;
+}
+
 void fastboot_reboot_bootloader(void) {
 	/* clear all reset events */
 	__raw_writel(DRA7XX_PRM_RSTST_CLR, PRM_RSTST);

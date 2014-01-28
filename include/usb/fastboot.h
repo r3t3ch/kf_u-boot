@@ -282,6 +282,8 @@ extern char *get_ptn_size(char *buf, const char *ptn);
 
 __weak int check_fastboot(void);
 
+__weak int check_recovery(void);
+
 __weak void fastboot_reboot_bootloader(void);
 
 
