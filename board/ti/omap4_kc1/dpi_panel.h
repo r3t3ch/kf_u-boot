@@ -1,9 +1,0 @@
-#ifndef __KC1_DPI_PANEL_H
-#define __KC1_DPI_PANEL_H
-
-enum {
-	OTTER_LCD_DISPLAY_SPLASH,
-	OTTER_LCD_DISPLAY_LOW_BATT_SCREEN,
-};
-
-#endif
