@@ -41,7 +41,8 @@
 
 /* SMB347 */
 #ifndef CONFIG_SPL_BUILD
-#define CONFIG_SMB347_POWER		1
+#define CONFIG_POWER_FG_BQ27541		1
+#define CONFIG_POWER_SMB347		1
 #endif
 
 /* Environment information */
@@ -50,11 +51,6 @@
 
 /* Use local mmc.c file */
 #define CONFIG_SKIP_COMMON_MMC		1
-
-/* Battery Charger */
-#ifndef CONFIG_SPL_BUILD
-#define CONFIG_CMD_BAT			1
-#endif
 
 /* Defines for SDRAM init */
 #undef CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS

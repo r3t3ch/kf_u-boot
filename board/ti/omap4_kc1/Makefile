@@ -27,18 +27,26 @@ LIB	= $(obj)lib$(BOARD).o
 
 COBJS	:= sdp.o
 
-ifndef CONFIG_SPL_BUILD
-COBJS	+= cmd_bat.o
-endif
-
 ifdef CONFIG_CMD_FASTBOOT
 COBJS   += mmc.o
 COBJS   += device_tree.o
 COBJS   += fastboot.o
 endif
 
+# Drivers
+COBJS	+= dpi_panel.o
+COBJS	+= fg_bq27541.o
+COBJS   += pmic_smb347.o
+COBJS	+= led_pwm.o
+
 SRCS	:= $(COBJS:.o=.c)
-OBJS	:= $(addprefix $(obj),$(COBJS))
+OBJS	:= $(addprefix $(obj),$(COBJS)) splash.o lowbattery.o
+
+splash.o:
+	$(OBJCOPY) -I binary -O elf32-littlearm -B arm initlogo.rle $@
+
+lowbattery.o:
+	$(OBJCOPY) -I binary -O elf32-littlearm -B arm lowbattery.rle $@
 
 $(LIB):	$(obj).depend $(OBJS)
 	$(call cmd_link_o_target, $(OBJS))
