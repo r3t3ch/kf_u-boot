@@ -36,6 +36,7 @@
 
 #include <configs/omap4_common.h>
 
+
 /* Not an SBL build */
 #undef CONFIG_SPL
 
@@ -44,6 +45,13 @@
 #define CONFIG_POWER_FG_BQ27541		1
 #define CONFIG_POWER_SMB347		1
 #endif
+
+/* SPI */
+#define CONFIG_OMAP4_SPI		1
+
+/* I2C */
+//#undef CONFIG_SYS_I2C_SPEED
+//#define CONFIG_SYS_I2C_SPEED		400000
 
 /* Environment information */
 #undef CONFIG_BOOTDELAY
@@ -79,20 +87,8 @@
 	"bootdir=/boot\0" \
 	"bootfile=zImage\0" \
 	"usbtty=cdc_acm\0" \
-	"vram=16M\0" \
 	"mmcdev=0\0" \
-	"mmcroot=/dev/mmcblk0p2 rw\0" \
-	"mmcrootfstype=ext3 rootwait\0" \
-	"mmcargs=setenv bootargs console=${console} " \
-		"vram=${vram} " \
-		"root=${mmcroot} " \
-		"rootfstype=${mmcrootfstype}\0" \
-	"loadbootscript=fatload mmc ${mmcdev} ${loadaddr} boot.scr\0" \
-	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
-		"source ${loadaddr}\0" \
-	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} uEnv.txt\0" \
-	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
-		"env import -t ${loadaddr} ${filesize}\0" \
+	"mmcargs=setenv bootargs console=${console}\0" \
 	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
 	"mmcboot=echo Booting from mmc${mmcdev} ...; " \
 		"run mmcargs; " \
@@ -107,16 +103,24 @@
 	"run findfdt; " \
 	"mmc dev ${mmcdev}; if mmc rescan; then " \
 		"echo SD/MMC found on device ${mmcdev};" \
-		"if run loadbootscript; then " \
-			"run bootscript; " \
-		"else " \
-			"if run loadbootenv; then " \
-				"run importbootenv; " \
-			"fi;" \
-			"if test -n ${uenvcmd}; then " \
-				"echo Running uenvcmd ...;" \
-				"run uenvcmd;" \
-			"fi;" \
+		"if test -n ${uenvcmd}; then " \
+			"echo Running uenvcmd ...;" \
+			"run uenvcmd;" \
+		"fi;" \
+		"if run loadimage; then " \
+			"run loadfdt;" \
+			"run mmcboot; " \
+		"fi; " \
+	"fi"
+
+#undef CONFIG_RECOVERYCOMMAND
+#define CONFIG_RECOVERYCOMMAND \
+	"run findfdt; " \
+	"mmc dev ${mmcdev}; if mmc rescan; then " \
+		"echo SD/MMC found on device ${mmcdev};" \
+		"if test -n ${uenvcmd}; then " \
+			"echo Running uenvcmd ...;" \
+			"run uenvcmd;" \
 		"fi;" \
 		"if run loadimage; then " \
 			"run loadfdt;" \
