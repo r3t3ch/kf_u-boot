@@ -213,6 +213,7 @@ void s_init(void)
 #endif
 	init_omap_revision();
 	hw_data_init();
+	prcm_init();
 
 #ifdef CONFIG_SPL_BUILD
 	if (warm_reset() && (omap_revision() <= OMAP5430_ES1_0))
@@ -232,7 +233,7 @@ void s_init(void)
 	preloader_console_init();
 	do_io_settings();
 #endif
-	prcm_init();
+
 #ifdef CONFIG_SPL_BUILD
 	/* For regular u-boot sdram_init() is called from dram_init() */
 	sdram_init();
