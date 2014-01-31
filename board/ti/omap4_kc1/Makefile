@@ -43,7 +43,7 @@ COBJS	+= fastboot.o
 endif
 
 SRCS	:= $(COBJS:.o=.c)
-OBJS	:= $(addprefix $(obj),$(COBJS)) splash.o lowbattery.o
+OBJS	:= $(addprefix $(obj),$(COBJS)) splash.o lowbattery.o multi_download.o
 
 $(LIB):	$(obj).depend $(OBJS)
 	$(call cmd_link_o_target, $(OBJS))
@@ -53,6 +53,9 @@ splash.o:
 
 lowbattery.o:
 	$(OBJCOPY) -I binary -O elf32-littlearm -B arm lowbattery.rle $@
+
+multi_download.o:
+	$(OBJCOPY) -I binary -O elf32-littlearm -B arm multi_download.rle $@
 
 #########################################################################
 
