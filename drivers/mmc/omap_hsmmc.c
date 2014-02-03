@@ -263,7 +263,7 @@ static int mmc_init_setup(struct mmc *mmc)
 	reg_val = readl(&mmc_base->con) & RESERVED_MASK;
 
 	writel(CTPL_MMC_SD | reg_val | WPP_ACTIVEHIGH | CDP_ACTIVEHIGH |
-		MIT_CTO | DW8_1_4BITMODE | MODE_FUNC | STR_BLOCK |
+		MIT_CTO | DTW_8_BITMODE | MODE_FUNC | STR_BLOCK |
 		HR_NOHOSTRESP | INIT_NOINIT | NOOPENDRAIN, &mmc_base->con);
 
 	dsor = 240;
@@ -760,7 +760,7 @@ int omap_mmc_init(int dev_index, uint host_caps_mask, uint f_max, int cd_gpio,
 		mmc->getwp = omap_mmc_getwp;
 
 	mmc->voltages = MMC_VDD_32_33 | MMC_VDD_33_34 | MMC_VDD_165_195;
-	mmc->host_caps = (MMC_MODE_4BIT | MMC_MODE_HS_52MHz | MMC_MODE_HS |
+	mmc->host_caps = (MMC_MODE_8BIT | MMC_MODE_HS_52MHz | MMC_MODE_HS |
 				MMC_MODE_HC) & ~host_caps_mask;
 
 	mmc->f_min = 400000;
