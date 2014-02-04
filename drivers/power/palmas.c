@@ -56,7 +56,7 @@ int palmas_mmc1_poweron_ldo1(void)
 	u8 val = 0;
 
 	/* set LDO9 TWL6035 to 3V */
-	val = 0x13; /* (1.8 -.9)*20 +1 */
+	val = 0x2b; /* (3 -.9)*20 +1 */
 
 	if (palmas_i2c_write_u8(0x58, LDO1_VOLTAGE, val)) {
 		printf("twl6035: could not set LDO1 voltage\n");

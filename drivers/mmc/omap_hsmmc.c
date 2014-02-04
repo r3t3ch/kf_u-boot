@@ -129,11 +129,6 @@ static void omap5_pbias_config(struct mmc *mmc)
 	palmas_mmc1_poweron_ldo9();
 #endif
 
-	udelay(10); /* wait 10 us */
-	value = readl((*ctrl)->control_pbias);
-	value &= ~SDCARD_PBIASLITE_VMODE;
-	writel(value, (*ctrl)->control_pbias);
-
 	value = readl((*ctrl)->control_pbias);
 	value |= SDCARD_BIAS_PWRDNZ;
 	writel(value, (*ctrl)->control_pbias);
@@ -234,7 +229,6 @@ static int mmc_init_setup(struct mmc *mmc)
 	ulong start;
 
 	mmc_base = ((struct omap_hsmmc_data *)mmc->priv)->base_addr;
-	writel(V1V8_SIGEN, &mmc_base->ac12);
 	mmc_board_init(mmc);
 
 	writel(readl(&mmc_base->sysconfig) | MMC_SOFTRESET,
@@ -255,8 +249,7 @@ static int mmc_init_setup(struct mmc *mmc)
 			return TIMEOUT;
 		}
 	}
-	writel(V1V8_SIGEN, &mmc_base->ac12);
-	writel(DTW_1_BITMODE | SDBP_PWROFF | SDVS_1V8, &mmc_base->hctl);
+	writel(DTW_1_BITMODE | SDBP_PWROFF | SDVS_3V0, &mmc_base->hctl);
 	writel(readl(&mmc_base->capa) | VS30_3V0SUP | VS18_1V8SUP,
 		&mmc_base->capa);
 

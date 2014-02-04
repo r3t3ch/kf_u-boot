@@ -50,8 +50,7 @@ struct hsmmc {
 	unsigned int sysctl;		/* 0x12C */
 	unsigned int stat;		/* 0x130 */
 	unsigned int ie;		/* 0x134 */
-	unsigned char res4[0x4];
-	unsigned int ac12;
+	unsigned char res4[0x8];
 	unsigned int capa;		/* 0x140 */
 	unsigned char res5[0x14];
 	unsigned int adamasal;		/* 0x258 */
@@ -146,7 +145,6 @@ struct hsmmc {
 #define IE_DEB				(0x01 << 22)
 #define IE_CERR				(0x01 << 28)
 #define IE_BADA				(0x01 << 29)
-#define V1V8_SIGEN			(1 << 19)
 #define MMCADMA_HCTL_DMAS_32BIT                (1 << 4)
 #define MMCADMA_CONN_DMA_MNS           (1 << 20)
 #define MMC_STAT_TC                    (1 << 1)
