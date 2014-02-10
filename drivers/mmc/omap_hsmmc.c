@@ -32,7 +32,9 @@
 #include <palmas.h>
 #include <asm/gpio.h>
 #include <asm/io.h>
+#ifndef CONFIG_DONT_USE_ADMA2
 #include <malloc.h>
+#endif
 #include <asm/arch/mmc_host_def.h>
 #include <asm/arch/sys_proto.h>
 
@@ -52,8 +54,10 @@ struct omap_hsmmc_data {
 static int mmc_read_data(struct hsmmc *mmc_base, char *buf, unsigned int size);
 static int mmc_write_data(struct hsmmc *mmc_base, const char *buf,
 			unsigned int siz);
+#ifndef CONFIG_DONT_USE_ADMA2
 static int mmc_adma_read(struct hsmmc *mmc_base, char *buf,
 			unsigned int size, unsigned int start_sec);
+#endif
 
 static struct mmc hsmmc_dev[3];
 static struct omap_hsmmc_data hsmmc_dev_data[3];
@@ -315,11 +319,13 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 
 	mmc_base = ((struct omap_hsmmc_data *)mmc->priv)->base_addr;
 
+#ifndef CONFIG_DONT_USE_ADMA2
 	if (!IS_SD(mmc) && data && ((cmd->cmdidx == MMC_CMD_READ_MULTIPLE_BLOCK) ||
 			(cmd->cmdidx == MMC_CMD_READ_SINGLE_BLOCK))) {
 		return mmc_adma_read(mmc_base, data->dest, data->blocks,
 				cmd->cmdarg);
 	}
+#endif
 	start = get_timer(0);
 	while ((readl(&mmc_base->pstate) & (DATI_MASK | CMDI_MASK)) != 0) {
 		if (get_timer(0) - start > MAX_RETRY_MS) {
@@ -432,6 +438,7 @@ static int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 	return 0;
 }
 
+#ifndef CONFIG_DONT_USE_ADMA2
 static struct mmc_adma_desc_table *adma_desc = NULL;
 static int mmc_pop_dma_desc(ulong sectors, void *data)
 {
@@ -550,6 +557,7 @@ exit:
 
 	return ret;
 }
+#endif
 
 static int mmc_read_data(struct hsmmc *mmc_base, char *buf, unsigned int size)
 {

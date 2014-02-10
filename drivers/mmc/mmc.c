@@ -393,7 +393,9 @@ static int mmc_read_blocks(struct mmc *mmc, void *dst, ulong start,
 	if (mmc_send_cmd(mmc, &cmd, &data))
 		return 0;
 
+#ifndef CONFIG_DONT_USE_ADMA2
 	if (IS_SD(mmc)) {
+#endif
 		if (blkcnt > 1) {
 			cmd.cmdidx = MMC_CMD_STOP_TRANSMISSION;
 			cmd.cmdarg = 0;
@@ -403,7 +405,9 @@ static int mmc_read_blocks(struct mmc *mmc, void *dst, ulong start,
 				return 0;
 			}
 		}
+#ifndef CONFIG_DONT_USE_ADMA2
 	}
+#endif
 	return blkcnt;
 }
 

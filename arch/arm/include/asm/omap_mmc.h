@@ -25,10 +25,12 @@
 #ifndef OMAP_MMC_H_
 #define OMAP_MMC_H_
 
+#ifndef CONFIG_DONT_USE_ADMA2
 struct mmc_adma_desc_table {
 	u32 desc_length_attr;
 	u32 desc_addr;
 };
+#endif
 
 struct hsmmc {
 	unsigned char res1[0x10];
@@ -52,8 +54,10 @@ struct hsmmc {
 	unsigned int ie;		/* 0x134 */
 	unsigned char res4[0x8];
 	unsigned int capa;		/* 0x140 */
+#ifndef CONFIG_DONT_USE_ADMA2
 	unsigned char res5[0x14];
 	unsigned int adamasal;		/* 0x258 */
+#endif
 };
 
 /*
@@ -145,6 +149,8 @@ struct hsmmc {
 #define IE_DEB				(0x01 << 22)
 #define IE_CERR				(0x01 << 28)
 #define IE_BADA				(0x01 << 29)
+
+#ifndef CONFIG_DONT_USE_ADMA2
 #define MMCADMA_HCTL_DMAS_32BIT                (1 << 4)
 #define MMCADMA_CONN_DMA_MNS           (1 << 20)
 #define MMC_STAT_TC                    (1 << 1)
@@ -269,6 +275,7 @@ struct hsmmc {
 					MMCSD_CMDDP_DATA     | \
 					MMCSD_CMDDIR_READ)
 
+#endif
 
 #define VS30_3V0SUP			(1 << 25)
 #define VS18_1V8SUP			(1 << 26)
