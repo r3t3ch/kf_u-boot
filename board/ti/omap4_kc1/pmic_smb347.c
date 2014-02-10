@@ -20,6 +20,8 @@
 #define LOW_BAT_SCREEN_TICKS       25
 #define NO_VBUS                    -2
 
+//#define TEST_LOW_BATT 1
+
 #define mdelay(n) ({ unsigned long msec = (n); while (msec--) udelay(1000); })
 
 static int kc1_chargerdetect_setting[] = {
@@ -634,7 +636,11 @@ static int low_bat_charge(void)
         switch (work_index) {
 
             case 0:
+#ifndef TEST_LOW_BATT
                 voltage  = get_bat_voltage();
+#else
+                voltage  = LOW_LCD_VOLTAGE_LIMIT + 1;
+#endif
                 capacity = get_bat_capacity();
                 if ((voltage > LOW_BATTERY_VOLTAGE_LIMIT) && (capacity > LOW_BATTERY_CAPACITY_LIMIT)){
                     result = 1;
@@ -755,7 +761,11 @@ void check_low_bat(void)
     }
 
     temperature = get_bat_temperature();
-    voltage = get_bat_voltage();
+#ifndef TEST_LOW_BATT
+    voltage  = get_bat_voltage();
+#else
+    voltage  = LOW_LCD_VOLTAGE_LIMIT + 1;
+#endif
     capacity = get_bat_capacity();
 
     printf("Battery capacity =%d voltage=%d temperature=%d\n",capacity,voltage,temperature);
@@ -767,9 +777,6 @@ void check_low_bat(void)
     }
 
     if( (voltage <= LOW_BATTERY_VOLTAGE_LIMIT) || (capacity <= LOW_BATTERY_CAPACITY_LIMIT)) {
-
-        //Prepare to display the low battery message. 
-        run_command("lbtinit", 0);
 
         if (kc1_twl6030_get_vbus_status()) {
             run_command("setgreenled 0", 0);
@@ -858,5 +865,4 @@ LOW_BAT_TURN_OFF:
         }
     }
 }
-
 
