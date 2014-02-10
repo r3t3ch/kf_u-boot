@@ -36,18 +36,22 @@
 
 #include <configs/omap4_common.h>
 
+/* DEBUG OUTPUT */
+#define DEBUG				1
 
 /* Not an SBL build */
 #undef CONFIG_SPL
 
 /* SMB347 */
-#ifndef CONFIG_SPL_BUILD
+#undef CONFIG_TWL6030_POWER
 #define CONFIG_POWER_FG_BQ27541		1
 #define CONFIG_POWER_SMB347		1
-#endif
 
 /* SPI */
 #define CONFIG_OMAP4_SPI		1
+
+/* DSS */
+#define CONFIG_VIDEO_OMAP4		1
 
 /* I2C */
 //#undef CONFIG_SYS_I2C_SPEED
@@ -59,6 +63,14 @@
 
 /* Use local mmc.c file */
 #define CONFIG_SKIP_COMMON_MMC		1
+#define CONFIG_BOARD_LATE_INIT		1
+
+/* Enhance our eMMC support / experience. */
+#define CONFIG_CMD_GPT
+#define CONFIG_EFI_PARTITION
+#define CONFIG_PARTITION_UUIDS
+#define CONFIG_CMD_PART
+#define CONFIG_DONT_USE_ADMA2
 
 /* Defines for SDRAM init */
 #undef CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
@@ -66,66 +78,79 @@
 #define CONFIG_SYS_DEFAULT_LPDDR2_TIMINGS
 
 /* ENV related config options */
-#define CONFIG_ENV_IS_NOWHERE		1
+#define CONFIG_ENV_IS_NOWHERE            1
+#define CONFIG_VERSION_VARIABLE          1
 
-#define CONFIG_SYS_PROMPT		"OMAPKC1 # "
+#define CONFIG_SYS_PROMPT                "OMAPKC1 # "
 
 /* undef to save memory */
 #undef CONFIG_SYS_LONGHELP
 #undef CONFIG_SYS_HUSH_PARSER
 
 #undef CONFIG_SYS_MEMTEST_END
-#define CONFIG_SYS_MEMTEST_END		(0x80000000 + (0x00100000 * 31))
+#define CONFIG_SYS_MEMTEST_END           (0x80000000 + (0x00100000 * 31))
 
+/* fastboot */
+#undef CONFIG_MUSB_UDC
+#undef CONFIG_USB_OMAP3
+#undef CONFIG_USB_TTY
+#undef CONFIG_USB_DEVICE
+#define CONFIG_CMD_FASTBOOT              1
+#define CONFIG_CUSTOM_COMMON_FASTBOOT    1
+#define CONFIG_MUSB_GADGET               1
+#define CONFIG_MUSB_PIO_ONLY             1
+#define CONFIG_USB_GADGET_DUALSPEED      1
+#define CONFIG_USB_MUSB_OMAP2PLUS        1
+
+#define MEMORY_BASE                      0x80000000
+#define CONFIG_ADDR_ATAGS                (MEMORY_BASE + 0x100)
+#define CONFIG_ADDR_DOWNLOAD             (MEMORY_BASE + 0x02000000)
+#define CONFIG_BOARD_MACH_TYPE           2160
+#define DEVICE_TREE                      0x81f80000
+#define CONFIG_ANDROID_BOOT_IMAGE        1
+
+#define CUSTOM_DEVICE_VENDOR_ID          0x18d1
+#define CUSTOM_DEVICE_PRODUCT_ID         0x0100
+#define CONFIG_CUSTOM_COMMON_DEVICE_TREE 1
+
+
+/* env */
 #undef CONFIG_EXTRA_ENV_SETTINGS
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"loadaddr=0x82000000\0" \
 	"console=ttyO2,115200n8\0" \
 	"fdt_high=0xffffffff\0" \
 	"fdtaddr=0x80f80000\0" \
-	"bootpart=0:2\0" \
-	"bootdir=/boot\0" \
-	"bootfile=zImage\0" \
-	"usbtty=cdc_acm\0" \
-	"mmcdev=0\0" \
-	"mmcargs=setenv bootargs console=${console}\0" \
-	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
-	"mmcboot=echo Booting from mmc${mmcdev} ...; " \
-		"run mmcargs; " \
-		"bootz ${loadaddr} - ${fdtaddr}\0" \
-	"findfdt="\
-		"if test $board_name = sdp4430; then " \
-			"setenv fdtfile omap4-sdp.dtb; fi; " \
-	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
+	"mmcdev=1\0" \
+	"mmcargs=setenv bootargs console=${console}\0"
 
 #undef CONFIG_BOOTCOMMAND
-#define CONFIG_BOOTCOMMAND \
-	"run findfdt; " \
-	"mmc dev ${mmcdev}; if mmc rescan; then " \
-		"echo SD/MMC found on device ${mmcdev};" \
-		"if test -n ${uenvcmd}; then " \
-			"echo Running uenvcmd ...;" \
-			"run uenvcmd;" \
-		"fi;" \
-		"if run loadimage; then " \
-			"run loadfdt;" \
-			"run mmcboot; " \
-		"fi; " \
-	"fi"
+#define CONFIG_BOOTCOMMAND               "booti mmc1"
 
-#undef CONFIG_RECOVERYCOMMAND
-#define CONFIG_RECOVERYCOMMAND \
-	"run findfdt; " \
-	"mmc dev ${mmcdev}; if mmc rescan; then " \
-		"echo SD/MMC found on device ${mmcdev};" \
-		"if test -n ${uenvcmd}; then " \
-			"echo Running uenvcmd ...;" \
-			"run uenvcmd;" \
-		"fi;" \
-		"if run loadimage; then " \
-			"run loadfdt;" \
-			"run mmcboot; " \
-		"fi; " \
-	"fi"
+/* if not usb_detect: */
+   /* check long_power_press(1 second) */
+   /* if not: shutdown */
+/* check_batt_low: */
+/* if yes: */
+   /* show_battlow */
+   /* start charging */
+   /* charge_loop() */
+
+
+/* if run check_fastboot_cable; then */
+   /* show_fastboot */
+   /* start fastboot_mode */
+/* check recovery_boot */
+/* if yes: */
+   /* bootm recovery */
+/* show logo */
+/* run fastboot loop / menu button check (6 sec): */
+/* if fastboot_detect: */
+   /* show_fastboot */
+   /* start fastboot_mode */
+/* if button_press: */
+   /* show bootmenu */
+   /* enter bootmenu loop */
+/* bootm boot */
 
 #endif /* __CONFIG_OMAP4KC1_H */
