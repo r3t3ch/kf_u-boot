@@ -188,9 +188,13 @@ COBJS-$(CONFIG_CMD_SPL) += cmd_spl.o
 COBJS-$(CONFIG_CMD_ZIP) += cmd_zip.o
 COBJS-$(CONFIG_CMD_ZFS) += cmd_zfs.o
 
+ifndef CONFIG_CUSTOM_COMMON_FASTBOOT
 COBJS-$(CONFIG_CMD_FASTBOOT) += fastboot.o
+endif
 COBJS-$(CONFIG_CMD_FASTBOOT) += cmd_fastboot.o
+ifndef CONFIG_CUSTOM_COMMON_DEVICE_TREE
 COBJS-$(CONFIG_CMD_FASTBOOT) += device_tree.o
+endif
 ifndef CONFIG_SKIP_COMMON_MMC
 COBJS-$(CONFIG_CMD_FASTBOOT) += mmc.o
 endif
