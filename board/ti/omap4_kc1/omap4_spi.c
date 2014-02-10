@@ -218,9 +218,9 @@ static void spi_init_spi1(void)
     gpMCSPIRegs = (MCSPI_REGS *)MCSPI_SPI1_IO_BASE;
 
     /* Overwrite pin muxing for mcspi1* + gpio48  + gpio 138*/
-    sr32((void *)0x4A100130, 0, 32, 0x01100118);
-    sr32((void *)0x4A100134, 0, 32, 0x01100110);
-    sr32((void *)0x4A100138, 0, 32, 0x01130110);
+    sr32((void *)CONTROL_PADCONF_MCSPI1_CLK, 0, 32, 0x01100118);
+    sr32((void *)CONTROL_PADCONF_MCSPI1_SOMI, 0, 32, 0x01100110);
+    sr32((void *)CONTROL_PADCONF_MCSPI1_CS0, 0, 32, 0x01130110);
 
     /* Output enable && dataout 1 for gpio 48 to power up ethernet */
     sr32((void *)0x48055134, 16, 1, 0);
@@ -255,8 +255,8 @@ static void spi_init_spi4(void)
     gpMCSPIRegs = (MCSPI_REGS *)MCSPI_SPI4_IO_BASE;
 
     /* Overwrite pin muxing for mcspi4 */
-    sr32((void *)0x4A100154, 0, 32, 0x01100110);
-    sr32((void *)0x4A100158, 0, 32, 0x01100110);
+    sr32((void *)CONTROL_PADCONF_MCSPI4_CLK, 0, 32, 0x01100110);
+    sr32((void *)CONTROL_PADCONF_MCSPI4_SOMI, 0, 32, 0x01100110);
 
     udelay(500);
 }
