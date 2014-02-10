@@ -75,12 +75,6 @@ const struct pad_conf_entry wkup_padconf_array_essential[] = {
 
 };
 
-const struct pad_conf_entry wkup_padconf_array_essential_4460[] = {
-
-{PAD1_FREF_CLK4_REQ, (M3)}, /* gpio_wk7 for TPS: Mode 3 */
-
-};
-
 const struct pad_conf_entry core_padconf_array_non_essential[] = {
 	{GPMC_AD8, (PTU | IEN | OFF_EN | OFF_PD | OFF_IN | M3)},	/* gpio_32 */
 	{GPMC_AD9, (PTU | IEN | M3)},					/* gpio_33 */
