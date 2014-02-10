@@ -26,6 +26,8 @@
 #include <common.h>
 #include <i2c.h>
 
+#include "kc1_board.h"
+
 /* I2C chip addresses */
 #define TWL6030_CHIP_PM                     0x48
 
@@ -193,8 +195,8 @@ int  kc1_twl6030_get_vbus_status(void);
 void kc1_twl6030_init_battery_charging(void);
 void kc1_twl6030_init_vusb(void);
 void kc1_twl6030_disable_vusb(void);
+void kc1_twl6030_power_mmc_init(void);
 void kc1_twl6030_usb_device_settings(void);
 int  kc1_twl6030_get_power_button_status(void);
-void kc1_twl6030_print_boot_reason(void);
 
 #endif /* __KC1_TWL6030__H__ */

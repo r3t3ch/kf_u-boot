@@ -20,6 +20,7 @@
  * MA 02111-1307 USA
  */
 #include <config.h>
+#include <command.h>
 #include <asm/io.h>
 
 #include "kc1_board.h"
@@ -29,6 +30,7 @@
 
 void kc1_twl6030_start_usb_charging(void)
 {
+    debug("*** KC1_TWL6030: start_usb_charging\n");
     kc1_twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, CHARGERUSB_VICHRG_500, CHARGERUSB_VICHRG);
     kc1_twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, CHARGERUSB_CIN_LIMIT_500, CHARGERUSB_CINLIMIT);
     kc1_twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, MBAT_TEMP, CONTROLLER_INT_MASK);
@@ -41,6 +43,7 @@ void kc1_twl6030_start_usb_charging(void)
 
 void kc1_twl6030_reset_wd(void)
 {
+    debug("*** KC1_TWL6030: reset_wd\n");
     get_bat_voltage();
     get_bat_current();
     kc1_twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, 0xa0, CONTROLLER_WDG);
@@ -48,19 +51,21 @@ void kc1_twl6030_reset_wd(void)
 
 void kc1_twl6030_shutdown(void)
 {
+    debug("*** KC1_TWL6030: shutdown\n");
     kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 7, TWL6030_PHONIX_DEV_ON);
 }
 
 int kc1_twl6030_get_vbus_status(void)
 {   
     u8   data;
+    debug("*** KC1_TWL6030: get_vbus_status\n");
     kc1_twl6030_i2c_read_u8(TWL6030_CHIP_CHARGER, &data, CONTROLLER_STAT1);//49,
     return ((data & 0x4) >> 2);
 }
 
 void kc1_twl6030_init_battery_charging(void)
 {
-    printf("twl6030_init_battery_charging\n");
+    debug("*** KC1_TWL6030: init_battery_charging\n");
     get_bat_voltage();
     get_bat_current();
     kc1_twl6030_start_usb_charging();
@@ -69,6 +74,7 @@ void kc1_twl6030_init_battery_charging(void)
 void kc1_twl6030_init_vusb(void)
 {
     u8 data;
+    debug("*** KC1_TWL6030: init_vusb\n");
     /* Select APP Group and set state to ON */
     kc1_twl6030_i2c_read_u8(TWL6030_CHIP_PM, &data, MISC2);
     data |= 0x10;
@@ -84,6 +90,7 @@ void kc1_twl6030_init_vusb(void)
 void kc1_twl6030_disable_vusb(void)
 {
     u8   data;
+    debug("*** KC1_TWL6030: disable_vusb\n");
     kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x18,VUSB_CFG_VOLTAGE);
     kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00,VUSB_CFG_GRP);
     kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00,VUSB_CFG_TRANS);
@@ -98,6 +105,7 @@ void kc1_twl6030_disable_vusb(void)
 
 void kc1_twl6030_kc1_settings(void)
 {
+    debug("*** KC1_TWL6030: kc1_settings\n");
     kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VMEM_CFG_GRP);
     //rtc off mode low power,BBSPOR_CFG,VRTC_EN_OFF_STS
     kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x72, 0xE6);
@@ -128,12 +136,22 @@ void kc1_twl6030_kc1_settings(void)
 void kc1_tw6030_kc1_clk32kg(void)
 {
     //32k
+    debug("*** KC1_TWL6030: kc1_clk32kg\n");
     kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x0, CLK32KG_CFG_GRP);
     kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x1, CLK32KG_CFG_STATE);
 }
 
+void kc1_twl6030_power_mmc_init(void)
+{
+    debug("*** KC1_TWL6030: kc1_twl6030_power_mmc_init\n");
+    /* set voltage to 3.0 and turnon for APP */
+    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x15, VMMC_CFG_VOLTAGE);
+    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x21, VMMC_CFG_STATE);
+}
+
 void kc1_twl6030_usb_device_settings(void)
 {
+    debug("*** KC1_TWL6030: usb_device_settings\n");
     kc1_twl6030_init_vusb();
 }
 
@@ -149,7 +167,7 @@ int kc1_twl6030_get_power_button_status(void)
     return (data & 0x1);
 }
 
-void kc1_twl6030_print_boot_reason(void)
+int kc1_twl6030_print_boot_reason(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
     volatile u8 data1 = 0, data2 = 0, data3 = 0;
     volatile u32 data4 = 0;
@@ -165,6 +183,8 @@ void kc1_twl6030_print_boot_reason(void)
     /* PRM_RSTST 10:31 are reserved. Mask them off */
     data4 = (0x3FF & data4);
     printf ("OMAP4 PRM_RSTST          :0x%08x\n", data4);
-    return;
+    return 0;
 }
+
+U_BOOT_CMD( print_boot_reason, 1, 0, kc1_twl6030_print_boot_reason, "print_boot_reason - display TWL6030 boot registers.\n", NULL );
 
