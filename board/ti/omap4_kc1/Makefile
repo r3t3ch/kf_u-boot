@@ -32,6 +32,7 @@ COBJS	+= kc1_board.o
 COBJS	+= kc1_leds.o
 COBJS	+= kc1_panel.o
 COBJS	+= kc1_twl6030.o
+COBJS	+= kc1_debug.o
 COBJS	+= fg_bq27541.o
 COBJS	+= pmic_smb347.o
 COBJS	+= omap4_spi.o
