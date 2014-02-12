@@ -49,6 +49,16 @@ OBJS	:= $(addprefix $(obj),$(COBJS)) splash.o lowbattery.o multi_download.o
 $(LIB):	$(obj).depend $(OBJS)
 	$(call cmd_link_o_target, $(OBJS))
 
+ifdef CONFIG_LCD
+splash.o:
+	$(OBJCOPY) -I binary -O elf32-littlearm -B arm initlogo.bmp.gz $@
+
+lowbattery.o:
+	$(OBJCOPY) -I binary -O elf32-littlearm -B arm lowbattery.bmp.gz $@
+
+multi_download.o:
+	$(OBJCOPY) -I binary -O elf32-littlearm -B arm multi_download.bmp.gz $@
+else
 splash.o:
 	$(OBJCOPY) -I binary -O elf32-littlearm -B arm initlogo.rle $@
 
@@ -57,6 +67,7 @@ lowbattery.o:
 
 multi_download.o:
 	$(OBJCOPY) -I binary -O elf32-littlearm -B arm multi_download.rle $@
+endif
 
 #########################################################################
 

@@ -648,7 +648,8 @@ static int low_bat_charge(void)
                 }
                 if ((voltage > LOW_LCD_VOLTAGE_LIMIT) && (show_low_bat == 0)) {
                    show_low_bat = 1;
-                   initialize_lcd(1);
+                   set_logoindex(1);
+                   initialize_lcd();
                 }
                 printf("Battery voltage=%d capacity=%d \n",voltage,capacity);
                 break;
@@ -693,7 +694,8 @@ static int low_bat_charge(void)
                         (show_low_bat >= LOW_BAT_SCREEN_TICKS) &&
                         (show_low_bat_ptw == 0)) {
                     show_low_bat_ptw = 1;
-                    initialize_lcd(1);
+                    set_logoindex(1);
+                    initialize_lcd();
                 }
                 break;
         }
@@ -856,7 +858,8 @@ void check_low_bat(void)
 LOW_BAT_TURN_OFF:
             printf("shutdown due to there is weak battery \n");
             if (voltage > LOW_LCD_VOLTAGE_LIMIT) {
-                initialize_lcd(1);
+                set_logoindex(1);
+                initialize_lcd();
                 for (ms=0; ms<1000; ms++)
                     udelay(2000);//2ms
                 turn_off_lcd();
