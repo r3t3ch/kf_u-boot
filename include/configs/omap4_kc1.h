@@ -132,10 +132,7 @@
 /* env */
 #undef CONFIG_EXTRA_ENV_SETTINGS
 #define CONFIG_EXTRA_ENV_SETTINGS \
-	"loadaddr=0x82000000\0" \
 	"console=ttyO2,115200n8\0" \
-	"fdt_high=0xffffffff\0" \
-	"fdtaddr=0x80f80000\0" \
 	"mmcdev=1\0" \
 	"mmcargs=setenv bootargs console=${console}\0"
 
@@ -145,27 +142,36 @@
 /* if not usb_detect: */
    /* check long_power_press(1 second) */
    /* if not: shutdown */
+
 /* check_batt_low: */
 /* if yes: */
    /* show_battlow */
    /* start charging */
    /* charge_loop() */
 
+/* load all idme values */
+/* set android.boot cmdline params (serial, mac, etc) */
 
 /* if run check_fastboot_cable; then */
    /* show_fastboot */
    /* start fastboot_mode */
+
 /* check recovery_boot */
 /* if yes: */
    /* bootm recovery */
+
 /* show logo */
-/* run fastboot loop / menu button check (6 sec): */
+/* show menu start */
+/* run fastboot loop / menu button check (bootdelay=sec): */
+
 /* if fastboot_detect: */
    /* show_fastboot */
    /* start fastboot_mode */
+
 /* if button_press: */
    /* show bootmenu */
    /* enter bootmenu loop */
+
 /* bootm boot */
 
 #endif /* __CONFIG_OMAP4KC1_H */
