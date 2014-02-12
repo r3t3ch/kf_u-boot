@@ -408,7 +408,7 @@ struct graphics_config {
 	u8  row_inc;
 	u8  pixel_inc;
 	u8  window_skip;
-	void *frame_buffer;
+	u32 video_data_format;
 };
 
 #define DSS_HBP(bp)    (((bp) - 1) << 20)
@@ -425,11 +425,14 @@ struct graphics_config {
 #define DISPC_GFX_FIFO_THRESHOLD(low,high)	((low << 0) | (high << 16))
 
 /* Generic DSS Functions */
-void omap4_dss_panel_config(const struct panel_config *panel_cfg);
-void omap4_graphics_config(const struct graphics_config *gfx_cfg, const struct panel_config *panel_cfg);
-int  omap4_apply_dss_disp_config(const struct panel_config *panel_cfg, int delay_count, int timeout);
-void omap4_reset_display_controller(unsigned int delay_count, unsigned int timeout);
-void omap4_dss_enable(const struct panel_config *panel_cfg);
-void omap4_fill_black_data(unsigned int framebuffer, const struct panel_config *panel_cfg);
+void omap4_dss_register_configs(const struct panel_config *new_panel_cfg, const struct graphics_config *new_gfx_cfg);
+void omap4_dss_apply_panel_config(void);
+void omap4_dss_apply_graphics_config(void);
+int  omap4_dss_apply_disp_config(int delay_count, int timeout);
+void omap4_dss_reset_display_controller(unsigned int delay_count, unsigned int timeout);
+void omap4_dss_enable(void);
+void omap4_dss_fill_black_data(void);
+void omap4_dss_video_init(int flag);
+void *omap4_dss_get_frame_buffer(void);
 
 #endif /* DSS_H */
