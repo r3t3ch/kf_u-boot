@@ -515,5 +515,6 @@ int  summit_is_aicl_complete(void);
 void summit_switch_mode(int mode);    
 void summit_charge_enable(int enable);
 int  detect_usb(void);
+void check_low_bat(void);
 
 #endif /* __PMIC_SMB347__H__ */
