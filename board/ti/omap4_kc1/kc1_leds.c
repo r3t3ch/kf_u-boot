@@ -2,7 +2,8 @@
 #include <common.h>
 #include <command.h>
 #include <asm/io.h>
-#include <twl6030.h>
+
+#include "kc1_twl6030.h"
 
 #define LED_PWM1ON           0xBA
 #define LED_PWM1OFF          0xBB
@@ -13,7 +14,7 @@
 int setled(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[], uint led_on, uint led_off)
 {
     int ret = 0;
-    long brightness;
+    unsigned char brightness;
     unsigned char data;
 
     if (i2c_get_bus_num() != 0) {
@@ -40,14 +41,23 @@ int setled(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[], uint led_o
         else
             brightness = (~(brightness/2)) & 0x7f;
 
-        data = 0x30;
+        if (led_on == LED_PWM2ON)
+            data = 0x30;
+        else
+            data = 0x06;
         i2c_write(TWL6030_CHIP_PWM, TWL6030_TOGGLE3, 1, &data, 1);
         i2c_write(TWL6030_CHIP_PWM, led_on, 1, &brightness, 1);
     }
     else if (brightness <= 1) {
-        data = 0x8;
+        if (led_on == LED_PWM2ON)
+            data = 0x08;
+        else
+            data = 0x01;
         i2c_write(TWL6030_CHIP_PWM, TWL6030_TOGGLE3, 1, &data, 1);
-        data = 0x38;
+        if (led_on == LED_PWM2ON)
+            data = 0x38;
+        else
+            data = 0x07;
         i2c_write(TWL6030_CHIP_PWM, TWL6030_TOGGLE3, 1, &data, 1);
     }
 
@@ -56,11 +66,13 @@ int setled(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[], uint led_o
 
 int do_setamberled(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
+    debug("** SET ORANGE LED: %s %s\n", argv[0], argv[1]);
     return setled(cmdtp, flag, argc, argv, LED_PWM2ON, LED_PWM2OFF);
 }
 
 int do_setgreenled(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
+    debug("** SET GREEN LED: %s %s\n", argv[0], argv[1]);
     return setled(cmdtp, flag, argc, argv, LED_PWM1ON, LED_PWM1OFF);
 }
 
