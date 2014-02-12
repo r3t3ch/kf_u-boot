@@ -26,6 +26,5 @@ void mbid_init(void);
 unsigned get_mbid(void);
 unsigned get_panelid(void);
 unsigned get_touchid(void);
-void set_SWBootingCfg(void);
 
 #endif /* __KC1_BOARD_H */

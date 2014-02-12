@@ -67,19 +67,3 @@ unsigned get_touchid(void)
   return touchid;
 }
 
-/*****************************************
- * Routine: SWBootingConfiguration
- * Description:  SW Booting Configuration
- *****************************************/
-void set_SWBootingCfg(void)
-{
-  __raw_writel( 0x4A326A0C , 0x4A326A00 );   // Address in Public Internal SRAM where SW Booting Configuration is
-  __raw_writel( 0xCF00AA01 , 0x4A326A0C );   // Header for SW Booting Configuration
-  __raw_writel( 0x0000000C , 0x4A326A10 );
-  __raw_writel( 0x00450000 , 0x4A326A14 );   // USB Boot First
-  __raw_writel( 0x00000000 , 0x4A326A18 );
-  __raw_writel( 0x00000000 , 0x4A326A1C );
-  /* now warm reset the silicon */
-  __raw_writel(PRM_RSTCTRL_RESET, PRM_RSTCTRL);
-}
-
