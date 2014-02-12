@@ -39,6 +39,10 @@
 /* DEBUG OUTPUT */
 #define DEBUG				1
 
+/* MEMORY ENV + 2M */
+#undef CONFIG_SYS_MALLOC_LEN
+#define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + 0x00200000)
+
 /* Not an SBL build */
 #undef CONFIG_SPL
 
@@ -56,6 +60,17 @@
 /* I2C */
 //#undef CONFIG_SYS_I2C_SPEED
 //#define CONFIG_SYS_I2C_SPEED		400000
+
+/* SPLASH SCREEN */
+#define CONFIG_LCD			1
+#define CONFIG_CMD_BMP		1
+#define CONFIG_BMP_16BPP		1
+#define CONFIG_BMP_32BPP		1
+#define CONFIG_VIDEO_BMP_GZIP		1
+#define CONFIG_SPLASH_SCREEN		1
+#define CONFIG_SYS_VIDEO_LOGO_MAX_SIZE  0x00200000
+#define LCD_BPP				LCD_COLOR16
+#define CONFIG_FB_ADDR			0x82000000
 
 /* Environment information */
 #undef CONFIG_BOOTDELAY
