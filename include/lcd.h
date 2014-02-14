@@ -44,6 +44,7 @@ void lcd_setcolreg(ushort regno, ushort red, ushort green, ushort blue);
 void lcd_initcolregs(void);
 
 int lcd_getfgcolor(void);
+int lcd_getbgcolor(void);
 
 /* gunzip_bmp used if CONFIG_VIDEO_BMP_GZIP */
 struct bmp_image *gunzip_bmp(unsigned long addr, unsigned long *lenp,
@@ -324,6 +325,9 @@ void lcd_show_board_info(void);
 
 /* Return the size of the LCD frame buffer, and the line length */
 int lcd_get_size(int *line_length);
+
+void lcd_setfgcolor(int color);
+void lcd_setbgcolor(int color);
 
 /************************************************************************/
 /* ** BITMAP DISPLAY SUPPORT						*/
