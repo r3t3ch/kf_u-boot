@@ -625,7 +625,12 @@ static int mmc_switch(struct mmc *mmc, u8 set, u8 index, u8 value)
 	cmd.resp_type = MMC_RSP_R1b;
 	cmd.cmdarg = (MMC_SWITCH_MODE_WRITE_BYTE << 24) |
 				 (index << 16) |
+#ifdef CONFIG_OMAP4KC1
+				 (value << 8) |
+				 set;
+#else
 				 (value << 8);
+#endif
 
 	ret = mmc_send_cmd(mmc, &cmd, NULL);
 
@@ -932,6 +937,40 @@ static int mmc_startup(struct mmc *mmc)
 		return err;
 
 	memcpy(mmc->cid, cmd.response, 16);
+#ifdef CONFIG_OMAP4KC1
+/*
+RESPONSE 0x [15][0100][4d 38473246 41]11340e ddba9e5d
+manfif = [15]
+oemid  = [0100]
+product name = [4d 38473246 41] OR M8G2FA
+*/
+	int mid=mmc->cid[0]>>24&0xFF;
+	char *str;
+	char product[7];
+
+	product[6]='\0';
+	product[5]=(mmc->cid[2]>>24)&0xFF;
+	product[4]=(mmc->cid[1]>>0)&0xFF;
+	product[3]=(mmc->cid[1]>>8)&0xFF;
+	product[2]=(mmc->cid[1]>>16)&0xFF;
+	product[1]=(mmc->cid[1]>>24)&0xFF;
+	product[0]=(mmc->cid[0]&0xFF);
+
+	if(mid==0x11)
+		str="Toshiba ";
+	else if(mid==0x15)
+		str="Samsung ";
+	else if(mid==0x13 || mid==0xFE)
+		str="Micron  ";
+	else
+		str="Unkown  ";
+
+	memcpy(mmc->block_dev.vendor,str,strlen(str));
+	memcpy(mmc->block_dev.product,product,sizeof(product));
+	debug("*** MMC: mid=%x\n", mid);
+	debug("*** MMC: vendor=%s\n", str);
+	debug("*** MMC: product=%s\n", product);
+#endif
 
 	/*
 	 * For MMC cards, set the Relative Address.
@@ -1377,3 +1416,21 @@ int mmc_initialize(bd_t *bis)
 
 	return 0;
 }
+
+#ifdef CONFIG_OMAP4KC1
+char *mmc_vendor(void)
+{
+	struct mmc *m = find_mmc_device(cur_dev_num);
+	if (m != NULL)
+		return m->block_dev.vendor;
+	return NULL;
+}
+
+char *mmc_product(void)
+{
+	struct mmc *m = find_mmc_device(cur_dev_num);
+	if (m != NULL)
+		return m->block_dev.product;
+	return NULL;
+}
+#endif
