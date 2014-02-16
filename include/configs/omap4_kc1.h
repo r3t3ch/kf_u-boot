@@ -41,7 +41,7 @@
 
 /* MEMORY ENV + 2M */
 #undef CONFIG_SYS_MALLOC_LEN
-#define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + 0x00200000)
+#define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + 0x01000000)
 
 /* Not an SBL build */
 #undef CONFIG_SPL
@@ -63,14 +63,21 @@
 
 /* SPLASH SCREEN */
 #define CONFIG_LCD			1
-#define CONFIG_CMD_BMP		1
+#define CONFIG_CMD_BMP			1
 #define CONFIG_BMP_16BPP		1
 #define CONFIG_BMP_32BPP		1
 #define CONFIG_VIDEO_BMP_GZIP		1
 #define CONFIG_SPLASH_SCREEN		1
 #define CONFIG_SYS_VIDEO_LOGO_MAX_SIZE  0x00200000
+#define CONFIG_SYS_WHITE_ON_BLACK	1
 #define LCD_BPP				LCD_COLOR16
-#define CONFIG_FB_ADDR			0x82000000
+
+/* BOOTMENU */
+//#define CONFIG_CFB_CONSOLE		1
+//#define CONFIG_CFB_CONSOLE_ANSI	1
+//#define CONFIG_VGA_AS_SINGLE_DEVICE	1
+//#define CONFIG_CMD_BOOTMENU		1
+//#define CONFIG_MENU			1
 
 /* Environment information */
 #undef CONFIG_BOOTDELAY
@@ -120,24 +127,40 @@
 #define MEMORY_BASE                      0x80000000
 #define CONFIG_ADDR_ATAGS                (MEMORY_BASE + 0x100)
 #define CONFIG_ADDR_DOWNLOAD             (MEMORY_BASE + 0x02000000)
+#define CONFIG_FB_ADDR                   (MEMORY_BASE + 0x01b00000)
 #define CONFIG_BOARD_MACH_TYPE           2160
-#define DEVICE_TREE                      0x81f80000
+#define DEVICE_TREE                      0x80f80000
 #define CONFIG_ANDROID_BOOT_IMAGE        1
 
 #define CUSTOM_DEVICE_VENDOR_ID          0x18d1
 #define CUSTOM_DEVICE_PRODUCT_ID         0x0100
-#define CONFIG_CUSTOM_COMMON_DEVICE_TREE 1
 
 
 /* env */
 #undef CONFIG_EXTRA_ENV_SETTINGS
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"console=ttyO2,115200n8\0" \
+	"fdt_high=0xffffffff\0" \
+	"fdtaddr=0x80f80000\0" \
+	"initrd_high=no\0" \
+	"wifimac=FFEEDDCCBBAA\0" \
+	"serialno=0123456789ABCDEF\0" \
 	"mmcdev=1\0" \
-	"mmcargs=setenv bootargs console=${console}\0"
+	"mmcargs_old=setenv bootargs console=${console} \
+		androidboot.wifimac=${wifimac} \
+		androidboot.serialno=${serialno}\0" \
+	"mmcargs_new=setenv dtbootargs console=${console} \
+		androidboot.wifimac=${wifimac} \
+		androidboot.serialno=${serialno}\0"
 
 #undef CONFIG_BOOTCOMMAND
-#define CONFIG_BOOTCOMMAND               "booti mmc1"
+#define CONFIG_BOOTCOMMAND		"run mmcargs_old; run mmcargs_new; booti mmc1"
+
+// legacy ATAGS config
+#define CONFIG_SETUP_MEMORY_TAGS	1
+#define CONFIG_CMDLINE_TAG		1
+#define CONFIG_INITRD_TAG		1
+#define CONFIG_REVISION_TAG		1
 
 /* if not usb_detect: */
    /* check long_power_press(1 second) */
