@@ -9,6 +9,7 @@
 #include <command.h>
 #include <i2c.h>
 #include <lcd.h>
+#include <version.h>
 
 #include "kc1_panel.h"
 #include "kc1_debug.h"
@@ -32,6 +33,8 @@ extern char const _binary_multi_download_rle_end[];
 
 static u8 logo_index = 0;
 extern struct prcm_regs const **prcm;
+
+void lcd_drawchars(ushort x, ushort y, uchar *str, int count);
 
 static const struct panel_config dpi_panel_cfg = {
 	.display_type	= OMAP_DISPLAY_TYPE_DPI,
@@ -114,19 +117,6 @@ void turn_off_lcd(void)
 }
 
 #ifdef CONFIG_LCD
-/*
- * 16bpp color definitions
- */
-# define CONSOLE_COLOR_BLACK	0x0000
-# define CONSOLE_COLOR_RED	0xF800
-# define CONSOLE_COLOR_GREEN	0x07E0
-# define CONSOLE_COLOR_YELLOW	0xFFE0
-# define CONSOLE_COLOR_BLUE	0x001F
-# define CONSOLE_COLOR_MAGENTA	0xF81F
-# define CONSOLE_COLOR_CYAN	0x07FF
-# define CONSOLE_COLOR_GREY	0x7BEF
-# define CONSOLE_COLOR_WHITE	0xFFFF	/* Must remain last / highest	*/
-
 /************************************************************************/
 /**  Small utility to check that you got the colours right		*/
 /************************************************************************/
@@ -156,6 +146,36 @@ static void kc1_test_pattern(void)
 		for (h = 0; h < h_max; ++h) {
 			uchar ix = N_BLK_HOR * iy + h / h_step;
 			*pix++ = test_colors[ix];
+		}
+	}
+}
+
+static void kc1_text_grid(void)
+{
+	int i, j;
+	char line1[255], line2[255];
+	int cols = lcd_get_screen_columns();
+	int rows = lcd_get_screen_rows();
+	for (j = 1; j <= cols; j++)
+		line1[j-1]=(48 + (j % 10));
+	line1[cols+1] = '\0';
+	for (j = 1; j <= cols; j++) {
+		if ((j % 10)==0)
+			line2[j-1]=(48 + (j / 10));
+		else
+			line2[j-1]=' ';
+	}
+	line2[cols+1] = '\0';
+	for (i = 0; i < rows; i+=2) {
+		if (((i % 2) == 0) && (i < rows)) {
+			lcd_position_cursor(0, i);
+			lcd_setfgcolor(test_colors[i % 6]);
+			lcd_printf(line1);
+		}
+		if (((i % 2) != 0) && ((i+1) < rows)) {
+			lcd_position_cursor(0, i + 1);
+			lcd_setfgcolor(test_colors[(i+1) % 6]);
+			lcd_printf(line2);
 		}
 	}
 }
@@ -211,6 +231,8 @@ void initialize_lcd(void)
 		show_image((u_int16_t *)_binary_lowbattery_bmp_gz_start, 0);
 	else
 		show_image((u_int16_t *)_binary_initlogo_bmp_gz_start, 0);
+
+	lcd_set_text_rotate(LCD_TEXT_ROTATE_270);
 #else
 	if (logo_index == 2)
 		show_image((u_int16_t *)_binary_multi_download_rle_start, (u_int16_t *)_binary_multi_download_rle_end);
@@ -304,7 +326,7 @@ void initialize_lcd(void)
 
 	/* Turn on backlight */
 	set_omap_pwm(0x7F);
-dump_dss();
+
 	omap4_dss_video_init(1);
 }
 
@@ -320,7 +342,6 @@ void show_image(u_int16_t *start, u_int16_t *end)
 	sprintf(buffer_cmd, "bmp display 0x%8x 0 0", (u_int16_t *)start);
 	debug("*** %s::buffer_cmd = '%s'\n", __func__, buffer_cmd);
 	run_command(buffer_cmd, 0);
-//	kc1_test_pattern();
 #else
 	u_int16_t *target_addr = (uint16_t *)omap4_dss_get_frame_buffer();
 	if (!target_addr) {
