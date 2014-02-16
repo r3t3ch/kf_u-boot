@@ -351,6 +351,15 @@ void lcd_setbgcolor(int color);
 #define LCD_COLOR8	3
 #define LCD_COLOR16	4
 
+/* Text rotation changes */
+#define LCD_TEXT_ROTATE_NONE	0
+#define LCD_TEXT_ROTATE_90	1
+#define LCD_TEXT_ROTATE_180	2
+#define LCD_TEXT_ROTATE_270	3
+
+void lcd_set_text_rotate(uchar rotate);
+uchar lcd_get_text_rotate(void);
+
 /*----------------------------------------------------------------------*/
 #if defined(CONFIG_LCD_INFO_BELOW_LOGO)
 # define LCD_INFO_X		0
@@ -407,6 +416,13 @@ void lcd_setbgcolor(int color);
  * 16bpp color definitions
  */
 # define CONSOLE_COLOR_BLACK	0x0000
+# define CONSOLE_COLOR_RED	0xF800
+# define CONSOLE_COLOR_GREEN	0x07E0
+# define CONSOLE_COLOR_YELLOW	0xFFE0
+# define CONSOLE_COLOR_BLUE	0x001F
+# define CONSOLE_COLOR_MAGENTA	0xF81F
+# define CONSOLE_COLOR_CYAN	0x07FF
+# define CONSOLE_COLOR_GREY	0x7BEF
 # define CONSOLE_COLOR_WHITE	0xffff	/* Must remain last / highest	*/
 
 #endif /* color definitions */
