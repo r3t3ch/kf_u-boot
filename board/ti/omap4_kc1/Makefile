@@ -39,7 +39,6 @@ COBJS	+= omap4_spi.o
 
 ifdef CONFIG_CMD_FASTBOOT
 COBJS	+= mmc.o
-COBJS	+= device_tree.o
 COBJS	+= fastboot.o
 endif
 
