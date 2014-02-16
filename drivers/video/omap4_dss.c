@@ -225,7 +225,6 @@ int board_video_init(void)
 #ifdef CONFIG_CFB_CONSOLE
 void *video_hw_init(void)
 {
-	lcd_printf("*** %s\n", __func__);
 	static GraphicDevice dssfb;
 	GraphicDevice *pGD = &dssfb;
 	struct dispc_regs *dispc = (struct dispc_regs *) OMAP4_DISPC_BASE;
