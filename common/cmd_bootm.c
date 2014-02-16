@@ -77,7 +77,9 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #if defined(CONFIG_CMD_FASTBOOT)
 extern int do_fastboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[]);
+#ifndef CONFIG_OMAP4KC1
 char* fastboot_get_serialno(void);
+#endif
 #endif
 
 #ifdef CONFIG_BZIP2
@@ -1981,6 +1983,8 @@ bootimg_print_image_hdr (boot_img_hdr *hdr)
 	printf ("   tags_addr:   0x%x\n", hdr->tags_addr);
 	printf ("   page_size:   0x%x\n", hdr->page_size);
 
+	printf ("   dt_size:   0x%x\n", hdr->dt_size);
+
 	printf ("   name:      %s\n", hdr->name);
 	printf ("   cmdline:   %s\n", hdr->cmdline);
 
@@ -2005,25 +2009,10 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	int mmcc = 1;
 	int boot_from_mmc = 0;
 	boot_img_hdr *hdr;
-	unsigned dbt_addr = CONFIG_ADDR_ATAGS;
-	unsigned cfg_machine_type = CONFIG_BOARD_MACH_TYPE;
+	unsigned dbt_addr = DEVICE_TREE;
 	struct mmc* mmc = NULL;
 	u64 num_sectors;
 	int status;
-	char* fdt_addr[3] = { "fdt", "addr", STR(DEVICE_TREE) };
-	char* fdt_resize[2] = { "fdt", "resize"};
-	char* fdt_chosen[4] = { "fdt", "chosen", NULL, NULL};
-	char* fdt_bootargs[5] = { "fdt", "set", "/chosen", "bootargs", NULL};
-	char bootargs_str[MAX_BOOTARGS_SIZE];
-	char start[32];
-	char end[32];
-#ifdef CONFIG_BOOTIPU1
-	unsigned ipu_load_addr;
-	char* ipu_boot[2] = { "bootipu", NULL };
-	char ipu_addr[32];
-#endif
-
-	void (*theKernel)(int zero, int arch, void *);
 
 	if (argc < 2)
 		return -1;
@@ -2056,8 +2045,7 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	}
 
 	hdr = (boot_img_hdr *) addr;
-
-	dbt_addr = load_dev_tree(dbt_addr);
+	memset(hdr, 0, sizeof(boot_img_hdr));
 
 	if (boot_from_mmc) {
 		struct fastboot_ptentry *pte = NULL;
@@ -2075,7 +2063,7 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		}
 		/* read kernel */
 		bootimg_print_image_hdr(hdr);
-		printf("\n\nramdisk sector count:%d", (int)(hdr->ramdisk_size /
+		printf("\n\nramdisk sector count:%d\n", (int)(hdr->ramdisk_size /
 												mmc->block_dev.blksz));
 		sector = pte->start + (hdr->page_size / mmc->block_dev.blksz);
 		num_sectors = ((hdr->kernel_size/mmc->block_dev.blksz) + 1);
@@ -2094,6 +2082,32 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		if(status < 0) {
 			printf("booti: Could not read ramdisk\n");
 			goto fail;
+		}
+		if ((hdr->second_size) && (!hdr->dt_size)) {
+			/* read devtree */
+			sector += _ALIGN(hdr->ramdisk_size, hdr->page_size) /
+								mmc->block_dev.blksz;
+			debug("*** %s::devtree sector (second_size) == %u\n", __func__, sector);
+			num_sectors = ((hdr->second_size/mmc->block_dev.blksz) + 1);
+			status = mmc->block_dev.block_read(mmcc, sector, num_sectors,
+						(void*)DEVICE_TREE);
+			if(status < 0) {
+				printf("booti: Could not read devtree (second_size)\n");
+				goto fail;
+			}
+		}
+		if (hdr->dt_size) {
+			/* read devtree (preferring dt_size value */
+			sector += _ALIGN(hdr->ramdisk_size, hdr->page_size) /
+								mmc->block_dev.blksz;
+			debug("*** %s::devtree sector (dt_size) == %u\n", __func__, sector);
+			num_sectors = ((hdr->dt_size/mmc->block_dev.blksz) + 1);
+			status = mmc->block_dev.block_read(mmcc, sector, num_sectors,
+						(void*)DEVICE_TREE);
+			if(status < 0) {
+				printf("booti: Could not read devtree (dt_size)\n");
+				goto fail;
+			}
 		}
 	}else {
 		u32 kaddr, raddr;
@@ -2115,57 +2129,41 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		memmove((void *) hdr->ramdisk_addr, (void *)raddr,
 							hdr->ramdisk_size);
 
+		raddr +=  _ALIGN(hdr->ramdisk_size, hdr->page_size);
+		// devtree .dtb
+		if ((hdr->second_size) && (!hdr->dt_size)) {
+			memmove((void *) DEVICE_TREE, (void *)raddr,
+							hdr->second_size);
+		}
+
+		if (hdr->dt_size) {
+			raddr +=  _ALIGN(hdr->second_size, hdr->page_size);
+			memmove((void *) DEVICE_TREE, (void *)raddr,
+							hdr->dt_size);
+		}
+
 	}
 
-	printf("kernel   @ %08x (%d)\n", hdr->kernel_addr, hdr->kernel_size);
-	printf("ramdisk  @ %08x (%d)\n", hdr->ramdisk_addr, hdr->ramdisk_size);
+	printf("kernel    @ %08x (%d)\n", hdr->kernel_addr, hdr->kernel_size);
+	printf("ramdisk   @ %08x (%d)\n", hdr->ramdisk_addr, hdr->ramdisk_size);
+	printf("2nd-image @ %08x (%d)\n", hdr->second_addr, hdr->second_size);
+	printf("dt-size          (%d)\n", hdr->dt_size);
 
-#ifdef CONFIG_BOOTIPU1
-	ipu_load_addr = load_ipu_image();
-	if(ipu_load_addr) {
-		ipu_boot[1] = ipu_addr;
-		sprintf(ipu_addr, "0x%x", (unsigned int)ipu_load_addr);
-		do_boot_ipu(NULL, 0, 2, ipu_boot);
-	} else {
-		printf("IPU1 not loaded.\n");
-	}
-#endif
-	//Set the initrd_start and initrd_end inside the FDT
-	status = do_fdt(NULL, 0, 3, fdt_addr);
-	if (status) {
-		printf("booti: Could not set FDT address\n");
-		goto fail;
-	}
-	status = do_fdt(NULL, 0, 4, fdt_resize);
-	if (status) {
-		printf("booti: Could not resize FDT\n");
-		goto fail;
-	}
+	memset((void *)&images, 0, sizeof(images));
+	boot_start_lmb(&images);
 
-	fdt_chosen[2] = start;
-	fdt_chosen[3] = end;
-	sprintf(start, "0x%x", (unsigned int)hdr->ramdisk_addr);
-	sprintf(end, "0x%x", (unsigned int)(hdr->ramdisk_addr +
-									hdr->ramdisk_size));
-	status = do_fdt(NULL, 0, 4, fdt_chosen);
-	if (status) {
-		printf("booti: Could not set initrd_start and initrd_end\n");
-		goto fail;
+	images.ep = hdr->kernel_addr;
+	images.rd_start = hdr->ramdisk_addr;
+	images.rd_end = hdr->ramdisk_addr + hdr->ramdisk_size;
+	if ((hdr->second_size) && (!hdr->dt_size)) {
+		images.ft_len = hdr->second_size;
+		images.ft_addr = DEVICE_TREE;
 	}
-	fdt_bootargs[4] = bootargs_str;
-	sprintf(bootargs_str, "androidboot.serialno=%s ", fastboot_get_serialno());
-	if (strlen((char*)hdr->cmdline))
-		strcat(bootargs_str, (char*)hdr->cmdline);
-	status = do_fdt(NULL, 0, 5, fdt_bootargs);
-	if (status) {
-		printf("booti: Warning: Could not set bootargs\n");
+	else if (hdr->dt_size) {
+		images.ft_len = hdr->dt_size;
+		images.ft_addr = DEVICE_TREE;
 	}
-
-	theKernel = (void (*)(int, int, void *))(hdr->kernel_addr);
-
-	printf("Starting kernel...\n");
-
-	theKernel(0, cfg_machine_type, (void *)dbt_addr);
+	do_bootm_linux(flag, argc, argv, &images);
 
 	puts("booti: Control returned to monitor - resetting...\n");
 fail:

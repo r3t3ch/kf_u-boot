@@ -250,7 +250,11 @@ int fdt_chosen(void *fdt, int force)
 	 * is true.
 	 */
 #ifndef CONFIG_SPL_BUILD
+#ifdef CONFIG_OMAP4KC1
+	str = getenv("dtbootargs");
+#else
 	str = getenv("bootargs");
+#endif
 #endif
 	if (str != NULL) {
 		path = fdt_getprop(fdt, nodeoffset, "bootargs", NULL);
