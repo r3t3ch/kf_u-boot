@@ -23,76 +23,76 @@
 #include <common.h>
 #include <asm/io.h>
 
-#include "kc1_board.h"
+#include <kc1_board.h>
+
 #include "fg_bq27541.h"
 
-static inline int bq27_i2c_read_u16(u8 chip_no, u16 *val, u8 reg)
+static inline int bq27_i2c_read_u16(u8 reg, u16 *val)
 {
-    u16 data;
-    int mbid = get_mbid();
+	u16 data;
 
-    if (mbid >= 4)
-        i2c_set_bus_num(0); // 100
-    if (i2c_read(chip_no, reg, 1, (u8 *)&data, 2) == 0) {
-        *val=data;
-        return 0;
-    }
-    else
-        return -1;
+	if (get_mbid() >= 4)
+		i2c_set_bus_num(0); // 100
+	if (i2c_read(BQ27541_I2C_ADDRESS, reg, 1, (u8 *)&data, 2) == 0) {
+		*val=data;
+		return 0;
+	}
+	else
+		return -1;
 }
 
-static inline int bq27_i2c_read_int(u8 chip_no, short *val, u8 reg)
+static inline int bq27_i2c_read_int(u8 reg, short *val)
 {
-    short data;
-    int mbid = get_mbid();
+	short data;
 
-    if(mbid >= 4)
-        i2c_set_bus_num(0); // 100
-    if(i2c_read(chip_no, reg, 1, (u8 *)&data, 2) == 0){
-        *val=data;
-        return 0;
-    }
-    else
-        return -1;
+	if(get_mbid() >= 4)
+		i2c_set_bus_num(0); // 100
+	if(i2c_read(BQ27541_I2C_ADDRESS, reg, 1, (u8 *)&data, 2) == 0){
+		*val=data;
+		return 0;
+	}
+	else
+		return -1;
 }
 
 int get_bat_voltage(void)
 {
-    u16 bat = 0;
-    if (bq27_i2c_read_u16(BQ27541_ADDRESS, &bat, 0x08) == 0) {
-        //printf("Battery voltage=%d mV\n",bat);
-        return bat;
-    }
-    else
-        return -1;
+	u16 bat = 0;
+	if (bq27_i2c_read_u16(BQ27541_BAT_VOLTAGE, &bat) == 0) {
+		debug("*** %s::Battery voltage=%d mV\n", __func__, bat);
+		return bat;
+	}
+	else
+		return -1;
 }
 
 int get_bat_temperature(void)
 {
-    u16 temp = 0;
-    short celsius = 0;
-    if (bq27_i2c_read_u16(BQ27541_ADDRESS, &temp, 0x06) == 0) {
-        //Kelvin to Celsius = K -273.15
-        celsius = temp - 2731;
-        return celsius/10;
-    }
-    else
-        return -1;
+	u16 temp = 0;
+	short celsius = 0;
+	if (bq27_i2c_read_u16(BQ27541_BAT_TEMP, &temp) == 0) {
+		//Kelvin to Celsius = K -273.15
+		celsius = temp - 2731;
+		debug("*** %s::Battery temp=%dc\n", __func__, celsius/10);
+		return celsius/10;
+	}
+	else
+		return -1;
 }
 
 int get_bat_current(void)
 {
-    short current = 0;
-    bq27_i2c_read_int(BQ27541_ADDRESS, &current, 0x14);
-    //printf("Battery current=%d mA\n",current);
-    return current;
+	short current = 0;
+	bq27_i2c_read_int(BQ27541_BAT_CURRENT, &current);
+	debug("*** %s::Battery current=%dc\n", __func__, current);
+	return current;
 }
 
 int get_bat_capacity(void)
 {
-    short capacity = 0;
-    bq27_i2c_read_int(BQ27541_ADDRESS, &capacity, 0x2c);
-    //printf("Battery current=%d mA\n",current);
-    return capacity;
+	short capacity = 0;
+	bq27_i2c_read_int(BQ27541_BAT_CAPACITY, &capacity);
+	debug("*** %s::Battery capacity=%dc\n", __func__, capacity);
+	return capacity;
 }
 

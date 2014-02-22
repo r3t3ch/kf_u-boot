@@ -24,9 +24,13 @@
 #include <i2c.h>
 
 /* I2C chip addresses */
-#define BQ27541_ADDRESS		0x55
+#define BQ27541_I2C_ADDRESS	0x55
 
 /* Battery REGISTERS */
+#define BQ27541_BAT_TEMP	0x06
+#define BQ27541_BAT_VOLTAGE	0x08
+#define BQ27541_BAT_CURRENT	0x14
+#define BQ27541_BAT_CAPACITY	0x2c
 
 /* Function*/
 int get_bat_voltage(void);
