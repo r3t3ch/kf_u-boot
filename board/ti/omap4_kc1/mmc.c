@@ -27,22 +27,32 @@
  */
 
 #include <common.h>
+#include <asm/omap_common.h>
+#include <asm/io.h>
 #include <mmc.h>
 #include <malloc.h>
 #include <usb/fastboot.h>
 #include <asm/arch/mmc_host_def.h>
+#include <linux/ctype.h>
+
+#include "kc1_twl6030.h"
 
 #define EFI_VERSION 0x00010000
 #define EFI_ENTRIES 128
 #define EFI_NAMELEN 36
 #define MMC_DEVICE 1
+#define MMC_BLOCK_SIZE		512	//1 page <=> 512 bytes
 
-#define DEBUG
+//#define DEBUG
 #ifdef DEBUG
 #define DBG(x...) printf(x)
 #else
 #define DBG(x...)
 #endif /* DEBUG */
+
+/* IDME VALUES */
+static char          idme_serial[20];
+static char          idme_macaddr[20];
 
 static int load_ptbl(void);
 int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
@@ -99,6 +109,28 @@ struct ptable {
 	};
 	struct efi_entry entry[EFI_ENTRIES];
 };
+
+
+typedef struct nvram_t {
+    const char *name;
+    unsigned int offset;
+    unsigned int size;
+} nvram_t;
+
+static const struct nvram_t nvram_info[] = {
+    {	.name = "serial",	.offset = 0x0,		.size = 16,	},
+    {	.name = "mac",		.offset = 0x30,		.size = 12,	},
+    {	.name = "sec",		.offset = 0x40,		.size = 20,	},
+    {	.name = "pcbsn",	.offset = 0x60,		.size = 16,	},
+    {	.name = "bootmode",	.offset = 0x1000,	.size = 16,	},
+    {	.name = "postmode",	.offset = 0x1010,	.size = 16,	},
+    {	.name = "bootcounter",	.offset = 0x1020,	.size = 16,	},
+    {	.name = "lpddr2",	.offset = 0x2000,	.size = 16,	},
+    {	.name = "emmc",		.offset = 0x2020,	.size = 16,	},
+    {	.name = "product",	.offset = 0x2040,	.size = 16,	},
+};
+
+#define CONFIG_NUM_NV_VARS (sizeof(nvram_info)/sizeof(nvram_info[0]))
 
 static void init_mbr(u8 *mbr, u32 blocks)
 {
@@ -415,11 +447,12 @@ struct _partition {
 
 
 /* HASH: Add this as a partition layout toggle */
+#if 0
 static struct _partition partitions_x[] = {
 	{ "-", 128 },			//GPT
 	{ "xloader", 128 },		//p1
 	{ "bootloader", 256 },		//p2
-	{ "dkernel", 1 },		//p3  *REMOVED*
+	{ "environment", 128 },		//p3
 	{ "efs", 10*1024 },		//p4  *REMOVED*
 	{ "recovery", 16*1024 },	//p5
 	{ "backup", 1 },		//p6  *REMOVED*
@@ -427,13 +460,13 @@ static struct _partition partitions_x[] = {
 	{ "splash", 1 },		//p8  *REMOVED*
 	{ "system", 512*1024 },		//p9
 	{ "spacer", 1 },		//p10 *REMOVED*
-	{ "cache", 256*1024 },		//p11
+	{ "cache", 512*1024 },		//p11
 	{ "userdata", 0},		//p12
 	{ NULL, 0 },
 };
+#endif
 
-
-static struct partition partitions[] = {
+static struct _partition partitions[] = {
 	{ "-", 128 },			//GPT
 	{ "xloader", 128 },		//p1 
 	{ "bootloader", 256 },		//p2
@@ -528,22 +561,288 @@ fail:
 	return status;
 }
 
+// string_show : show string stored in the buffer
+int string_show (unsigned char* buf , int num)
+{
+	int i = 0;
+	int fine_offset = 0 ;
+
+	if (num > CONFIG_NUM_NV_VARS) return -1;
+
+	fine_offset = nvram_info[num].offset % MMC_BLOCK_SIZE;
+
+	printf("%s",nvram_info[num].name);
+	for (i=0; i<= (15-strlen(nvram_info[num].name)); i++){
+		putc(' ');
+	}
+	printf("0x%04x",nvram_info[num].offset);
+
+	for (i=1; i<=12; i++){
+		putc(' ');
+	}
+
+	for (i = 0 ; i< nvram_info[num].size ; i++){
+
+		if (*(buf+i+fine_offset) < 0x20 || *(buf+i+fine_offset) > 0x7e )
+			putc('.');
+		else
+			printf("%c",*(buf+i+fine_offset));
+	}
+
+	printf("\n");
+	return 0;
+}
+
+char *idme_cleanup(char *str)
+{
+    size_t len = 0;
+    char *frontp = str - 1;
+    char *endp = NULL;
+
+    if( str == NULL )
+            return NULL;
+
+    if( str[0] == '\0' )
+            return str;
+
+    len = strlen(str);
+    endp = str + len;
+
+    while( !isprint(*(++frontp)) );
+    while( !isprint(*(--endp)) && endp != frontp );
+
+    if( str + len - 1 != endp )
+            *(endp + 1) = '\0';
+    else if( frontp != str &&  endp == frontp )
+            *str = '\0';
+
+    /* Shift the string so that it starts at str so
+     * that if it's dynamically allocated, we can
+     * still free it on the returned pointer.  Note
+     * the reuse of endp to mean the front of the
+     * string buffer now.
+     */
+    endp = str;
+    if( frontp != str )
+    {
+            while( *frontp ) *endp++ = *frontp++;
+            *endp = '\0';
+    }
+
+
+    return str;
+}
+
+int do_rw_idme(const char *cmd)
+{
+// HASH: TODO
+#if 0
+	int ret = 0 ;
+	unsigned char* buffer = NULL;
+	int i = 0;
+	int seq_no = -1;
+	int rw_size, rw_page = 0;
+	int rw_offset = 0;
+	struct mmc* mmc = NULL;
+	char *dev[4] = { "mmc", "dev", "1", "1" };
+
+	if (argc <= 1 || argc >= 4 )
+#endif
+		goto idme_cmd_usage;
+#if 0
+	else{
+		//0. check command validity
+                if (strncmp(argv[0],"idme",4) !=0)
+                        goto idme_cmd_usage;
+
+		mmc = find_mmc_device(MMC_DEVICE);
+		if (mmc == NULL) {
+			printf("%s::No MMC in slot 1\n", __func__);
+			return 1;
+		}
+		mmc_init(mmc);
+		if (r != 0) {
+			printf("%s::mmc init failed\n", __func__);
+			return r;
+		}
+
+		r = do_mmcops(NULL, 0, 4, dev);
+		if (r != 0) {
+			printf("%s::mmc dev 1 1 failed (%d)\n", __func__, r);
+			return r;
+		}
+
+		//3. allocate memory and initialize to 0x20
+		buffer = (unsigned char*)malloc(MMC_BLOCK_SIZE);
+		memset(buffer, 0x20, MMC_BLOCK_SIZE);
+
+		if ( argc == 2 ) {
+			if (strcmp(argv[1],"?") == 0){
+				printf("<================== idme nvram info ==================\n");
+				printf("Name		offset		  value    \n");
+				printf("----------------------------------|---|---|---|---|---|\n");
+				for(i=0; i<CONFIG_NUM_NV_VARS; i++){
+					r = mmc->block_dev.block_read(MMC_DEVICE,
+						(nvram_info[i].offset / MMC_BLOCK_SIZE), 1, buffer);
+					string_show(buffer, i);
+				}
+				printf("=================== idme nvram info ==================>\n");
+			}
+			else{
+				free(buffer);
+				goto idme_cmd_usage;
+			}
+		}
+		else {	//argc == 3 //write
+
+			for(i=0; i<CONFIG_NUM_NV_VARS; i++){
+				if (strcmp(argv[1],nvram_info[i].name) == 0){
+					seq_no = i;
+					break;
+				}
+			}
+			//4. check if the item is defined in the list
+			if (seq_no < 0 || seq_no > CONFIG_NUM_NV_VARS){
+				printf("<idme>\"%s\" not found!\n",argv[1]);
+				goto clean;
+			}
+			//5. check input data length
+			if (strlen (argv[2]) > nvram_info[seq_no].size){
+				printf("<idme> incorrect data length, please try again.\n");
+				goto clean;
+			}
+
+			rw_offset = nvram_info[seq_no].offset % MMC_BLOCK_SIZE;
+			rw_page = nvram_info[seq_no].offset / MMC_BLOCK_SIZE;
+			rw_size = nvram_info[seq_no].size;
+
+			//6. read target page(512 bytes) to buffer and replace correspond bytes with desired value
+			mmc_read(slot_no, rw_page,buffer, 1);
+			memset(&buffer[rw_offset], 0x20, rw_size);
+			memcpy(&buffer[rw_offset],argv[2],strlen(argv[2]));
+
+			//7. write back to EMMC page number "rw_page"
+			if (mmc_write(slot_no, (unsigned char *)buffer, rw_page, 1/*1 page*/) < 0){
+				printf("<idme> write mmc error \n ");
+				goto clean;
+			}
+			else{	//write success
+				printf("<idme> write %s to offset 0x%04x\n",argv[2],nvram_info[seq_no].offset);
+			}
+
+		}
+		free(buffer);
+	}
+
+	return 0;
+#endif
+
+idme_cmd_usage:
+	printf("Usage:\n"
+		"idme    - idme control interface\n"
+		"idme <var> <value> --- set a variable value \n"
+		"idme ?             --- print out known values\n");
+	return 1;
+
+#if 0
+clean:
+	if (buffer) free(buffer);
+	return 1;
+#endif
+}
 
 int fastboot_oem(const char *cmd)
 {
 	if (!strcmp(cmd,"format")) {
 		return do_format();
 	}
+	if (!strcmp(cmd,"idme")) {
+		return do_rw_idme(cmd);
+	}
 	return -1;
+}
+
+int idme_loadvalue(int index, char *buffer, int length) {
+	char *load_buffer = NULL;
+	int offset;
+	char *dev[4] = { "mmc", "dev", "1", "1" };
+	struct mmc* mmc = NULL;
+	int r = 0;
+
+	mmc = find_mmc_device(MMC_DEVICE);
+	if (mmc == NULL) {
+		printf("%s::No MMC in slot 1\n", __func__);
+		return -1;
+	}
+	mmc_init(mmc);
+	if (r != 0) {
+		printf("%s::mmc init failed\n", __func__);
+		return r;
+	}
+
+	r = do_mmcops(NULL, 0, 4, dev);
+	if (r != 0) {
+		printf("%s::mmc dev 1 1 failed (%d)\n", __func__, r);
+		return r;
+	}
+	load_buffer = (char *)malloc(MMC_BLOCK_SIZE);
+	r = mmc->block_dev.block_read(MMC_DEVICE, (nvram_info[index].offset / MMC_BLOCK_SIZE), 1, load_buffer);
+	if (r != 1) {
+		printf("%s::block_read failed (blkcount=%d)\n", __func__, r);
+		return -1;
+	}
+	offset = nvram_info[index].offset % MMC_BLOCK_SIZE;
+
+	memcpy(buffer, (load_buffer + offset), length);
+	free(load_buffer);
+	return 0;
 }
 
 int board_mmc_ftbtptn_init(void)
 {
+	char buffer[100];
+
+	// Load Serial
+	if (!idme_loadvalue(0, buffer, 20)) {
+		strlcpy(idme_serial, buffer, 17);
+		idme_serial[17]='\0';
+		idme_cleanup(idme_serial);
+	}
+	else {
+		printf("idme load serial failed\n");
+	}
+	debug("*** %s::serialno=[%s]\n", __func__, idme_serial);
+
+	// Load MAC
+	if (!idme_loadvalue(1, buffer, 20)) {
+		strlcpy(idme_macaddr, buffer, 13);
+		idme_macaddr[13]='\0';
+		idme_cleanup(idme_macaddr);
+	}
+	else {
+		printf("idme load macaddr failed\n");
+	}
+	debug("*** %s::wifimac=[%s]\n", __func__, idme_macaddr);
+
+	setenv("serialno", idme_serial);
+	setenv("wifimac", idme_macaddr);
+
+	printf("\nefi partition table:\n");
 	return load_ptbl();
 }
 
 int board_late_init(void)
 {
-	return load_ptbl();
+	return 0; // load_ptbl();
+}
+
+char* fastboot_get_serialno(void)
+{
+	return idme_serial;
+}
+
+char* fastboot_get_macaddr(void)
+{
+	return idme_macaddr;
 }
 
