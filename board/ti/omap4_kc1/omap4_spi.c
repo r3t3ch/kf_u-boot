@@ -4,7 +4,7 @@
 #include <asm/bitops.h>
 #include <asm/arch/sys_proto.h>
 
-#include "kc1_board.h"
+#include <kc1_board.h>
 #include "omap4_spi.h"
 
 /*
