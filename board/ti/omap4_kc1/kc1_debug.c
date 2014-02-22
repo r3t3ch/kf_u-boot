@@ -2,8 +2,10 @@
 #include <common.h>
 #include <asm/omap_common.h>
 #include <asm/arch/sys_proto.h>
+#include <twl6030.h>
 
 #include "kc1_debug.h"
+#include "pmic_smb347.h"
 
 #ifdef DEBUG
 #define SPACER "                             "
@@ -813,3 +815,40 @@ RMEMB("MCSPI_RX3", base + 0x178);
 RMEMB("MCSPI_XFERLEVEL", base + 0x17c);
 #endif
 }
+
+void dump_i2c_twl6030(void)
+{
+#ifdef DEBUG
+	int index  = 0;
+	u8  value  = 0;
+
+	int chip   = TWL6030_CHIP_PM;
+	for (index=0x40; index <= 0xE6; index++) {
+		twl6030_i2c_read_u8(chip, index, &value);
+		printf("chip=TWL6030_CHIP_PM       index=0x%2x  value=0x%8x\n", index, value);
+		udelay(5000); 
+	}
+
+	chip   = TWL6030_CHIP_USB;
+	for (index=0xE0; index <= 0xEF; index++) {
+		twl6030_i2c_read_u8(chip, index, &value);
+		printf("chip=TWL6030_CHIP_CHARGER  index=0x%2x  value=0x%8x\n", index, value);
+		udelay(5000); 
+	}
+#endif
+}
+
+void dump_i2c_smb347(void)
+{
+#ifdef DEBUG
+	int index  = 0;
+	u8  value  = 0;
+
+	for (index=0; index <= 0x0D; index++) {
+		smb347_i2c_read_u8(index, &value);
+		printf("chip=SMB347  index=0x%2x  value=0x%8x\n", index, value);
+		udelay(5000); 
+	}
+#endif
+}
+

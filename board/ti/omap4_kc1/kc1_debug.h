@@ -10,5 +10,7 @@ void dump_control_general_wkup(void);
 void dump_control_padconf_core(void);
 void dump_control_padconf_wkup(void);
 void dump_mcspi(unsigned int base);
+void dump_i2c_twl6030(void);
+void dump_i2c_smb347(void);
 
 #endif /* __KC1_BOARD_H */
