@@ -20,171 +20,229 @@
  * MA 02111-1307 USA
  */
 #include <config.h>
+#include <asm/omap_common.h>
 #include <command.h>
 #include <asm/io.h>
+#include <twl6030.h>
 
-#include "kc1_board.h"
+#include <kc1_board.h>
+
 #include "kc1_twl6030.h"
 #include "fg_bq27541.h"
 
 
-void kc1_twl6030_start_usb_charging(void)
+void twl6030_start_usb_charging(void)
 {
-    debug("*** KC1_TWL6030: start_usb_charging\n");
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, CHARGERUSB_VICHRG_500, CHARGERUSB_VICHRG);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, CHARGERUSB_CIN_LIMIT_500, CHARGERUSB_CINLIMIT);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, MBAT_TEMP, CONTROLLER_INT_MASK);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, MASK_MCHARGERUSB_THMREG, CHARGERUSB_INT_MASK);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, CHARGERUSB_VOREG_4P76, CHARGERUSB_VOREG);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, CHARGERUSB_CTRL2_VITERM_100, CHARGERUSB_CTRL2);
-    /* Enable USB charging */
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, CONTROLLER_CTRL1_EN_CHARGER, CONTROLLER_CTRL1);
+	debug("[TWL6030] %s:: ENTER\n", __func__);
+	twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, CHARGERUSB_VICHRG, CHARGERUSB_VICHRG_500);
+	twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, CHARGERUSB_CINLIMIT, CHARGERUSB_CIN_LIMIT_500);
+	twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, CONTROLLER_INT_MASK, MBAT_TEMP);
+	twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, CHARGERUSB_INT_MASK, MASK_MCHARGERUSB_THMREG);
+	twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, CHARGERUSB_VOREG, CHARGERUSB_VOREG_4P76);
+	twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, CHARGERUSB_CTRL2, CHARGERUSB_CTRL2_VITERM_100);
+	/* Enable USB charging */
+	twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, CONTROLLER_CTRL1, CONTROLLER_CTRL1_EN_CHARGER);
 }
 
-void kc1_twl6030_reset_wd(void)
+void twl6030_shutdown(void)
 {
-    debug("*** KC1_TWL6030: reset_wd\n");
-    get_bat_voltage();
-    get_bat_current();
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_CHARGER, 0xa0, CONTROLLER_WDG);
+	debug("[TWL6030] %s:: ENTER\n", __func__);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, TWL6030_PHONIX_DEV_ON, 7);
 }
 
-void kc1_twl6030_shutdown(void)
-{
-    debug("*** KC1_TWL6030: shutdown\n");
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 7, TWL6030_PHONIX_DEV_ON);
-}
-
-int kc1_twl6030_get_vbus_status(void)
+int twl6030_get_vbus_status(void)
 {   
-    u8   data;
-    debug("*** KC1_TWL6030: get_vbus_status\n");
-    kc1_twl6030_i2c_read_u8(TWL6030_CHIP_CHARGER, &data, CONTROLLER_STAT1);//49,
-    return ((data & 0x4) >> 2);
+	u8   data;
+	debug("[TWL6030] %s:: ENTER\n", __func__);
+	twl6030_i2c_read_u8(TWL6030_CHIP_CHARGER, CONTROLLER_STAT1, &data);//49,
+	return ((data & 0x4) >> 2);
 }
 
-void kc1_twl6030_init_battery_charging(void)
+void twl6030_init_battery_charging(void)
 {
-    debug("*** KC1_TWL6030: init_battery_charging\n");
-    get_bat_voltage();
-    get_bat_current();
-    kc1_twl6030_start_usb_charging();
+	debug("[TWL6030] %s:: ENTER\n", __func__);
+	get_bat_voltage();
+	get_bat_current();
+	twl6030_start_usb_charging();
 }
 
-void kc1_twl6030_init_vusb(void)
+void twl6030_init_vusb(void)
 {
-    u8 data;
-    debug("*** KC1_TWL6030: init_vusb\n");
-    /* Select APP Group and set state to ON */
-    kc1_twl6030_i2c_read_u8(TWL6030_CHIP_PM, &data, MISC2);
-    data |= 0x10;
-    /* Select the input supply for VBUS regulator */
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, data, MISC2);
+	u8 data;
+	debug("[TWL6030] %s:: ENTER\n", __func__);
+	/* Select APP Group and set state to ON */
+	twl6030_i2c_read_u8(TWL6030_CHIP_PM, MISC2, &data);
+	data |= 0x10;
+	/* Select the input supply for VBUS regulator */
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, MISC2, data);
 
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x18, VUSB_CFG_VOLTAGE);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VUSB_CFG_GRP);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VUSB_CFG_TRANS);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x01, VUSB_CFG_STATE);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VUSB_CFG_VOLTAGE, 0x18);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VUSB_CFG_GRP, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VUSB_CFG_TRANS, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VUSB_CFG_STATE, 0x01);
 }
 
-void kc1_twl6030_disable_vusb(void)
+void twl6030_disable_vusb(void)
 {
-    u8   data;
-    debug("*** KC1_TWL6030: disable_vusb\n");
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x18,VUSB_CFG_VOLTAGE);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00,VUSB_CFG_GRP);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00,VUSB_CFG_TRANS);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00,VUSB_CFG_STATE);
+	u8   data;
+	debug("[TWL6030] %s:: ENTER\n", __func__);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VUSB_CFG_VOLTAGE, 0x18);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VUSB_CFG_GRP, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VUSB_CFG_TRANS, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VUSB_CFG_STATE, 0x00);
 
-    /* Select APP Group and set state to ON */
-    kc1_twl6030_i2c_read_u8(TWL6030_CHIP_PM, &data, MISC2);
-    data &= ~0x18;
-    /* Select the input supply for VBUS regulator */
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, data, MISC2);
+	/* Select APP Group and set state to ON */
+	twl6030_i2c_read_u8(TWL6030_CHIP_PM, MISC2, &data);
+	data &= ~0x18;
+	/* Select the input supply for VBUS regulator */
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, MISC2, data);
 }
 
-void kc1_twl6030_kc1_settings(void)
+void twl6030_kc1_settings(void)
 {
-    debug("*** KC1_TWL6030: kc1_settings\n");
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VMEM_CFG_GRP);
-    //rtc off mode low power,BBSPOR_CFG,VRTC_EN_OFF_STS
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x72, 0xE6);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VMEM_CFG_GRP);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VMEM_CFG_STATE);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VMEM_CFG_TRANS);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0xC0, PHOENIX_MSK_TRANSITION);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x01, VCXIO_CFG_TRANS);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VDAC_CFG_GRP);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VDAC_CFG_TRANS);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VDAC_CFG_STATE);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VMMC_CFG_GRP);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VMMC_CFG_TRANS);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VMMC_CFG_STATE);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VAUX3_CFG_GRP);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VAUX3_CFG_STATE);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VAUX2_CFG_GRP);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VAUX2_CFG_STATE);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x09, VAUX2_CFG_VOLTAGE);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x10, 0xEC);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VUSIM_CFG_GRP);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x00, VUSIM_CFG_STATE);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x14, VUSIM_CFG_VOLTAGE);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x3C, V2V1_CFG_VOLTAGE);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x01, CLK32KG_CFG_STATE);
+	debug("[TWL6030] %s:: ENTER\n", __func__);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VMEM_CFG_GRP, 0x00);
+	//rtc off mode low power,BBSPOR_CFG,VRTC_EN_OFF_STS
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, BBSPOR_CFG, 0x72);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VMEM_CFG_GRP, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VMEM_CFG_STATE, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VMEM_CFG_TRANS, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, PHOENIX_MSK_TRANSITION, 0xC0);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VCXIO_CFG_TRANS, 0x01);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VDAC_CFG_GRP, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VDAC_CFG_TRANS, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VDAC_CFG_STATE, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VMMC_CFG_GRP, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VMMC_CFG_TRANS, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VMMC_CFG_STATE, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VAUX3_CFG_GRP, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VAUX3_CFG_STATE, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VAUX2_CFG_GRP, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VAUX2_CFG_STATE, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VAUX2_CFG_VOLTAGE, 0x09);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0xEC, 0x10);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VUSIM_CFG_GRP, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VUSIM_CFG_STATE, 0x00);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VUSIM_CFG_VOLTAGE, 0x14);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, V2V1_CFG_VOLTAGE, 0x3C);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, CLK32KG_CFG_STATE, 0x01);
 }
 
+#if 0
 void kc1_tw6030_kc1_clk32kg(void)
 {
-    //32k
-    debug("*** KC1_TWL6030: kc1_clk32kg\n");
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x0, CLK32KG_CFG_GRP);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x1, CLK32KG_CFG_STATE);
+debug("[TWL6030] %s:: ENTER\n", __func__);
+    twl6030_i2c_write_u8(TWL6030_CHIP_PM, CLK32KG_CFG_GRP, 0x0);
+    twl6030_i2c_write_u8(TWL6030_CHIP_PM, CLK32KG_CFG_STATE, 0x1);
 }
+#endif
 
-void kc1_twl6030_power_mmc_init(void)
+void twl6030_power_mmc_init(void)
 {
-    debug("*** KC1_TWL6030: kc1_twl6030_power_mmc_init\n");
-    /* set voltage to 3.0 and turnon for APP */
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x15, VMMC_CFG_VOLTAGE);
-    kc1_twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0x21, VMMC_CFG_STATE);
+	debug("[TWL6030] %s:: ENTER\n", __func__);
+	/* set voltage to 3.0 and turnon for APP */
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VMMC_CFG_VOLTAGE, 0x15);
+	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VMMC_CFG_STATE, 0x21);
 }
 
-void kc1_twl6030_usb_device_settings(void)
+void twl6030_usb_device_settings(void)
 {
-    debug("*** KC1_TWL6030: usb_device_settings\n");
-    kc1_twl6030_init_vusb();
+	debug("[TWL6030] %s:: ENTER\n", __func__);
+	twl6030_init_vusb();
 }
 
-#define PHOENIX_START_CONDITION		0x1F
-#define PHOENIX_MSK_TRANSITION 		0x20
-#define PHOENIX_STS_HW_CONDITIONS 	0x21
-#define PHOENIX_LAST_TURNOFF_STS 	0x22
 
-int kc1_twl6030_get_power_button_status(void)
+int twl6030_get_power_button_status(void)
 {   
-    volatile u8 data;
-    kc1_twl6030_i2c_read_u8 (TWL6030_CHIP_PM, &data, PHOENIX_STS_HW_CONDITIONS);
-    return (data & 0x1);
+	volatile u8 data;
+	twl6030_i2c_read_u8 (TWL6030_CHIP_PM, PHOENIX_STS_HW_CONDITIONS, &data);
+	return (data & 0x1);
 }
 
-int kc1_twl6030_print_boot_reason(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+u32 twl6030_print_boot_reason(void)
 {
-    volatile u8 data1 = 0, data2 = 0, data3 = 0;
-    volatile u32 data4 = 0;
+	volatile u8 data1 = 0, data2 = 0, data3 = 0;
+	volatile u32 data4 = 0;
 
-    printf ("PMIC TWL 6030 start conditions\n");
-    kc1_twl6030_i2c_read_u8 (TWL6030_CHIP_PM, &data1, PHOENIX_START_CONDITION);
-    kc1_twl6030_i2c_read_u8 (TWL6030_CHIP_PM, &data2, PHOENIX_LAST_TURNOFF_STS);
-    kc1_twl6030_i2c_read_u8 (TWL6030_CHIP_PM, &data3, PHOENIX_STS_HW_CONDITIONS);
-    printf ("PHOENIX_START_CONDITION  :0x%02x\n", data1);
-    printf ("PHOENIX_LAST_TURNOFF_STS :0x%02x\n", data2);
-    printf ("PHOENIX_STS_HW_CONDITIONS:0x%02x\n", data3);
-    data4 = __raw_readl(PRM_RSTST);
-    /* PRM_RSTST 10:31 are reserved. Mask them off */
-    data4 = (0x3FF & data4);
-    printf ("OMAP4 PRM_RSTST          :0x%08x\n", data4);
-    return 0;
+	printf ("PMIC TWL 6030 start conditions\n");
+	twl6030_i2c_read_u8 (TWL6030_CHIP_PM, PHOENIX_START_CONDITION, &data1);
+	twl6030_i2c_read_u8 (TWL6030_CHIP_PM, PHOENIX_LAST_TURNOFF_STS, &data2);
+	twl6030_i2c_read_u8 (TWL6030_CHIP_PM, PHOENIX_STS_HW_CONDITIONS, &data3);
+	printf ("PHOENIX_START_CONDITION  :0x%02x\n", data1);
+	printf ("PHOENIX_LAST_TURNOFF_STS :0x%02x\n", data2);
+	printf ("PHOENIX_STS_HW_CONDITIONS:0x%02x\n", data3);
+	data4 = __raw_readl(PRM_RSTST);
+	/* PRM_RSTST 10:31 are reserved. Mask them off */
+	data4 = (0x3FF & data4);
+	printf ("OMAP4 PRM_RSTST          :0x%08x\n", data4);
+
+	return data4;
 }
 
-U_BOOT_CMD( print_boot_reason, 1, 0, kc1_twl6030_print_boot_reason, "print_boot_reason - display TWL6030 boot registers.\n", NULL );
+#define OTG_INTERFSEL		0x4A0AB40C
+#define USBOTGHS_CONTROL	0x4A00233C
+#define OMAP34XX_USB_DEVCTL	(0x4A000000 + 0xAB000 + 0x060)
+#define OTG_SYSCONFIG		(0x4A000000 + 0xAB000 + 0x404)
+//#define OTG_SYSSTATUS		(0x4A000000 + 0xAB000 + 0x408)
+
+static volatile u32 *otg_sysconfig = (volatile u32  *)OTG_SYSCONFIG;
+static volatile u32 *otg_interfsel = (volatile u32  *)OTG_INTERFSEL;
+static volatile u32 *otghs_control = (volatile u32  *)USBOTGHS_CONTROL;
+//static volatile u32 *otg_sysstatus = (volatile u32  *)OTG_SYSSTATUS;
+
+void twl6030_usb_ulpi_init(void)
+{
+	debug("[TWL6030] %s:: ENTER\n", __func__);
+	int ms = 1;
+
+	twl6030_disable_vusb();
+	twl6030_init_vusb();
+	__raw_writel(0x101, 0x4A0093E0);    //enable ocp2scp_usb_phy_ick
+	__raw_writel(0x100, 0x4A008640);    //enable ocp2scp_usb_phy_phy_48m
+	for (ms=0;ms<100;ms++)
+		udelay(100);//10ms
+	__raw_writel(~(1), 0x4A002300);          //power up the usb phy
+
+	/* Reset Mentor USB block */
+	/* 1)soft reset */
+	*otg_sysconfig |= (1<<1);
+
+	/* 2)Power Management Configuration .now set better defaults MIDLEMODE=No standby mode ,SIDLEMODE=No idle mode*/
+	*otg_sysconfig = (0x1008);
+
+	/* 3)PHY interface is 8-bit, UTMI+ level 3*/
+	*otg_interfsel &= 0;
+
+	/* 4)*Enable functional PHY clock (OTG_60M_FCLK)*/
+	__raw_writel(0x101, 0x4A0093E0);	//Enable ocp2scp_usb_phy_ick
+	__raw_writel(0x100, 0x4A008640);	//Enable ocp2scp_usb_phy_phy_48m
+
+	__raw_writel(~(1), 0x4A002300);		//power up the usb phy
+
+	if (*otghs_control != 0x15) {
+		debug("*** %s::ENTER OTG_CONTROL != 0x15\n", __func__);
+#if 0
+		fastboot_reset();
+		*otg_interfsel &= 0;
+		/* Program Phoenix registers VUSB_CFG_STATE and MISC2 */
+		twl6030_usb_device_settings();
+		/* Program the control module register */
+		*otghs_control = 0x15;
+#endif
+	}
+	else {
+		/* HACK */
+		debug("*** %s::ENTER HACK\n", __func__);
+// HASH: TODO
+//		fastboot_bulk_endpoint_reset();
+		*otg_interfsel &= 0;
+		/* Keeping USB cable attached and booting causes
+		* ROM code to reconfigure USB, and then
+		* re-enumeration never happens
+		* Setting this SRP bit helps - Cannot see why !!
+		* MUSB spec says : Session bit is used only for SRP
+		*/
+		__raw_writeb(0x1, OMAP34XX_USB_DEVCTL);
+	}
+}
 

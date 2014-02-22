@@ -24,91 +24,21 @@
 #define __KC1_TWL6030__H__
 
 #include <common.h>
-#include <i2c.h>
+//#include <i2c.h>
 
-#include "kc1_board.h"
-
-/* I2C chip addresses */
-#define TWL6030_CHIP_PM                     0x48
-
-#define TWL6030_CHIP_USB                    0x49
-#define TWL6030_CHIP_ADC                    0x49
-#define TWL6030_CHIP_CHARGER                0x49
-#define TWL6030_CHIP_PWM                    0x49
-
-/* Battery CHARGER REGISTERS */
-#define CONTROLLER_INT_MASK                 0xE0
-#define CONTROLLER_CTRL1                    0xE1
-#define CONTROLLER_WDG                      0xE2
-#define CONTROLLER_STAT1                    0xE3
-#define CHARGERUSB_INT_STATUS               0xE4
-#define CHARGERUSB_INT_MASK                 0xE5
-#define CHARGERUSB_STATUS_INT1              0xE6
-#define CHARGERUSB_STATUS_INT2              0xE7
-#define CHARGERUSB_CTRL1                    0xE8
-#define CHARGERUSB_CTRL2                    0xE9
-#define CHARGERUSB_CTRL3                    0xEA
-#define CHARGERUSB_STAT1                    0xEB
-#define CHARGERUSB_VOREG                    0xEC
-#define CHARGERUSB_VICHRG                   0xED
-#define CHARGERUSB_CINLIMIT                 0xEE
-#define CHARGERUSB_CTRLLIMIT1               0xEF
+//#include "kc1_board.h"
 
 #define TWL6030_PHONIX_DEV_ON               0x25
 
-#define REG_START_CONDITION                 0x1F
+#define PHOENIX_START_CONDITION             0x1F
+#define PHOENIX_MSK_TRANSITION              0x20
+#define PHOENIX_STS_HW_CONDITIONS           0x21
+#define PHOENIX_LAST_TURNOFF_STS            0x22
 
 /* START_CONDITION_MASK*/
 #define STRT_ON_PLUG_DET                    (1 << 3)
 #define STRT_ON_USB_ID                      (1 << 2)
 #define STRT_ON_PWRON                       (1)
-
-#define REG_HW_CONDITION                    0x21
-#define STS_PLUG_DET                        (1 << 3)
-#define STS_USB_ID                          (1 << 2)
-#define STS_PWRON                           (1)
-
-/* CHARGERUSB_VICHRG */
-#define CHARGERUSB_VICHRG_500               0x4
-#define CHARGERUSB_VICHRG_1500              0xE
-
-/* CHARGERUSB_CINLIMIT */
-#define CHARGERUSB_CIN_LIMIT_100            0x1
-#define CHARGERUSB_CIN_LIMIT_300            0x5
-#define CHARGERUSB_CIN_LIMIT_500            0x9
-#define CHARGERUSB_CIN_LIMIT_NONE           0xF
-
-/* CONTROLLER_INT_MASK */
-#define MVAC_FAULT                          (1 << 6)
-#define MAC_EOC                             (1 << 5)
-#define MBAT_REMOVED                        (1 << 4)
-#define MFAULT_WDG                          (1 << 3)
-#define MBAT_TEMP                           (1 << 2)
-#define MVBUS_DET                           (1 << 1)
-#define MVAC_DET                            (1 << 0)
-
-/* CHARGERUSB_INT_MASK */
-#define MASK_MCURRENT_TERM                  (1 << 3)
-#define MASK_MCHARGERUSB_STAT               (1 << 2)
-#define MASK_MCHARGERUSB_THMREG             (1 << 1)
-#define MASK_MCHARGERUSB_FAULT              (1 << 0)
-
-/* CHARGERUSB_VOREG */
-#define CHARGERUSB_VOREG_3P52               0x01
-#define CHARGERUSB_VOREG_4P0                0x19
-#define CHARGERUSB_VOREG_4P2                0x23
-#define CHARGERUSB_VOREG_4P76               0x3F
-
-/* CHARGERUSB_CTRL2 */
-#define CHARGERUSB_CTRL2_VITERM_50          (0 << 5)
-#define CHARGERUSB_CTRL2_VITERM_100         (1 << 5)
-#define CHARGERUSB_CTRL2_VITERM_150         (2 << 5)
-
-/* CONTROLLER_CTRL1 */
-#define CONTROLLER_CTRL1_EN_CHARGER         (1 << 4)
-#define CONTROLLER_CTRL1_SEL_CHARGER        (1 << 3)
-
-#define MISC2                               0xE5
 
 #define PHOENIX_MSK_TRANSITION              0x20
 #define PHOENIX_SENS_TRANSITION             0x2A
@@ -175,28 +105,13 @@
 
 #define BBSPOR_CFG                          0xE6
 
-/* Functions to read and write from TWL6030 */
-static inline int kc1_twl6030_i2c_write_u8(u8 chip_no, u8 val, u8 reg)
-{
-    if (get_mbid() >= 4)
-        i2c_set_bus_num(0); // 100
-    return i2c_write(chip_no, reg, 1, &val, 1);
-}
-
-static inline int kc1_twl6030_i2c_read_u8(u8 chip_no, u8 *val, u8 reg)
-{
-    if (get_mbid() >= 4)
-        i2c_set_bus_num(0); // 100
-    return i2c_read(chip_no, reg, 1, val, 1);
-}
-
-void kc1_twl6030_shutdown(void);
-int  kc1_twl6030_get_vbus_status(void);
-void kc1_twl6030_init_battery_charging(void);
-void kc1_twl6030_init_vusb(void);
-void kc1_twl6030_disable_vusb(void);
-void kc1_twl6030_power_mmc_init(void);
-void kc1_twl6030_usb_device_settings(void);
-int  kc1_twl6030_get_power_button_status(void);
+void twl6030_shutdown(void);
+int  twl6030_get_vbus_status(void);
+void twl6030_init_vusb(void);
+void twl6030_disable_vusb(void);
+void twl6030_kc1_settings(void);
+int  twl6030_get_power_button_status(void);
+u32  twl6030_print_boot_reason(void);
+void twl6030_usb_ulpi_init(void);
 
 #endif /* __KC1_TWL6030__H__ */
