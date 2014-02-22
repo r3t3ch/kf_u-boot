@@ -2009,7 +2009,6 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	int mmcc = 1;
 	int boot_from_mmc = 0;
 	boot_img_hdr *hdr;
-	unsigned dbt_addr = DEVICE_TREE;
 	struct mmc* mmc = NULL;
 	u64 num_sectors;
 	int status;
@@ -2026,9 +2025,6 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	else {
 		boot_from_mmc = 1;
 		addr = CONFIG_ADDR_DOWNLOAD;
-	}
-	if (check_fastboot()) {
-		goto fail;
 	}
 	if (check_recovery())
 		strcpy(ptn, "recovery");
