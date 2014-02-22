@@ -8,7 +8,7 @@
 #define SET_BIT(reg, x)                     ((reg)|=(0x1<<(x)))
 
 /* I2C chip addresses */
-#define SMB347_ADDRESS                      0x6
+#define SMB347_I2C_ADDRESS                  0x6
 
 /*  REGISTERS */
 #define SUMMIT_SMB347_R0_CHARGE_CURRENT	    0x0
@@ -505,6 +505,20 @@
     #define SRE_AICL_2000                       7
     #define SRE_AICL_2200                       8
 
+/* Functions to read and write from SMB347 */
+static inline int smb347_i2c_write_u8(u8 reg, u8 val)
+{
+    if (get_mbid() >= 4)
+        i2c_set_bus_num(3); // 100
+    return i2c_write(SMB347_I2C_ADDRESS, reg, 1, &val, 1);
+}
+
+static inline int smb347_i2c_read_u8(u8 reg, u8 *val)
+{
+    if (get_mbid() >= 4)
+        i2c_set_bus_num(3); // 100
+    return i2c_read(SMB347_I2C_ADDRESS, reg, 1, val, 1);
+}
 
 void summit_read_status_e(void);
 int  summit_check_bmd(void);

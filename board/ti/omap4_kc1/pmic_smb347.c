@@ -5,8 +5,10 @@
  */
 #include <common.h>
 #include <asm/io.h>
+#include <twl6030.h>
 
-#include "kc1_board.h"
+#include <kc1_board.h>
+
 #include "kc1_panel.h"
 #include "kc1_twl6030.h"
 #include "pmic_smb347.h"
@@ -218,29 +220,12 @@ static int aicl_results[]={
 };
 
 
-/* Functions to read and write from SMB347 */
-static inline int smb347_i2c_write_u8(u8 val, u8 reg)
-{
-    int mbid = get_mbid();
-    if (mbid >= 4)
-        i2c_set_bus_num(3); // 100
-    return i2c_write(SMB347_ADDRESS, reg, 1, &val, 1);
-}
-
-static inline int smb347_i2c_read_u8(u8 *val, u8 reg)
-{
-    int mbid = get_mbid();
-    if (mbid >= 4)
-        i2c_set_bus_num(3); // 100
-    return i2c_read(SMB347_ADDRESS, reg, 1, val, 1);
-}
-
-
 void summit_read_status_c(void) {
     u8 value = 0;
     u8 temp = 0;
 
-    smb347_i2c_read_u8(&value, SUMMIT_SMB347_RC_STATUS);
+debug("[SMB347] %s:: ENTER\n", __func__);
+    smb347_i2c_read_u8(SUMMIT_SMB347_RC_STATUS, &value);
 
     temp = value;
     if (SRC_CHARGEING_CYCLE_STATUS(value))
@@ -283,7 +268,8 @@ void summit_read_status_e(void) {
     u8 value = 0;
     u8 temp = 0;
 
-    smb347_i2c_read_u8(&value, SUMMIT_SMB347_RE_STATUS);
+debug("[SMB347] %s:: ENTER\n", __func__);
+    smb347_i2c_read_u8(SUMMIT_SMB347_RE_STATUS, &value);
 
     temp = value;
     if (SRE_USB15_HC_MODE(temp) == SRE_USB1_OR_15_MODE)
@@ -310,29 +296,31 @@ void summit_read_status_e(void) {
 void summit_write_config(int enable) {
     u8 command = 0;
 
-    smb347_i2c_read_u8(&command, SUMMIT_SMB347_RA_COMMAND);
+debug("[SMB347] %s:: ENTER\n", __func__);
+    smb347_i2c_read_u8(SUMMIT_SMB347_RA_COMMAND, &command);
 
     if (enable)
         RA_COMMAND_ALLOW_WRITE_TO_CONFIG_REGISTER(command);
     else
         RA_COMMAND_NOT_ALLOW_WRITE_TO_CONFIG_REGISTER(command);
 
-    smb347_i2c_write_u8(command, SUMMIT_SMB347_RA_COMMAND);
+    smb347_i2c_write_u8(SUMMIT_SMB347_RA_COMMAND, command);
 }
 
 
 void summit_config_apsd(int enable) {
     u8 config = 0;
 
+debug("[SMB347] %s:: ENTER\n", __func__);
     summit_write_config(1);
-    smb347_i2c_read_u8(&config, SUMMIT_SMB347_R4_CHARGE_CONTROL);    
+    smb347_i2c_read_u8(SUMMIT_SMB347_R4_CHARGE_CONTROL, &config);
 
     if (enable)
         R4_SET_APSD_ENABLE(config);
     else
         R4_SET_APSD_DISABLE(config);
 
-    smb347_i2c_write_u8(config, SUMMIT_SMB347_R4_CHARGE_CONTROL);
+    smb347_i2c_write_u8(SUMMIT_SMB347_R4_CHARGE_CONTROL, config);
     summit_write_config(0);
 }    
 
@@ -340,8 +328,9 @@ void summit_config_apsd(int enable) {
 void summit_config_aicl(int enable,int aicl_thres) {
     u8 config = 0;
 
+debug("[SMB347] %s:: ENTER\n", __func__);
     summit_write_config(1);
-    smb347_i2c_read_u8(&config, SUMMIT_SMB347_R2_FUNCTIONS); 
+    smb347_i2c_read_u8(SUMMIT_SMB347_R2_FUNCTIONS, &config);
 
     if (enable)
         R2_SET_AICL_ENABLE(config);
@@ -353,8 +342,8 @@ void summit_config_aicl(int enable,int aicl_thres) {
     else if (aicl_thres == 4500)
         R2_SET_AIC_TH_4500mV(config);
 
-    smb347_i2c_write_u8(config, SUMMIT_SMB347_R2_FUNCTIONS);
-    smb347_i2c_read_u8(&config, SUMMIT_SMB347_R2_FUNCTIONS);
+    smb347_i2c_write_u8(SUMMIT_SMB347_R2_FUNCTIONS, config);
+    smb347_i2c_read_u8(SUMMIT_SMB347_R2_FUNCTIONS, &config);
 
     summit_write_config(0);
 }
@@ -365,13 +354,14 @@ int summit_is_aicl_complete(void)
     u8 value, temp = 0;
     int i, vbus;
 
+debug("[SMB347] %s:: ENTER\n", __func__);
     for (i=0; i<=20; i++) {
 
-        smb347_i2c_read_u8(&value, SUMMIT_SMB347_R2_FUNCTIONS);
+        smb347_i2c_read_u8(SUMMIT_SMB347_R2_FUNCTIONS, &value);
         if (R2_IS_AICL_DISABLE(value))
             return -1;
 
-        smb347_i2c_read_u8(&value, SUMMIT_SMB347_RE_STATUS);
+        smb347_i2c_read_u8(SUMMIT_SMB347_RE_STATUS, &value);
         temp = value;
         if (SRE_AICL_STATUS(temp)) {
             temp = value;
@@ -379,7 +369,7 @@ int summit_is_aicl_complete(void)
             return aicl_results[SRE_AICL_RESULT(value)];
         }
 
-        vbus = kc1_twl6030_get_vbus_status();
+        vbus = twl6030_get_vbus_status();
         if (vbus == 0)
             return -2;
 
@@ -392,6 +382,7 @@ void summit_switch_mode(int mode)
 {
     u8 command = 0;
 
+debug("[SMB347] %s:: ENTER\n", __func__);
     switch (mode) {
 
         case SRE_USB1_OR_15_MODE:
@@ -411,14 +402,15 @@ void summit_switch_mode(int mode)
 
     }
     printf("command=%d\n", command);
-    smb347_i2c_write_u8(command, SUMMIT_SMB347_RB_COMMAND);
+    smb347_i2c_write_u8(SUMMIT_SMB347_RB_COMMAND, command);
 }
 
 
 void summit_charge_enable(int enable) {
     u8 command = 0;
 
-    smb347_i2c_read_u8(&command, SUMMIT_SMB347_RA_COMMAND);
+debug("[SMB347] %s:: ENTER\n", __func__);
+    smb347_i2c_read_u8(SUMMIT_SMB347_RA_COMMAND, &command);
     if (enable) {
         printf("enable\n");
         RA_COMMAND_CHARGING_ENABLE(command);
@@ -427,7 +419,7 @@ void summit_charge_enable(int enable) {
         printf("disable\n");
         RA_COMMAND_CHARGING_DISABLE(command);
     }
-    smb347_i2c_write_u8(command, SUMMIT_SMB347_RA_COMMAND);
+    smb347_i2c_write_u8(SUMMIT_SMB347_RA_COMMAND, command);
 }
 
 
@@ -436,6 +428,7 @@ int detect_usb()
     int usb2phy, value = 0;
     int i = 0;
 
+debug("[SMB347] %s:: ENTER\n", __func__);
     usb2phy = __raw_readl(0x4a100620);
     if (usb2phy & 0x40000000) {         //ROM code disable detect charger function
         __raw_writel(0,0x4a100620);     //enable the detect charger fuction
@@ -489,17 +482,18 @@ int summit_detect_usb(void)
     u8 command = 0;
     int mbid   = get_mbid();
 
+debug("[SMB347] %s:: ENTER\n", __func__);
     // Check APSD enable
-    smb347_i2c_read_u8(&value, SUMMIT_SMB347_R4_CHARGE_CONTROL);
+    smb347_i2c_read_u8(SUMMIT_SMB347_R4_CHARGE_CONTROL, &value);
     printf("    Charger: summit_detect_usb \n");
     if ((value & (R4_APSD_ENABLE | R4_NC_APSD_ENABLE)) == 0) {
         value = value | (R4_APSD_ENABLE | R4_NC_APSD_ENABLE);
-        smb347_i2c_write_u8(value, SUMMIT_SMB347_R4_CHARGE_CONTROL);
+        smb347_i2c_write_u8(SUMMIT_SMB347_R4_CHARGE_CONTROL, value);
     }
 
     for (i = 0; i <= 20; i++) {
-        smb347_i2c_read_u8(&value, SUMMIT_SMB347_RD_INTSTAT);
-        smb347_i2c_read_u8(&value, SUMMIT_SMB347_RD_STATUS);
+        smb347_i2c_read_u8(SUMMIT_SMB347_RD_INTSTAT, &value);
+        smb347_i2c_read_u8(SUMMIT_SMB347_RD_STATUS, &value);
 
         //printf("    Power: STATUS_D=0x%x\n",value);
         if (SRD_APSD_STATUS(value) == SRD_APSD_COMPLETED) {
@@ -509,7 +503,7 @@ int summit_detect_usb(void)
         }
         value = -1;
 
-        vbus  = kc1_twl6030_get_vbus_status();
+        vbus  = twl6030_get_vbus_status();
         if (vbus == 0) {
             return -2;
         }
@@ -531,9 +525,9 @@ int summit_detect_usb(void)
         printf("    Charger: Other Charging Port\n");
         summit_switch_mode(SRE_HC_MODE); 
         summit_write_config(1);
-        smb347_i2c_read_u8(&command, SUMMIT_SMB347_R6_ENABLE_CONTROL);
+        smb347_i2c_read_u8(SUMMIT_SMB347_R6_ENABLE_CONTROL, &command);
         command &= ~R6_USB_HC_CONTROL_BY_PIN;
-        smb347_i2c_write_u8(command, SUMMIT_SMB347_R6_ENABLE_CONTROL);
+        smb347_i2c_write_u8(SUMMIT_SMB347_R6_ENABLE_CONTROL, command);
         summit_write_config(0);
         if (mbid < 4)  return SRE_USB5_OR_9_MODE;
         else           return SRE_USB1_OR_15_MODE;
@@ -557,8 +551,9 @@ void summit_read_setting(void)
     int index  = 0;
     u8  value  = 0;
 
+debug("[SMB347] %s:: ENTER\n", __func__);
     for (index=0; index <= 0x0d; index++) {
-        smb347_i2c_read_u8(&value, index);
+        smb347_i2c_read_u8(index, &value);
         printf("index=0x%x \n value=0x%x\n",index,value);
         udelay(5000); 
     }
@@ -569,28 +564,29 @@ void summit_init(int mbid)
     int index  = 0;
     u8 value   = 0;
 
+debug("[SMB347] %s:: ENTER\n", __func__);
     summit_write_config(1);
 
     for (index = 0; index <= 0x0d; index++) {
-        smb347_i2c_read_u8(&value, index);
+        smb347_i2c_read_u8(index, &value);
         udelay(1000); 
 
         if (mbid == 0) {
             if (value != kc1_phydetect_setting[index]) {
-                smb347_i2c_write_u8(kc1_phydetect_setting[index],index);
+                smb347_i2c_write_u8(index, kc1_phydetect_setting[index]);
             }
         }
         else {
             if (mbid >= 5) {// For PVT
                 if (value != kc1_chargerdetect_setting_pvt[index]) {
                     if (index != 0x05 && index != 0x3)
-                        smb347_i2c_write_u8(kc1_chargerdetect_setting_pvt[index], index);
+                        smb347_i2c_write_u8(index, kc1_chargerdetect_setting_pvt[index]);
 	        }                  
             }
             else {
                 if (value!=kc1_chargerdetect_setting[index]) {
                     if (index != 0x05 && index != 0x3)
-                        smb347_i2c_write_u8(kc1_chargerdetect_setting[index], index);              
+                        smb347_i2c_write_u8(index, kc1_chargerdetect_setting[index]);
 	        }
             }
         }
@@ -628,6 +624,7 @@ static int low_bat_charge(void)
     int power_button = 0;
     int work_index   = 0;
 
+debug("[SMB347] %s:: ENTER\n", __func__);
     while (result == 0) {
         work_index = sec % 10;
 
@@ -659,7 +656,7 @@ static int low_bat_charge(void)
                 //printf("Battery temperature=%d\n",temperature);
                 if( (temperature>TEMPERATURE_HOT_LIMIT) || (temperature<TEMPERATURE_COLD_LIMIT)){
                      printf("shutdown due to temperature protect %d\n",temperature);
-                     kc1_twl6030_shutdown();
+                     twl6030_shutdown();
                 }
                 break;
 
@@ -673,22 +670,22 @@ static int low_bat_charge(void)
                 if ((current < 0) &&
                         ((show_low_bat < 1) || (show_low_bat > 30))) {
                     printf("shutdown due to there is discharge %d mA\n",current);
-                    kc1_twl6030_shutdown();
+                    twl6030_shutdown();
                 }
                 break;
 
             case 2:
             case 6:
-                vbus = kc1_twl6030_get_vbus_status();
+                vbus = twl6030_get_vbus_status();
                 //printf("vbus=%d\n",vbus);
                 if (vbus == 0) {
                     printf("shutdown due to there is no VBUS\n");
-                    kc1_twl6030_shutdown();
+                    twl6030_shutdown();
                 }
                 break;
 
             default:
-                power_button = kc1_twl6030_get_power_button_status();
+                power_button = twl6030_get_power_button_status();
                 if ((power_button == 0 ) &&
                         (voltage > LOW_LCD_VOLTAGE_LIMIT) &&
                         (show_low_bat >= LOW_BAT_SCREEN_TICKS) &&
@@ -721,7 +718,7 @@ static int low_bat_charge(void)
         if (sec > 9000) { //30 min
             result=0;
             printf("shutdown due to the charge time out\n");
-            kc1_twl6030_shutdown();
+            twl6030_shutdown();
             break;
         }
 
@@ -731,7 +728,7 @@ static int low_bat_charge(void)
     }
 
     //check vbus again
-    vbus = kc1_twl6030_get_vbus_status();
+    vbus = twl6030_get_vbus_status();
     if ((vbus == 0)) {
         run_command("setgreenled ff", 0);
         run_command("setamberled 0", 0);
@@ -751,6 +748,7 @@ void check_low_bat(void)
     int mbid         = 0;
     u8  value        = 0;
 
+debug("[SMB347] %s:: ENTER\n", __func__);
     //turn off the phy
     __raw_writel(0x100, 0x4A0093E0);	  //disable ocp2scp_usb_phy_ick
     __raw_writel(0x30000, 0x4A0093E0);	  //disable ocp2scp_usb_phy_phy_48m
@@ -775,29 +773,29 @@ void check_low_bat(void)
     //Temperature protect 
     if( (temperature>TEMPERATURE_HOT_LIMIT) || (temperature<TEMPERATURE_COLD_LIMIT)) {
         printf("shutdown due to temperature protect %d\n",temperature);
-        kc1_twl6030_shutdown();
+        twl6030_shutdown();
     }
 
     if( (voltage <= LOW_BATTERY_VOLTAGE_LIMIT) || (capacity <= LOW_BATTERY_CAPACITY_LIMIT)) {
 
-        if (kc1_twl6030_get_vbus_status()) {
+        if (twl6030_get_vbus_status()) {
             run_command("setgreenled 0", 0);
             run_command("setamberled 10", 0);
 
             //enable the VUSB 3.3 V
-            kc1_twl6030_disable_vusb();
-            kc1_twl6030_init_vusb();
+            twl6030_disable_vusb();
+            twl6030_init_vusb();
             summit_write_config(1);
 
             //enable charge time out
-            smb347_i2c_read_u8(&value,SUMMIT_SMB347_R5_STAT_TIMERS);
+            smb347_i2c_read_u8(SUMMIT_SMB347_R5_STAT_TIMERS, &value);
 
             //enable Pre-charge Timeout 48 min
             CLEAR_BIT(value,1);CLEAR_BIT(value,0);
 
             //enable complete charge timeout 1527 min
             CLEAR_BIT(value,2);SET_BIT(value,3);
-            smb347_i2c_write_u8(value,SUMMIT_SMB347_R5_STAT_TIMERS);  
+            smb347_i2c_write_u8(SUMMIT_SMB347_R5_STAT_TIMERS, value);
             summit_write_config(0);
 
             //Detect the power source
@@ -808,13 +806,13 @@ void check_low_bat(void)
                 printf("DETECT_BY_CHARGER\n");
 
                 //check is this first boot?
-                smb347_i2c_read_u8(&value,SUMMIT_SMB347_R5_STAT_TIMERS);
+                smb347_i2c_read_u8(SUMMIT_SMB347_R5_STAT_TIMERS, &value);
                 if (IS_BIT_CLEAR(value,5)) {	//FIRST BOOT
                     printf("FIRST BOOT\n");
                     //disable stat
                     summit_write_config(1);
                     SET_BIT(value,5);
-                    smb347_i2c_write_u8(value,SUMMIT_SMB347_R5_STAT_TIMERS);
+                    smb347_i2c_write_u8(SUMMIT_SMB347_R5_STAT_TIMERS, value);
                     summit_write_config(0);
                     //redo the apsd
                     summit_config_apsd(0);
@@ -864,7 +862,7 @@ LOW_BAT_TURN_OFF:
                     udelay(2000);//2ms
                 turn_off_lcd();
             }
-            kc1_twl6030_shutdown();
+            twl6030_shutdown();
         }
     }
 }
