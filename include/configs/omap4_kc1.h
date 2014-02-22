@@ -33,8 +33,14 @@
  * High Level Configuration Options
  */
 #define CONFIG_OMAP4KC1			1
+#define CONFIG_OMAP4KC1_VERSION		"v2.00"
 
 #include <configs/omap4_common.h>
+
+#define CONFIG_ARCH_OMAP4               1
+
+#undef CONFIG_SYS_PTV
+#define CONFIG_SYS_PTV                  7
 
 /* DEBUG OUTPUT */
 #define DEBUG				1
@@ -117,12 +123,25 @@
 #undef CONFIG_USB_OMAP3
 #undef CONFIG_USB_TTY
 #undef CONFIG_USB_DEVICE
+
 #define CONFIG_CMD_FASTBOOT              1
 #define CONFIG_CUSTOM_COMMON_FASTBOOT    1
 #define CONFIG_MUSB_GADGET               1
+#define CONFIG_USB_MUSB_OMAP2PLUS        1
 #define CONFIG_MUSB_PIO_ONLY             1
 #define CONFIG_USB_GADGET_DUALSPEED      1
-#define CONFIG_USB_MUSB_OMAP2PLUS        1
+#define CONFIG_TWL6030_USB               1
+
+/* long press power to turn on (in seconds) */
+#define CONFIG_LONGPRESS_POWERON         2
+
+// 5 second fastboot / button press countdown
+#define CONFIG_FASTBOOT_COUNTDOWN        5
+// poll times per second
+#define CONFIG_FASTBOOT_COUNTDOWN_POLL   5
+
+// charger mode
+#define CONFIG_CHARGERMODE_ENABLE        1
 
 #define MEMORY_BASE                      0x80000000
 #define CONFIG_ADDR_ATAGS                (MEMORY_BASE + 0x100)
@@ -147,10 +166,11 @@
 	"serialno=0123456789ABCDEF\0" \
 	"mmcdev=1\0" \
 	"mmcargs_old=setenv bootargs console=${console} \
-		androidboot.wifimac=${wifimac} \
-		androidboot.serialno=${serialno}\0" \
+		mem=456M@0x80000000 \
+		init=/init vram=5M omapfb.vram=0:5M \
+		androidboot.console=ttyO2\0" \
 	"mmcargs_new=setenv dtbootargs console=${console} \
-		androidboot.wifimac=${wifimac} \
+		${chargermode}androidboot.wifimac=${wifimac} \
 		androidboot.serialno=${serialno}\0"
 
 #undef CONFIG_BOOTCOMMAND
