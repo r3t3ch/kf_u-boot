@@ -2,8 +2,7 @@
 #include <common.h>
 #include <command.h>
 #include <asm/io.h>
-
-#include "kc1_twl6030.h"
+#include <twl6030.h>
 
 #define LED_PWM1ON           0xBA
 #define LED_PWM1OFF          0xBB
