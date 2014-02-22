@@ -2,7 +2,7 @@
 #include <asm/io.h>
 #include <asm/arch/gpio.h>
 
-#include "kc1_board.h"
+#include <kc1_board.h>
 
 
 /*****************************************
