@@ -165,8 +165,18 @@ static void fastboot_unbind(struct usb_gadget *gadget)
 }
 
 /* This is the TI USB vendor id a product ID from TI's internal tree */
+#ifdef CUSTOM_DEVICE_VENDOR_ID
+#define DEVICE_VENDOR_ID  CUSTOM_DEVICE_VENDOR_ID
+#else
 #define DEVICE_VENDOR_ID  0x0451
+#endif
+
+#ifdef CUSTOM_DEVICE_PRODUCT_ID
+#define DEVICE_PRODUCT_ID CUSTOM_DEVICE_PRODUCT_ID
+#else
 #define DEVICE_PRODUCT_ID 0xd022
+#endif
+
 #define DEVICE_BCD        0x0100
 
 struct usb_device_descriptor fb_descriptor = {
@@ -496,6 +506,9 @@ struct usb_gadget_driver fast_gadget = {
 	.unbind		= fastboot_unbind,
 	.setup		= fastboot_setup,
 	.disconnect	= fastboot_disconnect,
+#ifdef CONFIG_OMAP4KC1
+	.speed		= USB_SPEED_FULL,
+#endif
 };
 
 static int udc_is_probbed;
