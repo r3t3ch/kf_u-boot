@@ -555,7 +555,7 @@ debug("[SMB347] %s:: ENTER\n", __func__);
     for (index=0; index <= 0x0d; index++) {
         smb347_i2c_read_u8(index, &value);
         printf("index=0x%x \n value=0x%x\n",index,value);
-        udelay(5000); 
+        udelay(5000);
     }
 }
 
@@ -569,7 +569,7 @@ debug("[SMB347] %s:: ENTER\n", __func__);
 
     for (index = 0; index <= 0x0d; index++) {
         smb347_i2c_read_u8(index, &value);
-        udelay(1000); 
+        udelay(1000);
 
         if (mbid == 0) {
             if (value != kc1_phydetect_setting[index]) {

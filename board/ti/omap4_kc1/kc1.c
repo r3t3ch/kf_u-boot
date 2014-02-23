@@ -245,36 +245,6 @@ int power_init_board(void)
 	return 0;
 }
 
-#define OMAP34XX_USB_DEVCTL	0x4A0AB060
-#define OTG_INTERFSEL		0x4A0AB40C
-#define OTG_SYSCONFIG		0x4A0AB404
-#define CONTROL_DEV_CONF	0x4A002300
-#define USBOTGHS_CONTROL	0x4A00233C
-
-//static volatile	u8  *pwr        = (volatile u8  *) OMAP34XX_USB_POWER;
-static volatile u32 *otg_interfsel = (volatile u32  *)OTG_INTERFSEL;
-static volatile u32 *otg_sysconfig = (volatile u32  *)OTG_SYSCONFIG;
-static volatile u32 *otghs_control = (volatile u32  *)USBOTGHS_CONTROL;
-
-#if 0
-static void fastboot_reset (void)
-{
-	/* Kill the power */
-	*pwr &= ~MUSB_POWER_SOFTCONN;
-	udelay(2 * 500000); /* 1 sec */
-
-	/* Reset address */
-	faddr = 0xff;
-
-	/* Reset */
-	*pwr |= (MUSB_POWER_SOFTCONN | MUSB_POWER_HSENAB);
-
-	/* Bulk endpoint fifo */
-	fastboot_bulk_endpoint_reset();
-
-}
-#endif
-
 int usb_gadget_init_udc(void)
 {
 	debug("*** %s\n", __func__);

@@ -358,14 +358,14 @@ void show_image(u_int16_t *start, u_int16_t *end)
 	}
 #endif
 
-	/* CM_DIV_M5_DPLL_PER Set bit8 = 1, force HSDIVIDER_CLKOUT2 clock enabled*/
-	__raw_writew(__raw_readw(0x4A00815C) | 0x100, 0x4A00815C);
-	/* CM_SSC_DELTAMSTEP_DPLL_PER */
-	__raw_writew(0XCC , 0x4A008168);
-	/* CM_SSC_MODFREQDIV_DPLL_PER */
-	__raw_writew(0X264 , 0x4A00816C);
-	/* CM_CLKMODE_DPLL_PER Set bit12 = 1, force DPLL_SSC_EN enabled*/
-	__raw_writew(__raw_readw(0x4A008140) | 0x1000 , 0x4A008140);
+	/* cm_div_m5_dpll_per Set bit8 = 1, force HSDIVIDER_CLKOUT2 clock enabled*/
+	__raw_writew(__raw_readw((*prcm)->cm_div_m5_dpll_per) | 0x100, (*prcm)->cm_div_m5_dpll_per);
+	/* cm_ssc_deltamstep_dpll_per */
+	__raw_writew(0xCC , (*prcm)->cm_ssc_deltamstep_dpll_per);
+	/* cm_ssc_modfreqdiv_dpll_per */
+	__raw_writew(0x264 , (*prcm)->cm_ssc_modfreqdiv_dpll_per);
+	/* cm_clkmode_dpll_per Set bit12 = 1, force DPLL_SSC_EN enabled*/
+	__raw_writew(__raw_readw((*prcm)->cm_clkmode_dpll_per) | 0x1000, (*prcm)->cm_clkmode_dpll_per);
 }
 
 void set_omap_pwm(u8 brightness)
@@ -377,10 +377,10 @@ void set_omap_pwm(u8 brightness)
 	//GPIO_DATAOUT
 	__raw_writel(__raw_readl(0x4805913C) | (0x11 << 23), 0x4805913C);
 
-	/* CM_CLKSEL_CORE to select 32KHz (0) or CM_SYS_CLK=26Mhz (1) as clock source */
+	/* cm_l4per_gptimer10_clkctrl to select 32KHz (0) or CM_SYS_CLK=26Mhz (1) as clock source */
 	*(int*)0x4A009428 &= ~(0x1 << 24);
 
-	/* GPT10 clock enable */
+	/* cm_l4per_gptimer10_clkctrl clock enable */
 	*(int*)0x4A009428 |= 0x2;
 
 	/* Set autoreload mode */

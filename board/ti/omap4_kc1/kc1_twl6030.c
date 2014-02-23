@@ -98,53 +98,6 @@ void twl6030_disable_vusb(void)
 	twl6030_i2c_write_u8(TWL6030_CHIP_PM, MISC2, data);
 }
 
-void twl6030_kc1_settings(void)
-{
-	debug("[TWL6030] %s:: ENTER\n", __func__);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VMEM_CFG_GRP, 0x00);
-	//rtc off mode low power,BBSPOR_CFG,VRTC_EN_OFF_STS
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, BBSPOR_CFG, 0x72);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VMEM_CFG_GRP, 0x00);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VMEM_CFG_STATE, 0x00);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VMEM_CFG_TRANS, 0x00);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, PHOENIX_MSK_TRANSITION, 0xC0);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VCXIO_CFG_TRANS, 0x01);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VDAC_CFG_GRP, 0x00);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VDAC_CFG_TRANS, 0x00);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VDAC_CFG_STATE, 0x00);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VMMC_CFG_GRP, 0x00);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VMMC_CFG_TRANS, 0x00);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VMMC_CFG_STATE, 0x00);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VAUX3_CFG_GRP, 0x00);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VAUX3_CFG_STATE, 0x00);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VAUX2_CFG_GRP, 0x00);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VAUX2_CFG_STATE, 0x00);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VAUX2_CFG_VOLTAGE, 0x09);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, 0xEC, 0x10);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VUSIM_CFG_GRP, 0x00);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VUSIM_CFG_STATE, 0x00);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VUSIM_CFG_VOLTAGE, 0x14);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, V2V1_CFG_VOLTAGE, 0x3C);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, CLK32KG_CFG_STATE, 0x01);
-}
-
-#if 0
-void kc1_tw6030_kc1_clk32kg(void)
-{
-debug("[TWL6030] %s:: ENTER\n", __func__);
-    twl6030_i2c_write_u8(TWL6030_CHIP_PM, CLK32KG_CFG_GRP, 0x0);
-    twl6030_i2c_write_u8(TWL6030_CHIP_PM, CLK32KG_CFG_STATE, 0x1);
-}
-#endif
-
-void twl6030_power_mmc_init(void)
-{
-	debug("[TWL6030] %s:: ENTER\n", __func__);
-	/* set voltage to 3.0 and turnon for APP */
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VMMC_CFG_VOLTAGE, 0x15);
-	twl6030_i2c_write_u8(TWL6030_CHIP_PM, VMMC_CFG_STATE, 0x21);
-}
-
 void twl6030_usb_device_settings(void)
 {
 	debug("[TWL6030] %s:: ENTER\n", __func__);
@@ -197,6 +150,7 @@ void twl6030_usb_ulpi_init(void)
 
 	twl6030_disable_vusb();
 	twl6030_init_vusb();
+
 	__raw_writel(0x101, 0x4A0093E0);    //enable ocp2scp_usb_phy_ick
 	__raw_writel(0x100, 0x4A008640);    //enable ocp2scp_usb_phy_phy_48m
 	for (ms=0;ms<100;ms++)
