@@ -40,6 +40,7 @@ COBJS	+= omap4_spi.o
 ifdef CONFIG_CMD_FASTBOOT
 COBJS	+= mmc.o
 COBJS	+= fastboot.o
+COBJS	+= sparse.o
 endif
 
 SRCS	:= $(COBJS:.o=.c)
