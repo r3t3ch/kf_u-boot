@@ -2041,11 +2041,13 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	}
 
 	hdr = (boot_img_hdr *) addr;
-	memset(hdr, 0, sizeof(boot_img_hdr));
 
 	if (boot_from_mmc) {
 		struct fastboot_ptentry *pte = NULL;
 		unsigned sector;
+
+		memset(hdr, 0, sizeof(boot_img_hdr));
+
 		pte = fastboot_flash_find_ptn(ptn);
 		if (!pte) {
 			printf("booti: cannot find '%s' partition\n", ptn);
@@ -2057,36 +2059,33 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			printf("booti: bad boot image magic\n");
 			goto fail;
 		}
+		/* check if ramdisk_addr is an offset rather than full addr */
+		if (hdr->ramdisk_addr < MEMORY_BASE)
+			hdr->ramdisk_addr += MEMORY_BASE;
 		/* read kernel */
 		bootimg_print_image_hdr(hdr);
-		printf("\n\nramdisk sector count:%d\n", (int)(hdr->ramdisk_size /
-												mmc->block_dev.blksz));
+		printf("\n\nramdisk sector count:%d\n", (int)(hdr->ramdisk_size / mmc->block_dev.blksz));
 		sector = pte->start + (hdr->page_size / mmc->block_dev.blksz);
 		num_sectors = ((hdr->kernel_size/mmc->block_dev.blksz) + 1);
-		status = mmc->block_dev.block_read(mmcc,sector, num_sectors,
-												(void*)hdr->kernel_addr);
+		status = mmc->block_dev.block_read(mmcc,sector, num_sectors, (void*)hdr->kernel_addr);
 		if (status < 0) {
 			printf("booti: Could not read kernel image\n");
 			goto fail;
 		}
 		/* read ramdisk */
-		sector += _ALIGN(hdr->kernel_size, hdr->page_size) /
-							mmc->block_dev.blksz;
+		sector += _ALIGN(hdr->kernel_size, hdr->page_size) / mmc->block_dev.blksz;
 		num_sectors = ((hdr->ramdisk_size/mmc->block_dev.blksz) + 1);
-		status = mmc->block_dev.block_read(mmcc, sector, num_sectors,
-					(void*)hdr->ramdisk_addr);
+		status = mmc->block_dev.block_read(mmcc, sector, num_sectors, (void*)hdr->ramdisk_addr);
 		if(status < 0) {
 			printf("booti: Could not read ramdisk\n");
 			goto fail;
 		}
 		if ((hdr->second_size) && (!hdr->dt_size)) {
 			/* read devtree */
-			sector += _ALIGN(hdr->ramdisk_size, hdr->page_size) /
-								mmc->block_dev.blksz;
+			sector += _ALIGN(hdr->ramdisk_size, hdr->page_size) / mmc->block_dev.blksz;
 			debug("*** %s::devtree sector (second_size) == %u\n", __func__, sector);
 			num_sectors = ((hdr->second_size/mmc->block_dev.blksz) + 1);
-			status = mmc->block_dev.block_read(mmcc, sector, num_sectors,
-						(void*)DEVICE_TREE);
+			status = mmc->block_dev.block_read(mmcc, sector, num_sectors, (void*)DEVICE_TREE);
 			if(status < 0) {
 				printf("booti: Could not read devtree (second_size)\n");
 				goto fail;
@@ -2094,12 +2093,10 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		}
 		if (hdr->dt_size) {
 			/* read devtree (preferring dt_size value */
-			sector += _ALIGN(hdr->ramdisk_size, hdr->page_size) /
-								mmc->block_dev.blksz;
+			sector += _ALIGN(hdr->ramdisk_size, hdr->page_size) / mmc->block_dev.blksz;
 			debug("*** %s::devtree sector (dt_size) == %u\n", __func__, sector);
 			num_sectors = ((hdr->dt_size/mmc->block_dev.blksz) + 1);
-			status = mmc->block_dev.block_read(mmcc, sector, num_sectors,
-						(void*)DEVICE_TREE);
+			status = mmc->block_dev.block_read(mmcc, sector, num_sectors, (void*)DEVICE_TREE);
 			if(status < 0) {
 				printf("booti: Could not read devtree (dt_size)\n");
 				goto fail;
@@ -2120,25 +2117,27 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 		raddr = kaddr + _ALIGN(hdr->kernel_size, hdr->page_size);
 
-		memmove((void *) hdr->kernel_addr, (void *)kaddr,
-							hdr->kernel_size);
-		memmove((void *) hdr->ramdisk_addr, (void *)raddr,
-							hdr->ramdisk_size);
+		memmove((void *) hdr->kernel_addr, (void *)kaddr, hdr->kernel_size);
+
+		/* check if ramdisk_addr is an offset rather than full addr */
+		if (hdr->ramdisk_addr < MEMORY_BASE)
+			hdr->ramdisk_addr += MEMORY_BASE;
+
+		memmove((void *) hdr->ramdisk_addr, (void *)raddr, hdr->ramdisk_size);
 
 		raddr +=  _ALIGN(hdr->ramdisk_size, hdr->page_size);
 		// devtree .dtb
 		if ((hdr->second_size) && (!hdr->dt_size)) {
-			memmove((void *) DEVICE_TREE, (void *)raddr,
-							hdr->second_size);
+			memmove((void *) DEVICE_TREE, (void *)raddr, hdr->second_size);
 		}
 
 		if (hdr->dt_size) {
 			raddr +=  _ALIGN(hdr->second_size, hdr->page_size);
-			memmove((void *) DEVICE_TREE, (void *)raddr,
-							hdr->dt_size);
+			memmove((void *) DEVICE_TREE, (void *)raddr, hdr->dt_size);
 		}
 
 	}
+
 
 	printf("kernel    @ %08x (%d)\n", hdr->kernel_addr, hdr->kernel_size);
 	printf("ramdisk   @ %08x (%d)\n", hdr->ramdisk_addr, hdr->ramdisk_size);
