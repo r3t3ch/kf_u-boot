@@ -171,7 +171,8 @@
 		androidboot.console=ttyO2\0" \
 	"mmcargs_new=setenv dtbootargs console=${console} \
 		${chargermode}androidboot.wifimac=${wifimac} \
-		androidboot.serialno=${serialno}\0"
+		androidboot.serialno=${serialno} \
+		androidboot.hardware=otterx\0"
 
 #undef CONFIG_BOOTCOMMAND
 #define CONFIG_BOOTCOMMAND		"run mmcargs_old; run mmcargs_new; booti mmc1"
