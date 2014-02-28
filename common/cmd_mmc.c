@@ -161,7 +161,7 @@ static int boot_part_access(struct mmc *mmc, u8 ack, u8 part_num, u8 access)
 }
 #endif
 
-static int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	enum mmc_state state;
 
@@ -430,7 +430,7 @@ static int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 U_BOOT_CMD(
 	mmc, 6, 1, do_mmcops,
 	"MMC sub system",
-	"read addr blk# cnt\n"
+	"mmc read addr blk# cnt\n"
 	"mmc write addr blk# cnt\n"
 	"mmc erase blk# cnt\n"
 	"mmc rescan\n"
