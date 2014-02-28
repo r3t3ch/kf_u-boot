@@ -58,7 +58,7 @@
 #ifdef CONFIG_LCD_LOGO
 # include <bmp_logo.h>		/* Get logo data, width and height	*/
 # include <bmp_logo_data.h>
-# if (CONSOLE_COLOR_WHITE >= BMP_LOGO_OFFSET) && (LCD_BPP != LCD_COLOR16)
+# if (CONSOLE_RGB_WHITE >= BMP_LOGO_OFFSET) && (LCD_BPP != LCD_COLOR16)
 #  error Default Color Map overlaps with Logo Color Map
 # endif
 #endif
@@ -75,21 +75,9 @@
 /************************************************************************/
 /* ** CONSOLE DEFINITIONS & FUNCTIONS					*/
 /************************************************************************/
-#if defined(CONFIG_LCD_LOGO) && !defined(CONFIG_LCD_INFO_BELOW_LOGO)
-# define CONSOLE_ROWS		((panel_info.vl_row-BMP_LOGO_HEIGHT) \
-					/ VIDEO_FONT_HEIGHT)
-#else
-# define CONSOLE_ROWS		(panel_info.vl_row / VIDEO_FONT_HEIGHT)
-#endif
-
-#define CONSOLE_COLS		(panel_info.vl_col / VIDEO_FONT_WIDTH)
 #define CONSOLE_ROW_SIZE	(VIDEO_FONT_HEIGHT * lcd_line_length)
 #define CONSOLE_ROW_FIRST	lcd_console_address
-#define CONSOLE_ROW_SECOND	(lcd_console_address + CONSOLE_ROW_SIZE)
-#define CONSOLE_ROW_LAST	(lcd_console_address + CONSOLE_SIZE \
-					- CONSOLE_ROW_SIZE)
-#define CONSOLE_SIZE		(CONSOLE_ROW_SIZE * CONSOLE_ROWS)
-#define CONSOLE_SCROLL_SIZE	(CONSOLE_SIZE - CONSOLE_ROW_SIZE)
+#define CONSOLE_SIZE		(CONSOLE_ROW_SIZE * lcd_max_console_rows)
 
 #if LCD_BPP == LCD_MONOCHROME
 # define COLOR_MASK(c)		((c)	  | (c) << 1 | (c) << 2 | (c) << 3 | \
@@ -102,6 +90,7 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+static void lcd_drawchar(ushort x, ushort y, uchar c);
 static void lcd_drawchars(ushort x, ushort y, uchar *str, int count);
 static inline void lcd_puts_xy(ushort x, ushort y, uchar *s);
 static inline void lcd_putc_xy(ushort x, ushort y, uchar  c);
@@ -110,12 +99,10 @@ static int lcd_init(void *lcdbase);
 
 static void *lcd_logo(void);
 
-static int lcd_getbgcolor(void);
-static void lcd_setfgcolor(int color);
-static void lcd_setbgcolor(int color);
-
 static int lcd_color_fg;
 static int lcd_color_bg;
+static int lcd_color_bright = 0;
+static int lcd_color_reversed = 0;
 int lcd_line_length;
 
 char lcd_is_enabled = 0;
@@ -127,6 +114,11 @@ static void *lcd_console_address;
 static void *lcd_base;			/* Start of framebuffer memory	*/
 
 static char lcd_flush_dcache;	/* 1 to flush dcache after each lcd update */
+
+/* Text rotation changes */
+static uchar lcd_text_rotate = LCD_TEXT_ROTATE_NONE;
+static uchar lcd_max_console_rows; // = CONSOLE_ROWS;
+static uchar lcd_max_console_cols; // = CONSOLE_COLS;
 
 /************************************************************************/
 
@@ -177,7 +169,7 @@ static void console_scrollup(void)
 static inline void console_back(void)
 {
 	if (--console_col < 0) {
-		console_col = CONSOLE_COLS-1 ;
+		console_col = lcd_max_console_cols-1 ;
 		if (--console_row < 0)
 			console_row = 0;
 	}
@@ -193,7 +185,7 @@ static inline void console_newline(void)
 	console_col = 0;
 
 	/* Check if we need to scroll the terminal */
-	if (++console_row >= CONSOLE_ROWS)
+	if (++console_row >= lcd_max_console_rows)
 		console_scrollup();
 	else
 		lcd_sync();
@@ -222,7 +214,7 @@ void lcd_putc(const char c)
 		console_col +=  8;
 		console_col &= ~7;
 
-		if (console_col >= CONSOLE_COLS)
+		if (console_col >= lcd_max_console_cols)
 			console_newline();
 
 		return;
@@ -231,11 +223,152 @@ void lcd_putc(const char c)
 
 		return;
 	default:
-		lcd_putc_xy(console_col * VIDEO_FONT_WIDTH,
+		lcd_drawchar(console_col * VIDEO_FONT_WIDTH,
+//		lcd_putc_xy(console_col * VIDEO_FONT_WIDTH,
 			console_row * VIDEO_FONT_HEIGHT, c);
-		if (++console_col >= CONSOLE_COLS)
+		if (++console_col >= lcd_max_console_cols)
 			console_newline();
 	}
+}
+
+/*----------------------------------------------------------------------*/
+
+int get_color_code(unsigned int color_index) {
+	int color_code = CONSOLE_RGB_BLACK;
+	switch (color_index) {
+		case 1: // RED
+			color_code = (lcd_color_bright == 0) ? CONSOLE_RGB_RED : CONSOLE_RGB_RED_BRIGHT;
+			break;
+		case 2: // GREEN
+			color_code = (lcd_color_bright == 0) ? CONSOLE_RGB_GREEN : CONSOLE_RGB_GREEN_BRIGHT;
+			break;
+		case 3: // YELLOW
+			color_code = (lcd_color_bright == 0) ? CONSOLE_RGB_YELLOW : CONSOLE_RGB_YELLOW_BRIGHT;
+			break;
+		case 4: // BLUE
+			color_code = (lcd_color_bright == 0) ? CONSOLE_RGB_BLUE : CONSOLE_RGB_BLUE_BRIGHT;
+			break;
+		case 5: // MAGENTA
+			color_code = (lcd_color_bright == 0) ? CONSOLE_RGB_MAGENTA : CONSOLE_RGB_MAGENTA_BRIGHT;
+			break;
+		case 6: // CYAN
+			color_code = (lcd_color_bright == 0) ? CONSOLE_RGB_CYAN : CONSOLE_RGB_CYAN_BRIGHT;
+			break;
+		case 7: // WHITE
+			color_code = (lcd_color_bright == 0) ? CONSOLE_RGB_WHITE_DIM : CONSOLE_RGB_WHITE;
+			break;
+		default: // BLACK
+			color_code = (lcd_color_bright == 0) ? CONSOLE_RGB_BLACK : CONSOLE_RGB_GREY;
+			break;
+	}
+	return color_code;
+}
+
+#define ASCII_ESCAPE		27
+#define ASCII_SEMICOLON		59
+#define ASCII_CAP_H		72
+#define ASCII_LEFT_BRACKET	91
+#define ASCII_LOW_M		109
+
+// ANSI_CURSOR_POSITION		"\e[%d;%dH"
+// ANSI_TEXT_ATTR_RESET		"\e[0m"
+// ANSI_TEXT_ATTR_BRIGHT	"\e[1m"
+// ANSI_TEXT_ATTR_DIM		"\e[2m"
+// ANSI_TEXT_ATTR_FGCOLOR	"\e[3%dm"
+// ANSI_TEXT_ATTR_BGCOLOR	"\e[4%dm"
+// ANSI_TEXT_ATTR_REVERSE	"\e[7m"
+
+unsigned int handle_ansi(const char *s1, bool dummy_flag)
+{
+	char *s = (char *)s1;
+	char *e = s;
+	char *l = 0;
+	while ((*s == ASCII_ESCAPE) && (*(s+1) == ASCII_LEFT_BRACKET)) {
+		s += 2;
+		e = s;
+		while (++e) {
+			if ((*e == ASCII_CAP_H) || (*e == ASCII_LOW_M))
+				break;
+		}
+		if (*e == 0) {
+			e = s;
+		}
+		else {
+			switch (*e) {
+				case ASCII_CAP_H:
+					l = s;
+					while (++l) {
+						if (*l == ASCII_SEMICOLON)
+							break;
+						if (l == e)
+							break;
+					}
+					if ((*l == ASCII_SEMICOLON) && ((l-s > 1) && (e-l > 1))) {
+						int val1 = (int)simple_strtoul(s, NULL, l-s);
+						l++;
+						int val2 = (int)simple_strtoul(l, NULL, e-l);
+						if (!dummy_flag)
+							lcd_position_cursor(val1, val2);
+					}
+					break;
+				case ASCII_LOW_M:
+					switch (*s-48) {
+						case 0: // reset
+							if (!dummy_flag) {
+								lcd_color_reversed = 0;
+								lcd_color_bright = 0;
+							}
+							break;
+						case 1: // bright
+							if (!dummy_flag) {
+								lcd_color_bright = 1;
+							}
+							break;
+						case 2: // dim
+							if (!dummy_flag) {
+								lcd_color_bright = 0;
+							}
+							break;
+						case 3: // fg color
+							s++;
+							if (!dummy_flag) {
+								lcd_color_fg = (*s-48);
+							}
+							break;
+						case 4: // bg color
+							s++;
+							if (!dummy_flag) {
+								lcd_color_bg = (*s-48);
+							}
+							break;
+						case 7: // reverse
+							if (!dummy_flag) {
+								lcd_color_reversed = 1;
+							}
+							break;
+					}
+					break;
+			}
+			e++;
+			s = e;
+		}
+	}
+	return e-s1;
+}
+
+int lcd_strlen(const char *s)
+{
+	int ret = 0;
+	while (*s) {
+		// consume escape codes
+		s += handle_ansi(s, true);
+		if (*s) {
+			s++;
+			ret++;
+		}
+	}
+	debug("*** %s::length=%u\n", __func__, ret);
+	return ret;
 }
 
 /*----------------------------------------------------------------------*/
@@ -248,8 +381,14 @@ void lcd_puts(const char *s)
 		return;
 	}
 
-	while (*s)
+	while (*s) {
+		// consume escape codes
+		s += handle_ansi(s, false);
 		lcd_putc(*s++);
+	}
+	// reset attributes at the end of any print
+	lcd_color_bright = 0;
+	lcd_color_reversed = 0;
 
 	lcd_sync();
 }
@@ -271,6 +410,52 @@ void lcd_printf(const char *fmt, ...)
 /************************************************************************/
 /* ** Low-Level Graphics Routines					*/
 /************************************************************************/
+
+static inline void lcd_console_setpixel(ushort x, ushort y, ushort c, const ushort panel_pixel_size)
+{
+	ushort rx = x; // LCD_TEXT_ROTATE_NONE
+	ushort ry = y; // LCD_TEXT_ROTATE_NONE
+	switch (lcd_text_rotate) {
+		case LCD_TEXT_ROTATE_90: //
+			// needs testing
+			rx = panel_info.vl_col-y;
+			ry = x;
+			break;
+		case LCD_TEXT_ROTATE_180: //
+			// needs testing
+			rx = panel_info.vl_col-y;
+			ry = panel_info.vl_row-x;
+			break;
+		case LCD_TEXT_ROTATE_270: // [128,37] x0,y0 -> rx0,ry37 | x1,y0 -> rx0,ry36 | x2,y0 -> rx0,rx35
+			rx = y;
+			ry = panel_info.vl_row-x;
+			break;
+	}
+	u8 *dest = (u8 *)(lcd_base + (rx * panel_pixel_size) + (ry * lcd_line_length));
+	u16 *d = (u16 *)dest;
+	*d++ = c;
+}
+
+static void lcd_drawchar(ushort x, ushort y, uchar c)
+{
+	ushort row, col;
+	const ushort panel_pixel_size = ((1 << panel_info.vl_bpix) / 8); // 2 bytes
+	int l_lcd_color_fg = get_color_code((lcd_color_reversed == 0) ? lcd_color_fg : lcd_color_bg);
+	int l_lcd_color_bg = get_color_code((lcd_color_reversed == 0) ? lcd_color_bg : lcd_color_fg);
+
+#if defined(CONFIG_LCD_LOGO) && !defined(CONFIG_LCD_INFO_BELOW_LOGO)
+	y += BMP_LOGO_HEIGHT;
+#endif
+
+	for (row = 0; row < VIDEO_FONT_HEIGHT; ++row) {
+		u8 bits = video_fontdata[(c * VIDEO_FONT_HEIGHT) + row];
+
+		for (col = 0; col < VIDEO_FONT_WIDTH; ++col) {
+			lcd_console_setpixel(x + col, y + row, (bits & 0x80) ? l_lcd_color_fg : l_lcd_color_bg, panel_pixel_size);
+			bits <<= 1;
+		}
+	}
+}
 
 static void lcd_drawchars(ushort x, ushort y, uchar *str, int count)
 {
@@ -488,6 +673,7 @@ static int lcd_init(void *lcdbase)
 
 	lcd_ctrl_init(lcdbase);
 
+	lcd_set_text_rotate(lcd_text_rotate);
 	/*
 	 * lcd_ctrl_init() of some drivers (i.e. bcm2835 on rpi_b) ignores
 	 * the 'lcdbase' argument and uses custom lcd base address
@@ -551,14 +737,14 @@ ulong lcd_setmem(ulong addr)
 
 /*----------------------------------------------------------------------*/
 
-static void lcd_setfgcolor(int color)
+void lcd_setfgcolor(int color) // use index 0 to 7
 {
 	lcd_color_fg = color;
 }
 
 /*----------------------------------------------------------------------*/
 
-static void lcd_setbgcolor(int color)
+void lcd_setbgcolor(int color) // use index 0 to 7
 {
 	lcd_color_bg = color;
 }
@@ -572,9 +758,46 @@ int lcd_getfgcolor(void)
 
 /*----------------------------------------------------------------------*/
 
-static int lcd_getbgcolor(void)
+int lcd_getbgcolor(void)
 {
 	return lcd_color_bg;
+}
+
+/*----------------------------------------------------------------------*/
+
+void lcd_set_text_rotate(uchar rotate)
+{
+	lcd_text_rotate = rotate;
+
+	switch (lcd_text_rotate) {
+		case LCD_TEXT_ROTATE_NONE:
+		case LCD_TEXT_ROTATE_180:
+			lcd_max_console_cols = panel_info.vl_col/(VIDEO_FONT_WIDTH);
+#if defined(CONFIG_LCD_LOGO) && !defined(CONFIG_LCD_INFO_BELOW_LOGO)
+			lcd_max_console_rows =  ((panel_info.vl_row-BMP_LOGO_HEIGHT)/(VIDEO_FONT_HEIGHT));
+#else
+			lcd_max_console_rows = panel_info.vl_row/(VIDEO_FONT_HEIGHT);
+#endif
+			break;
+		case LCD_TEXT_ROTATE_90:
+		case LCD_TEXT_ROTATE_270:
+			lcd_max_console_cols = panel_info.vl_row/(VIDEO_FONT_WIDTH);
+#if defined(CONFIG_LCD_LOGO) && !defined(CONFIG_LCD_INFO_BELOW_LOGO)
+			lcd_max_console_rows =  ((panel_info.vl_col-BMP_LOGO_HEIGHT)/(VIDEO_FONT_HEIGHT));
+#else
+			lcd_max_console_rows = panel_info.vl_col/(VIDEO_FONT_HEIGHT);
+#endif
+			break;
+	}
+
+	debug("[LCD] MAX cols=%u, MAX rows=%u\n", lcd_max_console_cols, lcd_max_console_rows);
+}
+
+/*----------------------------------------------------------------------*/
+
+uchar lcd_get_text_rotate(void)
+{
+	return lcd_text_rotate;
 }
 
 /************************************************************************/
@@ -1125,8 +1348,8 @@ U_BOOT_ENV_CALLBACK(splashimage, on_splashimage);
 
 void lcd_position_cursor(unsigned col, unsigned row)
 {
-	console_col = min(col, CONSOLE_COLS - 1);
-	console_row = min(row, CONSOLE_ROWS - 1);
+	console_col = min(col, lcd_max_console_cols - 1);
+	console_row = min(row, lcd_max_console_rows - 1);
 }
 
 int lcd_get_pixel_width(void)
@@ -1141,12 +1364,12 @@ int lcd_get_pixel_height(void)
 
 int lcd_get_screen_rows(void)
 {
-	return CONSOLE_ROWS;
+	return lcd_max_console_rows;
 }
 
 int lcd_get_screen_columns(void)
 {
-	return CONSOLE_COLS;
+	return lcd_max_console_cols;
 }
 
 #if defined(CONFIG_LCD_DT_SIMPLEFB)

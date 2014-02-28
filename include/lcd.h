@@ -27,6 +27,7 @@ void lcd_setcolreg(ushort regno, ushort red, ushort green, ushort blue);
 void lcd_initcolregs(void);
 
 int lcd_getfgcolor(void);
+int lcd_getbgcolor(void);
 
 /* gunzip_bmp used if CONFIG_VIDEO_BMP_GZIP */
 struct bmp_image *gunzip_bmp(unsigned long addr, unsigned long *lenp,
@@ -265,6 +266,7 @@ void	lcd_puts(const char *s);
 void	lcd_printf(const char *fmt, ...);
 void	lcd_clear(void);
 int	lcd_display_bitmap(ulong bmp_image, int x, int y);
+int     lcd_strlen(const char *s);
 
 /**
  * Get the width of the LCD in pixels
@@ -308,6 +310,9 @@ void lcd_show_board_info(void);
 /* Return the size of the LCD frame buffer, and the line length */
 int lcd_get_size(int *line_length);
 
+void lcd_setfgcolor(int color);
+void lcd_setbgcolor(int color);
+
 int lcd_dt_simplefb_add_node(void *blob);
 int lcd_dt_simplefb_enable_existing_node(void *blob);
 
@@ -332,6 +337,15 @@ int lcd_dt_simplefb_enable_existing_node(void *blob);
 #define LCD_COLOR4	2
 #define LCD_COLOR8	3
 #define LCD_COLOR16	4
+
+/* Text rotation changes */
+#define LCD_TEXT_ROTATE_NONE	0
+#define LCD_TEXT_ROTATE_90	1
+#define LCD_TEXT_ROTATE_180	2
+#define LCD_TEXT_ROTATE_270	3
+
+void lcd_set_text_rotate(uchar rotate);
+uchar lcd_get_text_rotate(void);
 
 /*----------------------------------------------------------------------*/
 #if defined(CONFIG_LCD_INFO_BELOW_LOGO)
@@ -388,8 +402,35 @@ int lcd_dt_simplefb_enable_existing_node(void *blob);
 /*
  * 16bpp color definitions
  */
-# define CONSOLE_COLOR_BLACK	0x0000
-# define CONSOLE_COLOR_WHITE	0xffff	/* Must remain last / highest	*/
+# define RGB565(r,g,b)			((r<<11) | (g<<5) | (b))
+
+# define CONSOLE_RGB_BLACK		RGB565( 0,  0,  0)
+
+# define CONSOLE_RGB_RED		RGB565(23,  0,  0)
+# define CONSOLE_RGB_RED_BRIGHT	RGB565(31,  0,  0)
+# define CONSOLE_RGB_GREEN		RGB565( 0, 47,  0)
+# define CONSOLE_RGB_GREEN_BRIGHT	RGB565( 0, 63,  0)
+# define CONSOLE_RGB_YELLOW		RGB565(23, 47,  0)
+# define CONSOLE_RGB_YELLOW_BRIGHT	RGB565(31, 63,  0)
+# define CONSOLE_RGB_BLUE		RGB565( 0,  0, 23)
+# define CONSOLE_RGB_BLUE_BRIGHT	RGB565( 0,  0, 31)
+# define CONSOLE_RGB_MAGENTA		RGB565(23,  0, 23)
+# define CONSOLE_RGB_MAGENTA_BRIGHT	RGB565(31,  0, 31)
+# define CONSOLE_RGB_CYAN		RGB565( 0, 47, 23)
+# define CONSOLE_RGB_CYAN_BRIGHT	RGB565( 0, 63, 31)
+
+# define CONSOLE_RGB_GREY		RGB565(15, 31, 15)
+# define CONSOLE_RGB_WHITE_DIM	RGB565(23, 47, 23)
+# define CONSOLE_RGB_WHITE		RGB565(31, 63, 31)
+
+# define CONSOLE_COLOR_BLACK	0
+# define CONSOLE_COLOR_RED	1
+# define CONSOLE_COLOR_GREEN	2
+# define CONSOLE_COLOR_YELLOW	3
+# define CONSOLE_COLOR_BLUE	4
+# define CONSOLE_COLOR_MAGENTA	5
+# define CONSOLE_COLOR_CYAN	6
+# define CONSOLE_COLOR_WHITE	7
 
 #endif /* color definitions */
 
