@@ -8,8 +8,12 @@
 #ifndef TWL6030_H
 #define TWL6030_H
 
+#include <config.h>
 #include <common.h>
 #include <i2c.h>
+#ifdef CONFIG_OMAP4KC1
+#include <kc1_board.h>
+#endif
 
 /* I2C chip addresses */
 #define TWL6030_CHIP_PM		0x48
@@ -154,11 +158,19 @@ struct twl6030_data{
 /* Functions to read and write from TWL6030 */
 static inline int twl6030_i2c_write_u8(u8 chip_no, u8 reg, u8 val)
 {
+#ifdef CONFIG_OMAP4KC1
+	if (get_mbid() >= 4)
+		i2c_set_bus_num(0); // 100
+#endif
 	return i2c_write(chip_no, reg, 1, &val, 1);
 }
 
 static inline int twl6030_i2c_read_u8(u8 chip_no, u8 reg, u8 *val)
 {
+#ifdef CONFIG_OMAP4KC1
+	if (get_mbid() >= 4)
+		i2c_set_bus_num(0); // 100
+#endif
 	return i2c_read(chip_no, reg, 1, val, 1);
 }
 
