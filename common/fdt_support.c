@@ -263,7 +263,11 @@ int fdt_chosen(void *fdt, int force)
 	 * If the property exists, update it only if the "force" parameter
 	 * is true.
 	 */
+#ifdef CONFIG_OMAP4KC1
+	str = getenv("dtbootargs");
+#else
 	str = getenv("bootargs");
+#endif
 	if (str != NULL) {
 		path = fdt_getprop(fdt, nodeoffset, "bootargs", NULL);
 		if ((path == NULL) || force) {

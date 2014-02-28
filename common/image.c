@@ -985,7 +985,11 @@ int boot_ramdisk_high(struct lmb *lmb, ulong rd_data, ulong rd_len,
 		 * turning the "load high" feature off. This is intentional.
 		 */
 		initrd_high = simple_strtoul(s, NULL, 16);
+#ifdef CONFIG_OMAP4KC1
+		if (initrd_high == 0)
+#else
 		if (initrd_high == ~0)
+#endif
 			initrd_copy_to_ram = 0;
 	} else {
 		/* not set, no restrictions to load high */
