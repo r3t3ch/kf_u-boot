@@ -1,0 +1,124 @@
+BOOT PATH:
+
+- if not usb_detect && power button on press:
+	- check_long_power_press (2 seconds)
+	- if not: shutdown
+
+- "check_batt_low":
+	- if yes:
+		- show BMP batt_low
+		- start "charging loop"
+	- if no:
+		- start "init"
+
+- "charging loop":
+	- check_power_press:
+	- if yes:
+		- init LCD/PWM drivers
+		- show BMP batt_low
+		- screen off (after 3-4 seconds)
+	- check batt_level ok:
+		- goto "init"
+
+- "init":
+	- load idme values:
+		- serial #
+		- wifi MAC
+	- check fastboot_cable:
+		- set fastboot_confirmed flag to stage 1 (doesn't exist bootmenu after timeout)
+	- if not done already, init LCD/PWM drivers
+	- show BMP current_selected (splash or fastboot depending)
+	- show text: [ PRESS POWER TO OPEN MENU]
+	- goto "fastboot loop"
+
+- "fastboot loop":
+	- if fastboot_confirmed set to stage 1:
+		- show BMP multi_download / open console window
+		- set fastboot_confirmed flag to stage 2
+	- handle fastboot commands (output to console window)
+	- if timeout and not fastboot_confirmed: goto "continue boot"
+	- check_power_press:
+		- start bootmenu, change timeout to long (1 min), gets reset after any bootmenu command
+
+- "bootmenu" shown as centered 40xY box from bottom up:
+                    |
+----------------------------------------6
+|               MAIN MENU:             |5
+|  <-- CONTINUE BOOT                   |4
+|  RECOVERY BOOT                       |3
+|  ADVANCED -->                        |2
+----------------------------------------1
+
+----------------------------------------A
+|            ADVANCED MENU:            |9
+|  <-- BACK                            |8
+|  CHARGER MODE:    ON                 |7
+|  SERIAL CONSOLE:  OFF                |6
+|  SERIAL #:        0123456789012345   |5
+|  WIFI MAC ADDR:   00:00:00:00:00:00  |4
+|  PARTITION MODE:  OTTERX             |3
+----------------------------------------1
+
+----------------------------------------5
+|           BOOT CONSOLE MENU:         |4
+|  <-- BACK                            |3
+|  [CONFIRM] SET MODE: ON              |2
+----------------------------------------1
+STEPS:
+	- swap idme mmc value on / off
+	- set/unset env var
+
+----------------------------------------7
+|          PARTITION MODE MENU:        |6
+|  <-- BACK                            |5
+|  ** WARNING!!!!                      |4
+|  ** SWITCH ERASES ENTIRE DEVICE!     |3
+|  [CONFIRM] SET MODE: AMAZON          |2
+----------------------------------------1
+STEPS:
+	- swap idme mmc value on / off
+	- backup gpt0, gpt1, xloader, bootloader and recovery
+	- execute Samsung iNand MMC RESET commands
+	- fastboot oem format
+	- restore gpt0, gpt1, xloader, bootloader and recovery
+
+SPEC:
+	- env vars
+		- "bootmenu_current_code"
+	- each menu item has:
+		- menu code (try to use UPPERCASE)
+		- text (can contain env vars: $recovery_mode, and ANSI color codes)
+		- check display env var
+		- check display env var value
+		- select run command, if empty not selectable (caption displayed in gray)
+	- bootmenu commands:
+		- "on"
+		- "off"
+		- "add <code>"
+		- "add <code>"
+		- "select <parent code> [<hightlight code>]"
+	- typical menu "run commands":
+		- [EXIT] "bootmenu off"
+		- [BACK] "bootmenu select <parent code>"
+		- [CONTINUE BOOT] "bootmenu off; booti mmc1"
+		- [RECOVERY BOOT] "bootmenu off; setenv recovery_mode 1; booti mmc1"
+	- each menu group starts with "<- BACK" unless it's "HOME"
+	- open initial menu:
+		- "bootmenu set HOME"
+		- "bootmenu on"
+
+	- setup:
+		- bootmenu add HOME
+- "continue boot":
+	- check "recovery" mode:
+		- if yes: change to "recovery" partition
+		- if no: use "boot" partition
+	- load bootimg header:
+		- check bootimg cmdline for "newbootargs"
+			- if yes: use new boot args
+		- else check for dt size / second_size (devtree)
+			- if yes: use new boot args
+			- if no: use legacy boot args
+	- load bootimg segments into memory
+	- execute kernel
+
