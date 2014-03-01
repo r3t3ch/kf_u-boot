@@ -166,16 +166,19 @@ int check_recovery(void)
 int check_longpress_loop(int countdown_length)
 {
 	int button_press = 0;
+debug("ENTER LONGPRESS CHECK\n");
 	while (countdown_length)
 	{
 		button_press = twl6030_get_power_button_status();
 		if (button_press != 0) {
+debug("EXIT LONGPRESS CHECK: not complete! shutting down.\n");
 			return 1;
 		}
 		udelay(1000000); /* 1 sec */
 		countdown_length--;
 	}
 	button_press = twl6030_get_power_button_status();
+debug("EXIT LONGPRESS CHECK (%d)\n", button_press);
 	return (button_press != 0);
 }
 #endif
