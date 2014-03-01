@@ -84,7 +84,7 @@ int get_bat_current(void)
 {
 	short current = 0;
 	bq27_i2c_read_int(BQ27541_BAT_CURRENT, &current);
-	debug("*** %s::Battery current=%dc\n", __func__, current);
+	debug("*** %s::Battery current=%d\n", __func__, current);
 	return current;
 }
 
@@ -92,7 +92,7 @@ int get_bat_capacity(void)
 {
 	short capacity = 0;
 	bq27_i2c_read_int(BQ27541_BAT_CAPACITY, &capacity);
-	debug("*** %s::Battery capacity=%dc\n", __func__, capacity);
+	debug("*** %s::Battery capacity=%d\n", __func__, capacity);
 	return capacity;
 }
 
