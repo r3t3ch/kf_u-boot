@@ -690,11 +690,14 @@ int do_fastboot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	int ret = 0;
 #ifdef CONFIG_FASTBOOT_COUNTDOWN
+	int keycode = 0;
 /* how many loops per second */
 #define LOOP_SPEED 1000000
 	int countdown_length = CONFIG_FASTBOOT_COUNTDOWN * LOOP_SPEED;
 	int val = check_fastboot();
 #endif
+
+	drv_twl6030_pwrbutton_init();
 
 	if (argc >= 2)
 		fastboot_confirmed = (unsigned int)*(argv[1])-48;
@@ -722,25 +725,22 @@ int do_fastboot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			if (fastboot_confirmed == 1)
 				show_fastbootmode();
 
-#ifdef CONFIG_FASTBOOT_COUNTDOWN
-			countdown_length--;
-#endif
 			if (fastboot_poll())
 				break;
+
 #ifdef CONFIG_FASTBOOT_COUNTDOWN
-			/* if we're holding down the button to get into
-			 * recovery, don't wait for the fastboot timeout so we don't
-			 * accidentally power off.  short circuit a certain # of times
-			 * through to keep from overwhelming the twl6030 */
-			if ((countdown_length % (LOOP_SPEED / CONFIG_FASTBOOT_COUNTDOWN_POLL_POWER)) == 0) {
-				if (twl6030_get_power_button_status() == 0) {
-					debug("*** %s::power_button press\n", __func__);
+			countdown_length--;
+			if ((countdown_length % LOOP_SPEED) == 0)
+				debug("*** %s::PULSE [%d]\n", __func__, countdown_length);
 
-					// RESET FASTBOOT TIMER
-					countdown_length = CONFIG_FASTBOOT_COUNTDOWN * LOOP_SPEED;
+			keycode = pwrbutton_getc();
+			if (keycode != 0) {
+				debug("*** %s::button press == %d\n", __func__, keycode);
 
-					// HANDLE MENU OPEN
-				}
+				// RESET FASTBOOT TIMER
+				countdown_length = CONFIG_FASTBOOT_COUNTDOWN * LOOP_SPEED;
+
+				// HANDLE MENU OPEN
 			}
 
 			if ((!countdown_length) && ((val) || (fastboot_confirmed))) {

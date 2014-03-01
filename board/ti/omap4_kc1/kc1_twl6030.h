@@ -102,6 +102,10 @@
 
 #define BBSPOR_CFG                          0xE6
 
+#define PWRBTN_KEY_DOWN		0x42
+#define PWRBTN_KEY_UP		0x41
+#define PWRBTN_KEY_ENTER	0x0D
+
 void twl6030_shutdown(void);
 int  twl6030_get_vbus_status(void);
 void twl6030_init_vusb(void);
@@ -109,5 +113,9 @@ void twl6030_disable_vusb(void);
 void twl6030_kc1_settings(void);
 int  twl6030_get_power_button_status(void);
 u32  twl6030_print_boot_reason(void);
+
+/* input driver for power button */
+int pwrbutton_getc(void);
+int drv_twl6030_pwrbutton_init(void);
 
 #endif /* __KC1_TWL6030__H__ */

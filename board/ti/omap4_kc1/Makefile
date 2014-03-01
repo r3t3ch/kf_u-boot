@@ -29,6 +29,7 @@ obj-y	+= kc1_leds.o
 obj-y	+= kc1_backlight.o
 obj-y	+= kc1_panel.o
 obj-y	+= kc1_twl6030.o
+obj-y	+= kc1_powerbutton.o
 obj-y	+= kc1_debug.o
 obj-y	+= fg_bq27541.o
 obj-y	+= pmic_smb347.o
