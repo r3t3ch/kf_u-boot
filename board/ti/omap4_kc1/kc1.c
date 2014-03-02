@@ -81,6 +81,10 @@ static struct musb_hdrc_platform_data musb_plat = {
 };
 #endif
 
+static int fastboot_mode = 0;
+static int recovery_mode = 0;
+static int start_condition = 0; // 0x1 == powerbutton, 0x2 == warm_reset, 0x8 == charger
+
 /**
  * @brief board_init
  *
@@ -103,17 +107,15 @@ int board_init(void)
 
 int check_init_fastboot(void)
 {
-	unsigned int ret = 0;
-
 	debug("*** %s\n", __func__);
 	if (__raw_readl(PRM_RSTST) & PRM_RSTST_RESET_WARM_BIT)
 		if (!strncmp((const char *)PUBLIC_SAR_RAM_1_FREE, "bootloader", REBOOT_REASON_SIZE)) {
 			strncpy((char *)PUBLIC_SAR_RAM_1_FREE, "", REBOOT_REASON_SIZE);
 			printf("\n Case: 'reboot bootloader'\n");
-			ret = 1;
+			fastboot_mode = 1;
 		}
 
-	if (ret == 0) {
+	if (fastboot_mode == 0) {
 		//gpio_52 set configuration to MUX3 and INPUT_ENABLE
 		__raw_writew(0x10B,0x4A100078);
 		udelay(100000); /* 1 sec */
@@ -121,45 +123,34 @@ int check_init_fastboot(void)
 		//gpio_52 read GPIO_DATAIN
 		if (__raw_readl(0x48055138) & 0x00100000) {
 			printf("\nSPECIAL USB CABLE DETECTED: enter FASTBOOT now\n");
-			ret = 1;
+			fastboot_mode = 1;
 		}
 	}
 
-	printf("*** %s::fastboot_mode == %d\n", __func__, ret);
-	setenv_hex("fastboot_mode", ret);
-	return ret;
+	printf("*** %s::fastboot_mode == %d\n", __func__, fastboot_mode);
+	return fastboot_mode;
 }
 
 int check_fastboot(void)
 {
-	int ret = (int)getenv_hex("fastboot_mode", 0);
-	if (ret != 0)
-		ret = 1;
-	printf("*** %s::fastboot_mode == %d\n", __func__, ret);
-	return ret;
+	return fastboot_mode;
 }
 
 int check_init_recovery(void)
 {
-	int ret = 0;
 	if (__raw_readl(PRM_RSTST) & PRM_RSTST_RESET_WARM_BIT)
 		if (!strncmp((const char *)PUBLIC_SAR_RAM_1_FREE, "recovery", REBOOT_REASON_SIZE)) {
 			strncpy((char *)PUBLIC_SAR_RAM_1_FREE, "", REBOOT_REASON_SIZE);
 			printf("\n Case: 'reboot recovery'\n");
-			ret = 1;
+			recovery_mode = 1;
 		}
-	printf("*** %s::recovery_mode == %d\n", __func__, ret);
-	setenv_hex("recovery_mode", ret);
-	return ret;
+	printf("*** %s::recovery_mode == %d\n", __func__, recovery_mode);
+	return recovery_mode;
 }
 
 int check_recovery(void)
 {
-	int ret = (int)getenv_hex("recovery_mode", 0);
-	if (ret != 0)
-		ret = 1;
-	printf("*** %s::recovery_mode == %d\n", __func__, ret);
-	return ret;
+	return recovery_mode;
 }
 
 #ifdef CONFIG_LONGPRESS_POWERON
@@ -190,7 +181,6 @@ int power_init_board(void)
 #else
 	int pre_boot = 0;
 #endif
-	u32 start_condition = 0;
 
 	check_init_recovery();
 	__raw_writel(0x30003,0x4A10015C); // gpio 155 & 156
@@ -203,7 +193,7 @@ int power_init_board(void)
 
 	start_condition = twl6030_print_boot_reason();
 	debug("*** %s::start_condition = 0x%2x\n", __func__, start_condition);
-	if ((pre_boot == 0) && (start_condition & STRT_ON_PWRON)) { // device started via power button
+	if ((pre_boot == 0) && (start_condition & 0x1)) { // device started via power button
 		if (check_longpress_loop(CONFIG_LONGPRESS_POWERON)) {
 			debug("*** %s::POWER_BUTTON_ON longpress was not detected, abort!\n", __func__);
 		        twl6030_shutdown();
@@ -238,8 +228,10 @@ int power_init_board(void)
 int misc_init_r(void)
 {
 #ifdef CONFIG_CHARGERMODE_ENABLE
-	if (getenv_ulong("start_condition", 16, 0x0) & STRT_ON_PLUG_DET)
+	if (start_condition & STRT_ON_PLUG_DET) {
+		debug("*** CHARGER MODE DETECTED ***\n");
 		setenv("chargermode", "androidboot.mode=charger ");
+	}
 	else
 		setenv("chargermode", "");
 #else
@@ -259,18 +251,12 @@ int misc_init_r(void)
 	run_command("kc1panel on", 0);
 #endif
 
-#ifdef CONFIG_OMAP4KC1_VERSION
-	// PRINT VERSION IN UPPER RIGHT CORNER
-	int ver_len = lcd_strlen(CONFIG_OMAP4KC1_VERSION);
-	lcd_position_cursor(lcd_get_screen_columns()-ver_len, 0);
-	lcd_setfgcolor(CONSOLE_COLOR_WHITE);
-	lcd_printf(CONFIG_OMAP4KC1_VERSION);
-#endif
-
 #ifdef CONFIG_FASTBOOT_COUNTDOWN
-	// DO MENU PREP
-	lcd_position_cursor((lcd_get_screen_columns()/2)-(lcd_strlen(CONFIG_WELCOME_MSG)/2), lcd_get_screen_rows()-1);
-	lcd_printf(CONFIG_WELCOME_MSG);
+	if (fastboot_mode == 0) {
+		// DO MENU PREP
+		lcd_position_cursor((lcd_get_screen_columns()/2)-(lcd_strlen(CONFIG_WELCOME_MSG)/2), lcd_get_screen_rows()-1);
+		lcd_printf(CONFIG_WELCOME_MSG);
+	}
 #endif
 	run_command("setbacklight 7f", 0);
 	run_command("fastboot", 0);
@@ -327,4 +313,16 @@ u32 get_board_rev(void)
 {
 	return 0x2;
 }
+
+int do_recoverymode(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	recovery_mode = 1;
+	return 0;
+}
+
+U_BOOT_CMD(
+	recoverymode,	1,	1,	do_recoverymode,
+	"recoverymode - set recovery\n",
+	"recoverymode\n"
+);
 
