@@ -3,6 +3,8 @@
 
 #include "kc1_twl6030.h"
 
+//#define DEBUG_POWERBUTTON	1
+
 /* don't check more than 10th of a second, risk burning out */
 // 1200 timer ticks == 1 sec
 #define PWRBTN_DEBOUNCE_TIMER_RATE	(150)
@@ -33,14 +35,18 @@ int pwrbutton_getc(void)
 	config.last_poll_ms = get_timer(0);
 	button_pressed = twl6030_get_power_button_status();
 	if (button_pressed == 0) {
+#ifdef DEBUG_POWERBUTTON
 		if (config.pressed == 0)
-			debug("===> POWER PRESS\n");
+			printf("===> POWER PRESS\n");
+#endif
 		config.pressed += 1;
 	}
 	// button not pressed
 	else {
 		if (config.pressed > 0) {
-			debug("===> RELEASED\n");
+#ifdef DEBUG_POWERBUTTON
+			printf("===> RELEASED\n");
+#endif
 			config.pressed = 0;
 			config.released = 1;
 		}
@@ -48,13 +54,17 @@ int pwrbutton_getc(void)
 
 	if ((config.pressed >= PWRBTN_LONG_PRESS_COUNT) || (config.released > 0)) {
 		if (config.pressed >= PWRBTN_LONG_PRESS_COUNT) {
-			ret = PWRBTN_KEY_ENTER; // long press
+			ret = PWRBTN_KEY_LONG_PRESS; // long press
 			config.debounce_ms = PWRBTN_LONG_PRESS_DEBOUNCE;
-			debug("*** %s:: SEND PWRBTN_KEY_ENTER\n", __func__);
+#ifdef DEBUG_POWERBUTTON
+			printf("*** %s:: SEND LONG_PRESS\n", __func__);
+#endif
 		}
 		else {
-			ret = PWRBTN_KEY_DOWN; // single press
-			debug("*** %s:: SEND PWRBTN_KEY_DOWN\n", __func__);
+			ret = PWRBTN_KEY_PRESS; // single press
+#ifdef DEBUG_POWERBUTTON
+			printf("*** %s:: SEND PRESS\n", __func__);
+#endif
 		}
 
 		// reset timing/press stats
@@ -73,7 +83,9 @@ int pwrbutton_getc(void)
  */
 int drv_twl6030_pwrbutton_init(void)
 {
-	debug("*** %s::driver register\n", __func__);
+#ifdef DEBUG_POWERBUTTON
+	printf("*** %s::driver register\n", __func__);
+#endif
 	config.last_poll_ms = get_timer(0);
 	config.pressed = 0;
 	config.released = 0;
