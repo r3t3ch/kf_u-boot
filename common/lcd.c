@@ -367,7 +367,6 @@ int lcd_strlen(const char *s)
 			ret++;
 		}
 	}
-	debug("*** %s::length=%u\n", __func__, ret);
 	return ret;
 }
 
