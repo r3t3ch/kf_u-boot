@@ -23,4 +23,6 @@
 #define ANSI_CLEAR_LINE_TO_END		"\e[0K"
 #define ANSI_CLEAR_LINE			"\e[2K"
 #define ANSI_COLOR_RESET		"\e[0m"
+#define ANSI_COLOR_BRIGHT		"\e[1m"
+#define ANSI_COLOR_DIM			"\e[2m"
 #define ANSI_COLOR_REVERSE		"\e[7m"
