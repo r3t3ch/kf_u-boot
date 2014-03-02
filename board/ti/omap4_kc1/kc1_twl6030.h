@@ -102,9 +102,8 @@
 
 #define BBSPOR_CFG                          0xE6
 
-#define PWRBTN_KEY_DOWN		0x42
-#define PWRBTN_KEY_UP		0x41
-#define PWRBTN_KEY_ENTER	0x0D
+#define PWRBTN_KEY_PRESS      0x1
+#define PWRBTN_KEY_LONG_PRESS 0x2
 
 void twl6030_shutdown(void);
 int  twl6030_get_vbus_status(void);

@@ -41,6 +41,8 @@ obj-$(CONFIG_CMD_FASTBOOT) += cmd_fastboot.o
 obj-$(CONFIG_CMD_FASTBOOT) += kc1_fastboot.o
 obj-$(CONFIG_CMD_FASTBOOT) += sparse.o
 
+obj-$(CONFIG_CMD_FASTBOOT) += cmd_lcdmenu.o
+
 ifdef CONFIG_LCD
 splash.o:
 	$(OBJCOPY) -I binary -O elf32-littlearm -B arm initlogo.bmp.gz $@

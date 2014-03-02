@@ -151,15 +151,39 @@
 /* env */
 #undef CONFIG_EXTRA_ENV_SETTINGS
 #define CONFIG_EXTRA_ENV_SETTINGS \
-	"console=ttyO2,115200n8\0" \
-	"fdt_high=0xffffffff\0" \
-	"fdtaddr=0x80f80000\0" \
-	"initrd_high=no\0" \
-	"wifimac=FFEEDDCCBBAA\0" \
-	"serialno=0123456789ABCDEF\0" \
-	"mmcdev=1\0" \
-	"mmcargs_old=setenv bootargs console=${console} mem=456M@0x80000000 init=/init vram=5M omapfb.vram=0:5M androidboot.console=ttyO2\0" \
-	"mmcargs_new=setenv dtbootargs console=${console} ${chargermode}androidboot.wifimac=${wifimac} androidboot.serialno=${serialno} androidboot.hardware=otterx\0"
+"console=ttyO2,115200n8\0" \
+"fdt_high=0xffffffff\0" \
+"fdtaddr=0x80f80000\0" \
+"initrd_high=no\0" \
+"wifimac=FFEEDDCCBBAA\0" \
+"serialno=0123456789ABCDEF\0" \
+"mmcdev=1\0" \
+\
+"mmcargs_old=setenv bootargs console=${console} mem=456M@0x80000000 init=/init vram=5M omapfb.vram=0:5M androidboot.console=ttyO2\0" \
+"mmcargs_new=setenv dtbootargs console=${console} ${chargermode}androidboot.wifimac=${wifimac} androidboot.serialno=${serialno} androidboot.hardware=otterx\0" \
+\
+"lcdmenu_fg_color=7\0" \
+"lcdmenu_bg_color=0\0" \
+"lcdmenu_width=0x28\0" \
+"lcdmenu_0=MAIN MENU\0" \
+"lcdmenuentry_00=<-- CONTINUE BOOT=lcdmenu hide; run mmcargs_old; run mmcargs_new; booti mmc1\0" \
+"lcdmenuentry_01=RECOVERY BOOT=lcdmenu hide; recoverymode; run mmcargs_old; run mmcargs_new; booti mmc1\0" \
+"lcdmenuentry_02=ADVANCED -->=lcdmenu show 1\0" \
+"lcdmenu_1=ADVANCED MENU\0" \
+"lcdmenuentry_10=<-- BACK=lcdmenu show 0\0" \
+"lcdmenuentry_11=CHARGER MODE:    \e[32mON\e[37m =lcdmenu show 0\0" \
+"lcdmenuentry_12=SERIAL CONSOLE:  \e[37mOFF\e[37m =lcdmenu show 0\0" \
+"lcdmenuentry_13=SERIAL #:        \e[36m0123456789012345\e[37m =lcdmenu show 0\0" \
+"lcdmenuentry_14=WIFI MAC ADDR:   \e[36m00:00:00:00:00:00\e[37m =lcdmenu show 0\0" \
+"lcdmenuentry_15=PARTITION MODE:  \e[36mOTTERX\e[37m =lcdmenu show 0\0" \
+"lcdmenu_2=BOOT CONSOLE MENU\0" \
+"lcdmenuentry_20=<-- BACK=lcdmenu show 1\0" \
+"lcdmenuentry_21=\e[33m[CONFIRM]\e[37m SET MODE: \e[32mON\e[37m =lcdmenu show 1\0" \
+"lcdmenu_3=PARTITION MODE MENU\0" \
+"lcdmenuentry_30=<-- BACK=lcdmenu show 1\0" \
+"lcdmenuentry_31=\e[32m** WARNING!!!!\e[37m =\0" \
+"lcdmenuentry_32=\e[32m** SWITCH ERASES ENTIRE DEVICE!\e[37m =\0" \
+"lcdmenuentry_33=\e[33m[CONFIRM]\e[37m SET MODE: \e[36mAMAZON\e[37m =lcdmenu show 1\0"
 
 #undef CONFIG_BOOTCOMMAND
 #define CONFIG_BOOTCOMMAND		"run mmcargs_old; run mmcargs_new; booti mmc1"

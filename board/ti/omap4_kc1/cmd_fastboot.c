@@ -686,10 +686,13 @@ done:
 	return ret;
 }
 
+//#define DEBUG_FASTBOOT_PULSE	1
+
 int do_fastboot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	int ret = 0;
 #ifdef CONFIG_FASTBOOT_COUNTDOWN
+	int bootmenu_open = 0;
 	int keycode = 0;
 /* how many loops per second */
 #define LOOP_SPEED 1000000
@@ -725,31 +728,51 @@ int do_fastboot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			if (fastboot_confirmed == 1)
 				show_fastbootmode();
 
+			if (fastboot_confirmed == 2) {
+				debug("*** ENTER FULL FASTBOOT MODE ***");
+				while (1)
+				{
+					if (fastboot_poll())
+						break;
+				}
+			}
+
 			if (fastboot_poll())
 				break;
 
 #ifdef CONFIG_FASTBOOT_COUNTDOWN
 			countdown_length--;
+#ifdef DEBUG_FASTBOOT_PULSE
 			if ((countdown_length % LOOP_SPEED) == 0)
 				debug("*** %s::PULSE [%d]\n", __func__, countdown_length);
+#endif
 
 			keycode = pwrbutton_getc();
 			if (keycode != 0) {
-				debug("*** %s::button press == %d\n", __func__, keycode);
-
-				// RESET FASTBOOT TIMER
-				countdown_length = CONFIG_FASTBOOT_COUNTDOWN * LOOP_SPEED;
+				// RESET FASTBOOT TO A LONG TIMER
+				countdown_length = LOOP_SPEED * 60; /* 60 seconds */
 
 				// HANDLE MENU OPEN
+				if (bootmenu_open == 0) {
+					bootmenu_open = 1;
+					run_command("lcdmenu show 0", 0);
+				}
+				if (keycode == PWRBTN_KEY_LONG_PRESS)
+					run_command("lcdmenu key select", 0);
+				else
+					run_command("lcdmenu key down", 0);
 			}
 
-			if ((!countdown_length) && ((val) || (fastboot_confirmed))) {
+			if ((!countdown_length) && ((val) || (fastboot_confirmed != 0))) {
 				/* reset countdown to hold fastboot */
 				countdown_length = CONFIG_FASTBOOT_COUNTDOWN * LOOP_SPEED;
 			}
 			udelay(1000000 / LOOP_SPEED);
 #endif
 		}
+	}
+	if (bootmenu_open) {
+		run_command("lcdmenu hide", 0);
 	}
 
 	/* Reset the board specific support */
