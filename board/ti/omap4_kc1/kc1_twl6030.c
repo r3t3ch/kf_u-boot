@@ -129,7 +129,10 @@ u32 twl6030_print_boot_reason(void)
 	data4 = (0x3FF & data4);
 	printf ("OMAP4 PRM_RSTST          :0x%08x\n", data4);
 
-	return data4;
+	if (data4 & (1<<1)) // warm reset
+		data1 = 0x2;
+
+	return data1; // power button press start
 }
 
 int do_powerdown(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
