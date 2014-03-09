@@ -55,6 +55,7 @@
 /* IDME VALUES */
 static char          idme_serial[20];
 static char          idme_macaddr[20];
+static unsigned int  idme_settings;
 
 static int load_ptbl(void);
 int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
@@ -130,6 +131,7 @@ static const struct nvram_t nvram_info[] = {
     {	.name = "lpddr2",	.offset = 0x2000,	.size = 16,	},
     {	.name = "emmc",		.offset = 0x2020,	.size = 16,	},
     {	.name = "product",	.offset = 0x2040,	.size = 16,	},
+    {	.name = "settings",	.offset = 0x2060,	.size = 2,	},
 };
 
 #define CONFIG_NUM_NV_VARS (sizeof(nvram_info)/sizeof(nvram_info[0]))
@@ -457,30 +459,27 @@ struct _partition {
 	unsigned size_kb;
 };
 
-
-/* HASH: Add this as a partition layout toggle */
-#if 0
+/* Add this as a partition layout toggle */
 static struct _partition partitions_x[] = {
 	{ "-", 128 },			//GPT
 	{ "xloader", 128 },		//p1
 	{ "bootloader", 256 },		//p2
-	{ "environment", 128 },		//p3
-	{ "efs", 10*1024 },		//p4  *REMOVED*
+	{ "dkernel", 10*1024 },		//p3
+	{ "dfs", 192*1024 },		//p4
 	{ "recovery", 16*1024 },	//p5
-	{ "backup", 1 },		//p6  *REMOVED*
+	{ "backup", 64*1024 },		//p6
 	{ "boot", 10*1024 },		//p7
-	{ "splash", 1 },		//p8  *REMOVED*
-	{ "system", 512*1024 },		//p9
-	{ "spacer", 1 },		//p10 *REMOVED*
-	{ "cache", 512*1024 },		//p11
-	{ "userdata", 0},		//p12
-	{ NULL, 0 },
+	{ "splash", 5*1024 },		//p8
+	{ "system", 512*1024 },		//p9 starts @ sector 609280 (512) align start 606208
+	{ "spacer", 1024 },		//p10
+	{ "cache", 256*1024 },		//p11 aligned to 4mb erase barrier
+	{ "userdata", 0 },		//p12 aligned to 4mb erase barrier
+	{ 0, 0 },
 };
-#endif
 
 static struct _partition partitions[] = {
 	{ "-", 128 },			//GPT
-	{ "xloader", 128 },		//p1 
+	{ "xloader", 128 },		//p1
 	{ "bootloader", 256 },		//p2
 	{ "dkernel", 10*1024 },		//p3
 	{ "dfs", 192*1024 },		//p4
@@ -494,6 +493,8 @@ static struct _partition partitions[] = {
 	{ "media", 5131*1024 },		//p12
 	{ 0, 0 },
 };
+
+static struct _partition *current_partitions = partitions;
 
 #ifdef CONFIG_CMD_FASTBOOT
 static int do_format(void)
@@ -533,16 +534,16 @@ static int do_format(void)
 	start_ptbl(ptbl, blocks);
 	n = 0;
 	next = 0;
-	for (n = 0, next = 0; partitions[n].name; n++) {
-		unsigned sz = partitions[n].size_kb * 2;
-		if (!strcmp(partitions[n].name,"-")) {
+	for (n = 0, next = 0; current_partitions[n].name; n++) {
+		unsigned sz = current_partitions[n].size_kb * 2;
+		if (!strcmp(current_partitions[n].name,"-")) {
 			next += sz;
 			continue;
 		}
 		if (sz == 0)
 			sz = blocks - next;
 
-	    if (add_ptn(ptbl, next, next + sz - 1, partitions[n].name)) {
+	    if (add_ptn(ptbl, next, next + sz - 1, current_partitions[n].name)) {
 	        printf("Add partition failed\n");
 			status = -1;
 	        goto fail;
@@ -656,7 +657,7 @@ int do_idme(const char *cmd)
 	int rw_size, rw_page = 0;
 	int rw_offset = 0;
 	struct mmc* mmc = NULL;
-	char *dev[4] = { "mmc", "dev", "1", "1" };
+	char *dev[3] = { "mmc", "dev", "1" };
 	char *argv[CONFIG_SYS_MAXARGS + 1];	/* NULL terminated	*/
 	int argc;
 
@@ -682,8 +683,13 @@ int do_idme(const char *cmd)
 			return 1;
 		}
 
-		if (do_mmcops(NULL, 0, 4, dev) != 0) {
-			printf("%s::mmc select boot device 1 failed\n", __func__);
+		if (do_mmcops(NULL, 0, 3, dev)) {
+			printf("Unable to set MMC device\n");
+			return 1;
+		}
+
+		if (mmc_boot_part_access(mmc, 0, 0, 1)) {
+			printf("%s::mmc set r/w access on boot1 failed\n", __func__);
 			return 1;
 		}
 
@@ -713,7 +719,6 @@ int do_idme(const char *cmd)
 			}
 		}
 		else {	//argc == 3 //write
-
 			for (i=0; i<CONFIG_NUM_NV_VARS; i++) {
 				if (strcmp(argv[1],nvram_info[i].name) == 0) {
 					seq_no = i;
@@ -745,16 +750,18 @@ int do_idme(const char *cmd)
 			memcpy(&buffer[rw_offset], argv[2], strlen(argv[2]));
 
 			//7. write back to EMMC page number "rw_page"
-#if 0
 			if (mmc->block_dev.block_write(mmc->block_dev.dev, rw_page, 1, (unsigned char *)buffer) == 0){
 				printf("<idme> write mmc error \n ");
 				goto clean;
 			}
 			else{	//write success
-#endif
 				printf("<idme> write %s to offset 0x%04x\n",
 					argv[2], nvram_info[seq_no].offset);
-//			}
+			}
+
+			if (mmc_boot_part_access(mmc, 0, 0, 0)) {
+				printf("%s::mmc set readonly access on boot1 failed\n", __func__);
+			}
 
 		}
 		free(buffer);
@@ -770,6 +777,7 @@ idme_cmd_usage:
 	return 1;
 
 clean:
+	mmc_boot_part_access(mmc, 0, 0, 0);
 	if (buffer) free(buffer);
 	return 1;
 }
@@ -789,7 +797,7 @@ int fastboot_oem(const char *cmd)
 int idme_loadvalue(int index, char *buffer, int length) {
 	char *load_buffer = NULL;
 	int offset;
-	char *dev[4] = { "mmc", "dev", "1", "1" };
+	char *dev[3] = { "mmc", "dev", "1" };
 	struct mmc* mmc = NULL;
 	int r = 0;
 
@@ -798,19 +806,25 @@ int idme_loadvalue(int index, char *buffer, int length) {
 		printf("%s::No MMC in slot 1\n", __func__);
 		return -1;
 	}
-	mmc_init(mmc);
+	r = mmc_init(mmc);
 	if (r != 0) {
 		printf("%s::mmc init failed\n", __func__);
 		return r;
 	}
 
-	r = do_mmcops(NULL, 0, 4, dev);
+	if (do_mmcops(NULL, 0, 3, dev)) {
+		printf("Unable to set MMC device\n");
+		return 1;
+	}
+
+	r = mmc_boot_part_access(mmc, 0, 0, 1);
 	if (r != 0) {
-		printf("%s::mmc dev 1 1 failed (%d)\n", __func__, r);
+		printf("%s::mmc boot access 1 failed (%d)\n", __func__, r);
 		return r;
 	}
 	load_buffer = (char *)malloc(MMC_BLOCK_SIZE);
 	r = mmc->block_dev.block_read(MMC_DEVICE, (nvram_info[index].offset / mmc->read_bl_len), 1, load_buffer);
+	mmc_boot_part_access(mmc, 0, 0, 0);
 	if (r != 1) {
 		printf("%s::block_read failed (blkcount=%d)\n", __func__, r);
 		return -1;
@@ -835,7 +849,7 @@ int board_mmc_ftbtptn_init(void)
 	else {
 		printf("idme load serial failed\n");
 	}
-	debug("*** %s::serialno=[%s]\n", __func__, idme_serial);
+	debug("*** %s::idme_serialno=[%s]\n", __func__, idme_serial);
 
 	// Load MAC
 	if (!idme_loadvalue(1, buffer, 20)) {
@@ -846,10 +860,21 @@ int board_mmc_ftbtptn_init(void)
 	else {
 		printf("idme load macaddr failed\n");
 	}
-	debug("*** %s::wifimac=[%s]\n", __func__, idme_macaddr);
+	debug("*** %s::idme_wifimac=[%s]\n", __func__, idme_macaddr);
 
-	setenv("serialno", idme_serial);
-	setenv("wifimac", idme_macaddr);
+	// Load Settings
+	if (!idme_loadvalue(10, buffer, 2)) {
+		idme_settings = (unsigned int)(buffer[0]-48);
+		if (idme_settings & (1<<2))
+			current_partitions = partitions_x;
+		else
+			current_partitions = partitions;
+	}
+	debug("*** %s::idme_settings=[%u]\n", __func__, idme_settings);
+
+	setenv("idme_serialno", idme_serial);
+	setenv("idme_wifimac", idme_macaddr);
+	setenv_hex("idme_settings", idme_settings);
 
 	printf("\nefi partition table:\n");
 	return load_ptbl();
@@ -864,4 +889,116 @@ char* fastboot_get_macaddr(void)
 {
 	return idme_macaddr;
 }
+
+int fastboot_write_settings(unsigned int new_settings)
+{
+	char buffer[25];
+	idme_settings = new_settings;
+	setenv_hex("idme_settings", idme_settings);
+	sprintf(buffer, "idme settings %2x", idme_settings);
+	return do_idme(buffer);
+}
+
+unsigned long fastboot_get_settings(void)
+{
+	return idme_settings;
+}
+
+int fastboot_get_setting_bit(unsigned char bit)
+{
+	return ((idme_settings & (1<<bit)) != 0);
+}
+
+void fastboot_set_setting_bit(unsigned char bit, unsigned char value)
+{
+	if (value)
+		idme_settings |= (1<<bit);
+	else
+		idme_settings &= ~(1<<bit);
+}
+
+void kc1_findreplace(char *text_to_find, char *text_to_replace, char *buffer)
+{
+	char temp[255];
+
+	char *pos = strstr(buffer, text_to_find);
+	if (pos != NULL)
+	{
+		/* Copy the text before the text to replace */
+		memcpy(temp, buffer, pos - buffer);
+
+		/* Copy in the replacement text */
+		memcpy(temp + (pos - buffer), text_to_replace, strlen(text_to_replace));
+
+		/* Copy the remaining text from after the replace text */
+		memcpy(temp + (pos - buffer) + strlen(text_to_replace),
+			pos + strlen(text_to_find),
+			1 + strlen(buffer) - ((pos - buffer) + strlen(text_to_find)));
+
+		strcpy(buffer, temp);
+	}
+}
+
+void lcdmenu_processvars(char *buffer)
+{
+// [0] CHARGER MODE:    #charger_mode_flag#     \e[32mON\e[37m
+// [1] SERIAL CONSOLE:  #serial_console_flag#   \e[37mOFF\e[37m
+// ___ SERIAL #:        #serial_no#             \e[36m0123456789012345\e[37m
+// ___ WIFI MAC ADDR:   #wifi_mac#              \e[36m00:00:00:00:00:00\e[37m
+// [2] PARTITION MODE:  #partition_mode#        \e[36mOTTERX\e[37m
+	char temp[200];
+	if (fastboot_get_setting_bit(0)) {
+		kc1_findreplace("#charger_mode_flag#", "\e[32mON\e[37m", buffer);
+		kc1_findreplace("#charger_mode_menu_id#", "2", buffer);
+	}
+	else {
+		kc1_findreplace("#charger_mode_flag#", "\e[37mOFF\e[37m", buffer);
+		kc1_findreplace("#charger_mode_menu_id#", "3", buffer);
+	}
+	if (fastboot_get_setting_bit(1)) {
+		kc1_findreplace("#serial_console_flag#", "\e[32mON\e[37m", buffer);
+		kc1_findreplace("#serial_console_menu_id#", "4", buffer);
+	}
+	else {
+		kc1_findreplace("#serial_console_flag#", "\e[37mOFF\e[37m", buffer);
+		kc1_findreplace("#serial_console_menu_id#", "5", buffer);
+	}
+	sprintf(temp, "\e[36m%s\e[37m", fastboot_get_serialno());
+	kc1_findreplace("#serial_no#", temp, buffer);
+	sprintf(temp, "\e[36m%s\e[37m", fastboot_get_macaddr());
+	kc1_findreplace("#wifi_mac#", temp, buffer);
+	if (fastboot_get_setting_bit(2)) {
+		kc1_findreplace("#partition_mode#", "\e[36mOTTERX\e[37m", buffer);
+		kc1_findreplace("#partition_mode_menuid#", "6", buffer);
+	}
+	else {
+		kc1_findreplace("#partition_mode#", "\e[36mAMAZON\e[37m", buffer);
+		kc1_findreplace("#partition_mode_menu_id#", "7", buffer);
+	}
+}
+
+
+int do_idme_settings(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	unsigned char bit = 0;
+	unsigned char value = 0;
+
+	if (argc != 3)
+		return 1;
+
+	bit = (unsigned char)simple_strtoul(argv[1], NULL, 16);
+	value = (unsigned char)simple_strtoul(argv[2], NULL, 16);
+	fastboot_set_setting_bit(bit, value);
+
+	fastboot_write_settings(fastboot_get_settings());
+	if (bit == 2) { // partition_mode
+		if (value != 0)
+			current_partitions = partitions_x;
+		else
+			current_partitions = partitions;
+		do_format();
+	}
+}
+
+U_BOOT_CMD( idme_settings, 3, 1, do_idme_settings, "idme_settings <bit> <value>\n", NULL );
 

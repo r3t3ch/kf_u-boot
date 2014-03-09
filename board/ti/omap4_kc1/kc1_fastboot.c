@@ -35,7 +35,7 @@ int fastboot_board_init(struct cmd_fastboot_interface *interface, char **device_
 
 	board_mmc_ftbtptn_init();
 
-	sprintf(serialno, "%s", getenv("serialno"));
+	sprintf(serialno, "%s", getenv("idme_serialno"));
 	printf("Device Serial Number: %s\n", serialno);
 	sprintf(manufacturer, "%s", "Amazon");
 	sprintf(product, "%s", "kindle");

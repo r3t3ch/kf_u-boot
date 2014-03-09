@@ -359,7 +359,7 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 					lcd_printf("secure: %lu\n", interface.proc_rev);
 				}
 			} else if (!strcmp(cmdbuf + get_var_length, "wifimac")) {
-				char *wifimac = getenv("wifimac");
+				char *wifimac = getenv("idme_wifimac");
 				if (wifimac) {
 					strcpy(response + 4, wifimac);
 					lcd_printf("wifimac: %s\n", wifimac);
