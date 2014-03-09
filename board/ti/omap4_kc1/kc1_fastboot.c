@@ -24,7 +24,7 @@ static unsigned int pcount = 0;
  */
 DECLARE_GLOBAL_DATA_PTR;
 #define CFG_FASTBOOT_TRANSFER_BUFFER      CONFIG_ADDR_DOWNLOAD
-#define CFG_FASTBOOT_TRANSFER_BUFFER_SIZE 0x16000000
+#define CFG_FASTBOOT_TRANSFER_BUFFER_SIZE 0x18000000
 
 int fastboot_board_init(struct cmd_fastboot_interface *interface, char **device_strings)
 {
