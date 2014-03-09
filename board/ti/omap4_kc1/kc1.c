@@ -94,7 +94,6 @@ int board_init(void)
 {
 	gpmc_init();
 
-	gd->bd->bi_arch_number = MACH_TYPE_OMAP_4430SDP;
 	gd->bd->bi_boot_params = CONFIG_ADDR_ATAGS; /* boot param addr */
 
         /*init gpio 54 as ouput and gpio 39 as input*/
@@ -228,7 +227,7 @@ int power_init_board(void)
 int misc_init_r(void)
 {
 #ifdef CONFIG_CHARGERMODE_ENABLE
-	if (start_condition & STRT_ON_PLUG_DET) {
+	if ((fastboot_get_setting_bit(0)) && (start_condition & STRT_ON_PLUG_DET)) {
 		debug("*** CHARGER MODE DETECTED ***\n");
 		setenv("chargermode", "androidboot.mode=charger ");
 	}
