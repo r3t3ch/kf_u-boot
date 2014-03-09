@@ -96,6 +96,7 @@
 #define CONFIG_EFI_PARTITION
 #define CONFIG_PARTITION_UUIDS
 #define CONFIG_CMD_PART
+#define CONFIG_SUPPORT_EMMC_BOOT
 
 /* Defines for SDRAM init */
 #undef CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
@@ -144,7 +145,7 @@
 #define CONFIG_ADDR_ATAGS                (MEMORY_BASE + 0x100)
 #define CONFIG_ADDR_DOWNLOAD             (MEMORY_BASE + 0x02000000)
 //#define CONFIG_FB_ADDR                   (MEMORY_BASE + 0x02000000)
-#define CONFIG_BOARD_MACH_TYPE           2160
+#define CONFIG_MACH_TYPE                 MACH_TYPE_OMAP_4430SDP
 #define DEVICE_TREE                      0x80f80000
 #define CONFIG_ANDROID_BOOT_IMAGE        1
 
@@ -155,12 +156,13 @@
 "fdt_high=0xffffffff\0" \
 "fdtaddr=0x80f80000\0" \
 "initrd_high=no\0" \
-"wifimac=FFEEDDCCBBAA\0" \
-"serialno=0123456789ABCDEF\0" \
+"idme_wifimac=FFEEDDCCBBAA\0" \
+"idme_serialno=0123456789ABCDEF\0" \
+"idme_settings=0x00000000\0" \
 "mmcdev=1\0" \
 \
 "mmcargs_old=setenv bootargs console=${console} mem=456M@0x80000000 init=/init vram=5M omapfb.vram=0:5M androidboot.console=ttyO2\0" \
-"mmcargs_new=setenv dtbootargs console=${console} ${chargermode}androidboot.wifimac=${wifimac} androidboot.serialno=${serialno} androidboot.hardware=otterx\0" \
+"mmcargs_new=setenv dtbootargs console=${console} ${chargermode}androidboot.wifimac=${idme_wifimac} androidboot.serialno=${idme_serialno} androidboot.hardware=otterx\0" \
 \
 "lcdmenu_fg_color=7\0" \
 "lcdmenu_bg_color=0\0" \
@@ -171,19 +173,33 @@
 "lcdmenuentry_02=ADVANCED -->=lcdmenu show 1\0" \
 "lcdmenu_1=ADVANCED MENU\0" \
 "lcdmenuentry_10=<-- BACK=lcdmenu show 0\0" \
-"lcdmenuentry_11=CHARGER MODE:    \e[32mON\e[37m =lcdmenu show 0\0" \
-"lcdmenuentry_12=SERIAL CONSOLE:  \e[37mOFF\e[37m =lcdmenu show 0\0" \
-"lcdmenuentry_13=SERIAL #:        \e[36m0123456789012345\e[37m =lcdmenu show 0\0" \
-"lcdmenuentry_14=WIFI MAC ADDR:   \e[36m00:00:00:00:00:00\e[37m =lcdmenu show 0\0" \
-"lcdmenuentry_15=PARTITION MODE:  \e[36mOTTERX\e[37m =lcdmenu show 0\0" \
-"lcdmenu_2=BOOT CONSOLE MENU\0" \
+"lcdmenuentry_11=CHARGER MODE:    #charger_mode_flag# =lcdmenu show #charger_mode_menu_id#\0" \
+"lcdmenuentry_12=SERIAL CONSOLE:  #serial_console_flag# =lcdmenu show #serial_console_menu_id#\0" \
+"lcdmenuentry_13=SERIAL #:        #serial_no# =lcdmenu show 0\0" \
+"lcdmenuentry_14=WIFI MAC ADDR:   #wifi_mac# =lcdmenu show 0\0" \
+"lcdmenuentry_15=PARTITION MODE:  #partition_mode# =lcdmenu show #partition_mode_menu_id#\0" \
+"lcdmenu_2=CHARGER MODE MENU\0" \
 "lcdmenuentry_20=<-- BACK=lcdmenu show 1\0" \
-"lcdmenuentry_21=\e[33m[CONFIRM]\e[37m SET MODE: \e[32mON\e[37m =lcdmenu show 1\0" \
-"lcdmenu_3=PARTITION MODE MENU\0" \
+"lcdmenuentry_21=\e[33m[CONFIRM]\e[37m SET MODE: \e[32mOFF\e[37m =idme_settings 0 0; lcdmenu show 1\0" \
+"lcdmenu_3=CHARGER MODE MENU\0" \
 "lcdmenuentry_30=<-- BACK=lcdmenu show 1\0" \
-"lcdmenuentry_31=\e[32m** WARNING!!!!\e[37m =\0" \
-"lcdmenuentry_32=\e[32m** SWITCH ERASES ENTIRE DEVICE!\e[37m =\0" \
-"lcdmenuentry_33=\e[33m[CONFIRM]\e[37m SET MODE: \e[36mAMAZON\e[37m =lcdmenu show 1\0"
+"lcdmenuentry_31=\e[33m[CONFIRM]\e[37m SET MODE: \e[32mON\e[37m =idme_settings 0 1; lcdmenu show 1\0" \
+"lcdmenu_4=BOOT CONSOLE MENU\0" \
+"lcdmenuentry_40=<-- BACK=lcdmenu show 1\0" \
+"lcdmenuentry_41=\e[33m[CONFIRM]\e[37m SET MODE: \e[36mOFF\e[37m =idme_settings 1 0; lcdmenu show 1\0" \
+"lcdmenu_5=BOOT CONSOLE MENU\0" \
+"lcdmenuentry_50=<-- BACK=lcdmenu show 1\0" \
+"lcdmenuentry_51=\e[33m[CONFIRM]\e[37m SET MODE: \e[36mON\e[37m =idme_settings 1 1; lcdmenu show 1\0" \
+"lcdmenu_6=PARTITION MODE MENU\0" \
+"lcdmenuentry_60=<-- BACK=lcdmenu show 1\0" \
+"lcdmenuentry_61=\e[31m** WARNING!!!!\e[37m =\0" \
+"lcdmenuentry_62=\e[31m** SWITCH ERASES SYSTEM/CACHE/USERDATA!\e[37m =\0" \
+"lcdmenuentry_63=\e[33m[CONFIRM]\e[37m SET MODE: \e[36mAMAZON\e[37m =idme_settings 2 0; lcdmenu show 1\0" \
+"lcdmenu_7=PARTITION MODE MENU\0" \
+"lcdmenuentry_70=<-- BACK=lcdmenu show 1\0" \
+"lcdmenuentry_71=\e[31m** WARNING!!!!\e[37m =\0" \
+"lcdmenuentry_72=\e[31m** SWITCH ERASES SYSTEM/CACHE/USERDATA!\e[37m =\0" \
+"lcdmenuentry_73=\e[33m[CONFIRM]\e[37m SET MODE: \e[36mOTTERX\e[37m =idme_settings 2 1; lcdmenu show 1\0"
 
 #undef CONFIG_BOOTCOMMAND
 #define CONFIG_BOOTCOMMAND		"run mmcargs_old; run mmcargs_new; booti mmc1"
