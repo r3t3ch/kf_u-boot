@@ -198,10 +198,13 @@ static void lcdmenu_clear(void)
 	spacer[config.menu_width+1] = 0x20;
 }
 
+void process_lcdmenuvars(char *orig, char *buffer);
+
 static int lcdmenu_refresh(void)
 {
 	struct lcdmenu_entry *iter = config.first;
 	int len, len2;
+	char buffer[255];
 
 	// re-read screen info
 	config.screen_rows = lcd_get_screen_rows();
@@ -214,16 +217,7 @@ static int lcdmenu_refresh(void)
 	config.menu_top = config.screen_rows - config.menu_height;
 	config.menu_width = getenv_hex("lcdmenu_width", DEFAULT_WIDTH) + 2; // add 2 for border
 	config.menu_left = (config.screen_cols/2) - (config.menu_width/2) - 1; // adjust for border
-#if 0
-	debug("*** %s::config.screen_rows    =%d\n", __func__, config.screen_rows);
-	debug("*** %s::config.screen_cols    =%d\n", __func__, config.screen_cols);
-	debug("*** %s::config.screen_fg_color=%d\n", __func__, config.fg_color);
-	debug("*** %s::config.screen_bg_color=%d\n", __func__, config.bg_color);
-	debug("*** %s::config.menu_top       =%d\n", __func__, config.menu_top);
-	debug("*** %s::config.menu_left      =%d\n", __func__, config.menu_left);
-	debug("*** %s::config.menu_width     =%d\n", __func__, config.menu_width);
-	debug("*** %s::config.menu_height    =%d\n", __func__, config.menu_height);
-#endif
+
 	// RENDER STATUS BAR
 	int capacity = get_bat_capacity();
 	if (capacity < 10)
@@ -270,12 +264,14 @@ static int lcdmenu_refresh(void)
 		lcd_position_cursor(config.menu_left, (config.menu_top + iter->num + 1));
 		lcd_setfgcolor(config.fg_color);
 		lcd_setbgcolor(config.bg_color);
-		len = config.menu_width - lcd_strlen(iter->title) - 2;
+		strcpy(buffer, iter->title);
+		lcdmenu_processvars(buffer);
+		len = config.menu_width - lcd_strlen(buffer) - 2;
 		spacer[len] = 0;
 		if (config.active == iter->num)
-			lcd_printf(MENUBOX_SIDE " %s%s%s%s" MENUBOX_SIDE, ANSI_COLOR_REVERSE, iter->title, ANSI_COLOR_RESET, spacer);
+			lcd_printf(MENUBOX_SIDE " %s%s%s%s" MENUBOX_SIDE, ANSI_COLOR_REVERSE, buffer, ANSI_COLOR_RESET, spacer);
 		else
-			lcd_printf(MENUBOX_SIDE " %s%s" MENUBOX_SIDE, iter->title, spacer);
+			lcd_printf(MENUBOX_SIDE " %s%s" MENUBOX_SIDE, buffer, spacer);
 		iter = iter->next;
 		spacer[len] = 0x20;
 	}
@@ -304,13 +300,13 @@ static int lcdmenu_show(int menuid)
 	return 0;
 }
 
-
 int do_lcdmenu(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
 	int i;
 	int menuid = 0;
 	char *command = NULL;
 	struct lcdmenu_entry *iter = config.first;
+	char buffer[255];
 
 	if (argc < 2)
 		return 1;
@@ -354,7 +350,8 @@ int do_lcdmenu(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 			if (iter->command) {
 				debug("Starting entry '%s'\n", iter->title);
 				command = strdup(iter->command);
-				run_command(iter->command, 0);
+				lcdmenu_processvars(command);
+				run_command(command, 0);
 				free(command);
 			}
 			/* don't continue here as we're probably nested */
