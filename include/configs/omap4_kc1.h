@@ -176,9 +176,9 @@
 "lcdmenuentry_12=SERIAL CONSOLE:  #serial_console_flag# =lcdmenu show #serial_console_menu_id#\0" \
 "lcdmenuentry_13=SERIAL #:        #serial_no# =lcdmenu show 0\0" \
 "lcdmenuentry_14=WIFI MAC ADDR:   #wifi_mac# =lcdmenu show 0\0" \
-"lcdmenuentry_15=PARTITION MODE:  #partition_mode# =lcdmenu show #partition_mode_menu_id#\0" \
-"lcdmenuentry_16=TRIGGER USBBOOT MODE =lcdmenu show 8\0" \
-"lcdmenuentry_17=EMMC CORRUPTION FIX =lcdmenu show 9\0" \
+"lcdmenuentry_15=PARTITION MODE:  #partition_mode# =lcdmenu show 6\0" \
+"lcdmenuentry_16=TRIGGER USBBOOT MODE =lcdmenu show 7\0" \
+"lcdmenuentry_17=EMMC CORRUPTION FIX =lcdmenu show 8\0" \
 "lcdmenu_2=CHARGER MODE MENU\0" \
 "lcdmenuentry_20=<-- BACK=lcdmenu show 1\0" \
 "lcdmenuentry_21=\e[33m[CONFIRM]\e[37m SET MODE: \e[32mOFF\e[37m =idme_settings 0 0; lcdmenu show 1\0" \
@@ -191,26 +191,21 @@
 "lcdmenu_5=BOOT CONSOLE MENU\0" \
 "lcdmenuentry_50=<-- BACK=lcdmenu show 1\0" \
 "lcdmenuentry_51=\e[33m[CONFIRM]\e[37m SET MODE: \e[36mON\e[37m =idme_settings 1 1; lcdmenu show 1\0" \
-"lcdmenu_6=PARTITION MODE MENU\0" \
+"lcdmenu_6=PARTITION MODE MENU \0" \
 "lcdmenuentry_60=<-- BACK=lcdmenu show 1\0" \
 "lcdmenuentry_61=\e[31m** WARNING!!!!\e[37m =\0" \
 "lcdmenuentry_62=\e[31m** SWITCH ERASES SYSTEM/CACHE/USERDATA!\e[37m =\0" \
-"lcdmenuentry_63=\e[33m[CONFIRM]\e[37m SET MODE: \e[36mAMAZON\e[37m =idme_settings 2 0; lcdmenu show 1\0" \
-"lcdmenu_7=PARTITION MODE MENU\0" \
+"lcdmenuentry_63=\e[33m[CONFIRM]\e[37m SET MODE: \e[36m#partition_mode_other#\e[37m =kc1_swap_partition_mode; lcdmenu show 1\0" \
+"lcdmenu_7=USB BOOT MODE\0" \
 "lcdmenuentry_70=<-- BACK=lcdmenu show 1\0" \
-"lcdmenuentry_71=\e[31m** WARNING!!!!\e[37m =\0" \
-"lcdmenuentry_72=\e[31m** SWITCH ERASES SYSTEM/CACHE/USERDATA!\e[37m =\0" \
-"lcdmenuentry_73=\e[33m[CONFIRM]\e[37m SET MODE: \e[36mOTTERX\e[37m =idme_settings 2 1; lcdmenu show 1\0" \
-"lcdmenu_8=USB BOOT MODE\0" \
+"lcdmenuentry_71=\e[36m** USE TO TEST NEW BOOTLOADERS\e[37m =\0" \
+"lcdmenuentry_72=\e[31m** LASTS TILL FULL POWER OFF\e[37m =\0" \
+"lcdmenuentry_73=\e[33m[CONFIRM]\e[37m RESTART =kc1_usbboot\0" \
+"lcdmenu_8=EMMC CORRUPTION FIX\0" \
 "lcdmenuentry_80=<-- BACK=lcdmenu show 1\0" \
-"lcdmenuentry_81=\e[36m** USE TO TEST NEW BOOTLOADERS\e[37m =\0" \
-"lcdmenuentry_82=\e[31m** LASTS TILL FULL POWER OFF\e[37m =\0" \
-"lcdmenuentry_83=\e[33m[CONFIRM]\e[37m RESTART =kc1_usbboot\0" \
-"lcdmenu_9=EMMC CORRUPTION FIX\0" \
-"lcdmenuentry_90=<-- BACK=lcdmenu show 1\0" \
-"lcdmenuentry_91=\e[31m** WARNING!!!!\e[37m =\0" \
-"lcdmenuentry_92=\e[31m** THIS ERASES *EVERYTHING*!!\e[37m =\0" \
-"lcdmenuentry_93=\e[33m[CONFIRM]\e[37m RUN EMMC FIX =kc1_emmcfix\0"
+"lcdmenuentry_81=\e[31m** WARNING!!!!\e[37m =\0" \
+"lcdmenuentry_82=\e[31m** THIS ERASES *EVERYTHING*!!\e[37m =\0" \
+"lcdmenuentry_83=\e[33m[CONFIRM]\e[37m RUN EMMC FIX =kc1_emmcfix\0"
 
 #undef CONFIG_BOOTCOMMAND
 #define CONFIG_BOOTCOMMAND		"run mmcargs_old; run mmcargs_new; booti mmc1"

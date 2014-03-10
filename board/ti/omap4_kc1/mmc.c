@@ -851,6 +851,15 @@ int do_emmcfix(const char *cmd)
 	return -1; // WIP
 }
 
+int do_swap_partition_mode(const char *cmd)
+{
+	if (current_partitions == partitions_x)
+		current_partitions = partitions;
+	else
+		current_partitions = partitions_x;
+	return do_format();
+}
+
 int fastboot_oem(const char *cmd)
 {
 	if (memcmp(cmd, "format", 6) == 0) {
@@ -864,6 +873,9 @@ int fastboot_oem(const char *cmd)
 	}
 	if (memcmp(cmd, "emmcfix", 7) == 0) {
 		return do_emmcfix(cmd);
+	}
+	if (memcmp(cmd, "swap_partition_mode", 19) == 0) {
+		return do_swap_partition_mode(cmd);
 	}
 	return -1;
 }
@@ -914,6 +926,7 @@ int idme_loadvalue(int index, char *buffer, int length) {
 int board_mmc_ftbtptn_init(void)
 {
 	char buffer[100];
+	int ret = 0;
 
 	// Load Serial
 	if (!idme_loadvalue(0, buffer, 20)) {
@@ -940,10 +953,6 @@ int board_mmc_ftbtptn_init(void)
 	// Load Settings
 	if (!idme_loadvalue(10, buffer, 2)) {
 		idme_settings = (unsigned int)(buffer[0]-48);
-		if (idme_settings & (1<<2))
-			current_partitions = partitions_x;
-		else
-			current_partitions = partitions;
 	}
 	debug("*** %s::idme_settings=[%u]\n", __func__, idme_settings);
 
@@ -952,7 +961,19 @@ int board_mmc_ftbtptn_init(void)
 	setenv_hex("idme_settings", idme_settings);
 
 	printf("\nefi partition table:\n");
-	return load_ptbl();
+	ret = load_ptbl();
+
+	// Load partition mode
+	if (fastboot_flash_find_ptn("spacer")) {
+		debug("*** %s::partition_mode=OTTERX\n", __func__);
+		current_partitions = partitions_x;
+	}
+	else {
+		debug("*** %s::partition_mode=AMAZON\n", __func__);
+		current_partitions = partitions;
+	}
+
+	return ret;
 }
 
 char* fastboot_get_serialno(void)
@@ -1042,13 +1063,13 @@ void lcdmenu_processvars(char *buffer)
 	kc1_findreplace("#serial_no#", temp, buffer);
 	sprintf(temp, "\e[36m%s\e[37m", fastboot_get_macaddr());
 	kc1_findreplace("#wifi_mac#", temp, buffer);
-	if (fastboot_get_setting_bit(2)) {
+	if (current_partitions == partitions_x) {
 		kc1_findreplace("#partition_mode#", "\e[36mOTTERX\e[37m", buffer);
-		kc1_findreplace("#partition_mode_menuid#", "6", buffer);
+		kc1_findreplace("#partition_mode_other#", "\e[36mAMAZON\e[37m", buffer);
 	}
 	else {
 		kc1_findreplace("#partition_mode#", "\e[36mAMAZON\e[37m", buffer);
-		kc1_findreplace("#partition_mode_menu_id#", "7", buffer);
+		kc1_findreplace("#partition_mode_other#", "\e[36mOTTERX\e[37m", buffer);
 	}
 }
 
@@ -1066,16 +1087,15 @@ int do_idme_settings(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	fastboot_set_setting_bit(bit, value);
 
 	fastboot_write_settings(fastboot_get_settings());
-	if (bit == 2) { // partition_mode
-		if (value != 0)
-			current_partitions = partitions_x;
-		else
-			current_partitions = partitions;
-		do_format();
-	}
+}
+
+int do_kc1_swap_partition_mode(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	return do_swap_partition_mode(NULL);
 }
 
 U_BOOT_CMD( idme_settings, 3, 1, do_idme_settings, "idme_settings <bit> <value>\n", NULL );
+U_BOOT_CMD( kc1_swap_partition_mode, 1, 1, do_kc1_swap_partition_mode, "kc1_swap_partition_mode\n", NULL );
 U_BOOT_CMD( kc1_usbboot, 1, 1, do_kc1_usbboot, "kc1_usbboot\n", NULL );
 U_BOOT_CMD( kc1_emmcfix, 1, 1, do_kc1_emmcfix, "kc1_emmcfix\n", NULL );
 
