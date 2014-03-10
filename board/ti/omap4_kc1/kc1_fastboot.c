@@ -33,7 +33,10 @@ int fastboot_board_init(struct cmd_fastboot_interface *interface, char **device_
 	interface->storage_medium = EMMC;
 	debug("*** %s:: transfer_buffer==0x%08x, buffer_size==%u\n", __func__, (unsigned int)interface->transfer_buffer, interface->transfer_buffer_size);
 
+	// MOVED TO EARLIER
+#ifndef CONFIG_LCD
 	board_mmc_ftbtptn_init();
+#endif
 
 	sprintf(serialno, "%s", getenv("idme_serialno"));
 	printf("Device Serial Number: %s\n", serialno);

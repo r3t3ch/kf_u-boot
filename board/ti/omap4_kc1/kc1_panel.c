@@ -14,6 +14,14 @@
 #include <lcd.h>
 #endif
 #include <version.h>
+#ifdef CONFIG_CMD_FASTBOOT
+#include <usb/fastboot.h>
+#include <asm/sizes.h>
+#include <usb/fastboot.h>
+#include <mmc.h>
+#include <malloc.h>
+#include <asm/omap_mmc.h>
+#endif
 
 #include "kc1_debug.h"
 #include "omap4_spi.h"
@@ -220,7 +228,6 @@ void initialize_lcd(void)
 {
 	struct dispc_regs *dispc = (struct dispc_regs *) OMAP4_DISPC_BASE;
 	struct dsi_regs *dsi2 = (struct dsi_regs *) OMAP4_DSI2_BASE;
-	unsigned int val = 0;
 
 	debug("*** %s\n", __func__);
 	omap4_dss_register_configs(&dpi_panel_cfg, &gfx_cfg);
@@ -319,21 +326,64 @@ void initialize_lcd(void)
 #ifdef CONFIG_LCD
 void render_image(void)
 {
-	u_int16_t *start;
+	int displayed = 0;
+	u_int16_t *start = 0;
 	char buffer_cmd[100];
 	if (logo_index == LOGO_FASTBOOT)
 		start = (u_int16_t *)_binary_multi_download_bmp_gz_start;
 	else if (logo_index == LOGO_LOW_BATT)
 		start = (u_int16_t *)_binary_lowbattery_bmp_gz_start;
-	else
-		start = (u_int16_t *)_binary_initlogo_bmp_gz_start;
-	sprintf(buffer_cmd, "bmp info 0x%8x", (unsigned int)start);
-	debug("*** %s::buffer_cmd = '%s'\n", __func__, buffer_cmd);
-	run_command(buffer_cmd, 0);
+	else {
+#ifdef CONFIG_CMD_FASTBOOT
+		struct fastboot_ptentry *pte = NULL;
+		struct mmc* mmc = NULL;
+		void *dst = NULL;
+		void *splash_bmp = NULL;
+		bmp_image_t *bmp;
 
-	sprintf(buffer_cmd, "bmp display 0x%8x 0 0", (unsigned int)start);
-	debug("*** %s::buffer_cmd = '%s'\n", __func__, buffer_cmd);
-	run_command(buffer_cmd, 0);
+		mmc = find_mmc_device(1);
+		if (mmc && (!mmc_init(mmc))) {
+			pte = fastboot_flash_find_ptn("splash");
+			if (pte) {
+				dst = malloc(CONFIG_SYS_VIDEO_LOGO_MAX_SIZE + 3);
+				if (dst) {
+					if (mmc->block_dev.block_read(1, pte->start,
+							CONFIG_SYS_VIDEO_LOGO_MAX_SIZE / mmc->read_bl_len, dst) > 0) {
+						/* align to 32-bit-aligned-address + 2 */
+						bmp = (bmp_image_t *)((((unsigned int)dst + 1) & ~3) + 2);
+						memmove(bmp, dst, CONFIG_SYS_VIDEO_LOGO_MAX_SIZE); // shift this for reading
+						start = (u_int16_t *)bmp;
+						sprintf(buffer_cmd, "bmp display 0x%8x 0 0", (unsigned int)start);
+						debug("*** %s::buffer_cmd #1 '%s'\n", __func__, buffer_cmd);
+						if (run_command(buffer_cmd, 0)) {
+							free(dst);
+							start = 0; // bad BMP
+						}
+						else {
+							displayed = 1;
+						}
+					}
+					else {
+						free(dst);
+					}
+				}
+			}
+		}
+
+		if (!start)
+#endif
+		start = (u_int16_t *)_binary_initlogo_bmp_gz_start;
+	}
+
+	if (!displayed) {
+		sprintf(buffer_cmd, "bmp info 0x%8x", (unsigned int)start);
+		debug("*** %s::buffer_cmd #2 = '%s'\n", __func__, buffer_cmd);
+		run_command(buffer_cmd, 0);
+
+		sprintf(buffer_cmd, "bmp display 0x%8x 0 0", (unsigned int)start);
+		debug("*** %s::buffer_cmd #3 = '%s'\n", __func__, buffer_cmd);
+		run_command(buffer_cmd, 0);
+	}
 }
 #else
 void render_image(void)
@@ -373,6 +423,9 @@ int board_video_init(void)
 {
 	debug("*** %s\n", __func__);
 	lcd_set_flush_dcache(1);
+#ifdef CONFIG_CMD_FASTBOOT
+	board_mmc_ftbtptn_init(); // init fastboot partition table here
+#endif
 	initialize_lcd();
 	return 0;
 }
