@@ -236,6 +236,8 @@ int misc_init_r(void)
 #else
 	setenv("chargermode", "");
 #endif
+	if (!fastboot_get_setting_bit(1))
+		setenv("console", "null");
 
 #ifdef CONFIG_USB_MUSB_OMAP2PLUS
 	// Setup USB
