@@ -782,6 +782,75 @@ clean:
 	return 1;
 }
 
+int do_kc1_usbboot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	return do_usbboot(NULL);
+}
+
+int do_usbboot(const char *cmd)
+{
+	__raw_writel( 0x4A326A0C , 0x4A326A00 );   // Address in Public Internal SRAM where SW Booting Configuration is
+	__raw_writel( 0xCF00AA01 , 0x4A326A0C );   // Header for SW Booting Configuration
+	__raw_writel( 0x0000000C , 0x4A326A10 );
+	__raw_writel( 0x00450000 , 0x4A326A14 );   // USB Boot First
+	__raw_writel( 0x00000000 , 0x4A326A18 );
+	__raw_writel( 0x00000000 , 0x4A326A1C );
+	/* now warm reset the silicon */
+	__raw_writel( (1<<0) , PRM_RSTCTRL);
+
+	return 0; // never gets here
+}
+
+int do_kc1_emmcfix(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	return do_emmcfix(NULL);
+}
+
+int do_emmcfix(const char *cmd)
+{
+#if 0
+- SHOW fastbootmode
+- open boot0
+- PRINT "backing up bootpart 0 ..."
+- read 1024 sectors of boot0 into mem1 [1024 sectors * 512 bytes per sector = 512kb]
+- PRINT "done\n"
+- close boot0
+- open boot1
+- PRINT "backing up bootpart 1 ..."
+- read 1024 sectors of boot1 into mem2 [1024 sectors * 512 bytes per sector = 512kb]
+- PRINT "done\n"
+- close boot0
+- PRINT "backing up xloader and bootloader ..."
+- reset to start of xloader sector and read 768 sectors into mem3 (xloader, bootloader)
+	[768 sectors * 512 bytes per sector = 384kb]
+- PRINT "done\n"
+- PRINT "clearing EMMC chip ..."
+- write bootsize 0 NAND cmd
+- wait?
+- write bootsize 4 NAND cmd
+- wait?
+- PRINT "done\n"
+- PRINT "writing partition layout ..."
+- write format of partitions
+- PRINT "done\n"
+- open boot0
+- PRINT "restoring bootpart 0 ..."
+- write 1024 sectors from mem1
+- PRINT "done\n"
+- close boot0
+- open boot1
+- PRINT "restoring bootpart 1 ..."
+- write 1024 sectors from mem2
+- PRINT "done\n"
+- close boot 1
+- PRINT "restoring xloader and bootloader ..."
+- reset to start of xloader sector and write 768 sectors from mem3 (xloader, bootloader)
+- PRINT "done\n"
+- PRINT "EMMC corruption fix complete.  Use fastboot to flash recovery and then reboot."
+#endif
+	return -1; // WIP
+}
+
 int fastboot_oem(const char *cmd)
 {
 	if (memcmp(cmd, "format", 6) == 0) {
@@ -789,6 +858,12 @@ int fastboot_oem(const char *cmd)
 	}
 	if (memcmp(cmd, "idme", 4) == 0) {
 		return do_idme(cmd);
+	}
+	if (memcmp(cmd, "usbboot", 7) == 0) {
+		return do_usbboot(cmd);
+	}
+	if (memcmp(cmd, "emmcfix", 7) == 0) {
+		return do_emmcfix(cmd);
 	}
 	return -1;
 }
@@ -1001,4 +1076,6 @@ int do_idme_settings(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 }
 
 U_BOOT_CMD( idme_settings, 3, 1, do_idme_settings, "idme_settings <bit> <value>\n", NULL );
+U_BOOT_CMD( kc1_usbboot, 1, 1, do_kc1_usbboot, "kc1_usbboot\n", NULL );
+U_BOOT_CMD( kc1_emmcfix, 1, 1, do_kc1_emmcfix, "kc1_emmcfix\n", NULL );
 
