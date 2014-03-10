@@ -228,7 +228,7 @@ static int lcdmenu_refresh(void)
 		lcd_setfgcolor(CONSOLE_COLOR_GREEN);
 	lcd_position_cursor(0, 0);
 	lcd_setbgcolor(CONSOLE_COLOR_BLACK);
-	lcd_printf("%d%%", get_bat_capacity());
+	lcd_printf("%d%%", capacity);
 #ifdef CONFIG_OMAP4KC1_VERSION
 	// PRINT VERSION IN UPPER RIGHT CORNER
 	len = lcd_strlen(CONFIG_OMAP4KC1_VERSION);
