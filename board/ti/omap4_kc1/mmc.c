@@ -36,6 +36,8 @@
 #endif
 #include <asm/arch/mmc_host_def.h>
 #include <linux/ctype.h>
+#include <asm/sizes.h>
+#include <lcd.h>
 
 #include "kc1_twl6030.h"
 
@@ -782,11 +784,6 @@ clean:
 	return 1;
 }
 
-int do_kc1_usbboot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
-{
-	return do_usbboot(NULL);
-}
-
 int do_usbboot(const char *cmd)
 {
 	__raw_writel( 0x4A326A0C , 0x4A326A00 );   // Address in Public Internal SRAM where SW Booting Configuration is
@@ -801,54 +798,201 @@ int do_usbboot(const char *cmd)
 	return 0; // never gets here
 }
 
+int do_kc1_usbboot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	return do_usbboot(NULL);
+}
+
+int do_bootsize_change(struct mmc* mmc, unsigned int bootpart, unsigned int bootpart_size)
+{
+	char bootpartsize_cmd[250];
+
+	sprintf(bootpartsize_cmd, "mmc bootpart 1 %u %u", bootpart_size, bootpart_size);
+
+	if (mmc_boot_part_access(mmc, 0, 0, bootpart+1)) {
+		lcd_printf("ERROR: Unable to open boot%d!\n", bootpart);
+		return 1;
+	}
+
+	if (run_command(bootpartsize_cmd, 0)) {
+		lcd_printf("ERROR: setting bootsize.\n");
+	}
+
+	if (mmc_boot_part_access(mmc, 0, 0, 0)) {
+		lcd_printf("ERROR: Unable to close boot%d!\n", bootpart);
+		return 1;
+	}
+
+	return 0;
+}
+
+int do_emmcfix(const char *cmd)
+{
+	void *backup_parts;
+	struct mmc* mmc = NULL;
+	char *dev[3] = { "mmc", "dev", "1" };
+	unsigned int sectors = 0;
+	unsigned int r = 0;
+	int ret = 1;
+
+	show_fastbootmode();
+
+	lcd_printf("Starting EMMC corruption wipe process.\n");
+
+	backup_parts = malloc(SZ_128K + SZ_256K);
+	if (!backup_parts) {
+		lcd_printf("ERROR: can't allocate memory for backups.  ABORT.\n");
+		goto cleanup;
+	}
+
+	mmc = find_mmc_device(MMC_DEVICE);
+	if (mmc == NULL) {
+		lcd_printf("ERROR: No MMC in slot 1!  ABORT.\n");
+		goto cleanup;
+	}
+
+	if (mmc_init(mmc)) {
+		lcd_printf("ERROR: MMC init failed!  ABORT.\n");
+		goto cleanup;
+	}
+
+	if (do_mmcops(NULL, 0, 3, dev)) {
+		lcd_printf("ERROR: Unable to set MMC device!  ABORT.\n");
+		goto cleanup;
+	}
+
+	// backup early partitions
+	sectors = ((SZ_128K + SZ_256K) + (mmc->read_bl_len - 1)) / mmc->read_bl_len;
+	lcd_printf("Backing up xloader and bootloader ...");
+	r = mmc->block_dev.block_read(mmc->block_dev.dev, 0, sectors, backup_parts);
+	if (r != sectors) {
+		lcd_printf("FAILED!\nNot all sectors were read from MMC(%u instead of %u)!  ABORT\n", r, sectors);
+		goto cleanup;
+	}
+	lcd_printf("Done!\n");
+
+	lcd_printf("Clearing EMMC chip: stage 1 ...");
+	ret = do_bootsize_change(mmc, 0, 0);
+	if (ret) {
+		lcd_printf("ERROR: Writing bootsize 0 to boot0!\n");
+	}
+	/* Waiting for the ready status */
+	udelay(10000000);
+	ret = do_bootsize_change(mmc, 1, 0);
+	/* Waiting for the ready status */
+	udelay(10000000);
+	if (ret) {
+		lcd_printf("ERROR: Writing bootsize 0 to boot1!\n");
+	}
+	else {
+		lcd_printf(" Done!\n");
+	}
+
+	lcd_printf("Clearing EMMC chip: stage 2 ...");
+	ret = do_bootsize_change(mmc, 0, 512);
+	if (ret) {
+		lcd_printf("ERROR: Writing bootsize 512kb to boot0!\n");
+	}
+	/* Waiting for the ready status */
+	udelay(10000000);
+	ret = do_bootsize_change(mmc, 1, 512);
+	/* Waiting for the ready status */
+	udelay(10000000);
+	if (ret) {
+		lcd_printf("ERROR: Writing bootsize 512kb to boot1!\n");
+	}
+	else {
+		lcd_printf(" Done!\n");
+	}
+
+	if (do_mmcops(NULL, 0, 3, dev)) {
+		lcd_printf(" ERROR: Resetting MMC device!\n");
+	}
+	else {
+		lcd_printf(" Done!\n");
+	}
+
+	// Write partition layout
+	lcd_printf("Writing partition layout ...");
+	if (do_format()) {
+		lcd_printf("ERROR!? CONTINUING.. EMMC IS BLANK AT THIS POINT.\n");
+	}
+	else
+		lcd_printf("Done!\n");
+
+	udelay(1000000); // pause 1 sec
+
+	// restore boot parts
+	sectors = ((SZ_128K + SZ_256K) + (mmc->read_bl_len - 1)) / mmc->read_bl_len;
+	lcd_printf("Restoring xloader + bootloader [%u sectors] ...", sectors);
+	if (mmc->block_dev.block_write(mmc->block_dev.dev, 0, sectors, backup_parts) == 0) {
+		lcd_printf("FAILED.\nNot all sectors were written back to MMC!\n");
+	}
+	else {
+		lcd_printf("Done!\n");
+		lcd_printf("EMMC corruption fix complete.  Use fastboot to flash recovery and then reboot.\n");
+		ret = 0;
+	}
+
+cleanup:
+	if (backup_parts)
+		free(backup_parts);
+	return ret;
+}
+
 int do_kc1_emmcfix(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	return do_emmcfix(NULL);
 }
 
-int do_emmcfix(const char *cmd)
+int do_bootsize(const char *cmd)
 {
-#if 0
-- SHOW fastbootmode
-- open boot0
-- PRINT "backing up bootpart 0 ..."
-- read 1024 sectors of boot0 into mem1 [1024 sectors * 512 bytes per sector = 512kb]
-- PRINT "done\n"
-- close boot0
-- open boot1
-- PRINT "backing up bootpart 1 ..."
-- read 1024 sectors of boot1 into mem2 [1024 sectors * 512 bytes per sector = 512kb]
-- PRINT "done\n"
-- close boot0
-- PRINT "backing up xloader and bootloader ..."
-- reset to start of xloader sector and read 768 sectors into mem3 (xloader, bootloader)
-	[768 sectors * 512 bytes per sector = 384kb]
-- PRINT "done\n"
-- PRINT "clearing EMMC chip ..."
-- write bootsize 0 NAND cmd
-- wait?
-- write bootsize 4 NAND cmd
-- wait?
-- PRINT "done\n"
-- PRINT "writing partition layout ..."
-- write format of partitions
-- PRINT "done\n"
-- open boot0
-- PRINT "restoring bootpart 0 ..."
-- write 1024 sectors from mem1
-- PRINT "done\n"
-- close boot0
-- open boot1
-- PRINT "restoring bootpart 1 ..."
-- write 1024 sectors from mem2
-- PRINT "done\n"
-- close boot 1
-- PRINT "restoring xloader and bootloader ..."
-- reset to start of xloader sector and write 768 sectors from mem3 (xloader, bootloader)
-- PRINT "done\n"
-- PRINT "EMMC corruption fix complete.  Use fastboot to flash recovery and then reboot."
-#endif
-	return -1; // WIP
+	struct mmc* mmc = NULL;
+	char *argv[CONFIG_SYS_MAXARGS + 1];	/* NULL terminated	*/
+	int argc;
+	char *dev[3] = { "mmc", "dev", "1" };
+	unsigned int bootpart = 0;
+	unsigned int bootpartsize = 0;
+
+	if (!cmd || !*cmd)
+		goto bootsize_cmd_usage;	/* empty command */
+
+	debug("*** %s::cmd = %s\n", __func__, cmd);
+
+	/* Extract arguments */
+	if ((argc = parse_line (cmd, argv)) == 0) {
+		goto bootsize_cmd_usage;	/* empty command */
+	}
+	else if (argc != 3) {
+		goto bootsize_cmd_usage;
+	}
+	else {
+		bootpart = (unsigned int)simple_strtoul(argv[1], NULL, 10);
+		bootpartsize = (unsigned int)simple_strtoul(argv[2], NULL, 10);
+
+		mmc = find_mmc_device(MMC_DEVICE);
+		if (mmc == NULL) {
+			lcd_printf("ERROR: No MMC in slot 1!  ABORT.\n");
+			return 1;
+		}
+
+		if (mmc_init(mmc)) {
+			lcd_printf("ERROR: MMC init failed!  ABORT.\n");
+			return 1;
+		}
+
+		if (do_mmcops(NULL, 0, 3, dev)) {
+			printf("Unable to set MMC device\n");
+			return 1;
+		}
+
+		return do_bootsize_change(mmc, bootpart, bootpartsize);
+	}
+
+bootsize_cmd_usage:
+	printf("Usage:\n"
+		"bootsize - change boot partition size\n");
+	return 1;
 }
 
 int do_swap_partition_mode(const char *cmd)
@@ -876,6 +1020,9 @@ int fastboot_oem(const char *cmd)
 	}
 	if (memcmp(cmd, "swap_partition_mode", 19) == 0) {
 		return do_swap_partition_mode(cmd);
+	}
+	if (memcmp(cmd, "bootsize", 8) == 0) {
+		return do_bootsize(cmd);
 	}
 	return -1;
 }
@@ -1086,7 +1233,7 @@ int do_idme_settings(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	value = (unsigned char)simple_strtoul(argv[2], NULL, 16);
 	fastboot_set_setting_bit(bit, value);
 
-	fastboot_write_settings(fastboot_get_settings());
+	return fastboot_write_settings(fastboot_get_settings());
 }
 
 int do_kc1_swap_partition_mode(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
