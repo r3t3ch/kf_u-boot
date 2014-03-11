@@ -97,7 +97,7 @@ static unsigned int download_bytes_unpadded;
 static unsigned int download_error;
 static unsigned int mmc_controller_no = 1;
 
-static void show_fastbootmode(void)
+void show_fastbootmode(void)
 {
 	fastboot_confirmed = 2;
 	run_command("kc1panel logo_set_index 2", 0);
@@ -592,7 +592,7 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 				printf ("Booting kernel from RAM...\n");
 
 				/* boot the boot.img */
-				sprintf(booti_cmd, "booti ram 0x%08x", (unsigned int)interface.transfer_buffer);
+				sprintf(booti_cmd, "run mmcargs_old; run mmcargs_new; booti ram 0x%08x", (unsigned int)interface.transfer_buffer);
 				run_command(booti_cmd, 0);
 			}
 			sprintf(response, "FAILinvalid boot image");
@@ -644,32 +644,37 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 					/* Next is the partition name */
 					if (memcmp(cmdbuf+6, "bootpart:", 9) == 0) {
 						struct fastboot_ptentry tmpptn;
+						int bootpart = 0;
 						printf("boot partition testing\n");
 						ptn=&tmpptn;
-						sprintf(ptn->name,"bootpart%lu", simple_strtoul(cmdbuf + 15, NULL, 10));
+						bootpart = simple_strtoul(cmdbuf + 15, NULL, 10);
+						sprintf(ptn->name,"bootpart%lu", bootpart);
 						ptn->length = (download_bytes + (mmc->write_bl_len - 1)) / mmc->write_bl_len;
 						ptn->start  = 0;
-						printf("name=%s length=%llx offset=%x\n",
+						printf("name=%s length=%llu offset=%x\n",
 							ptn->name, ptn->length, ptn->start);
 
+						mmc_boot_part_access(mmc, 0, 0, bootpart + 1);
+						write_to_ptn_emmc(ptn, 0, response);
+						mmc_boot_part_access(mmc, 0, 0, 0);
 					}
 					else {
 						ptn = fastboot_flash_find_ptn(cmdbuf + 6);
-					}
 
-					if (ptn == 0) {
-						printf("Partition:'%s' does not exist\n", ptn->name);
-						sprintf(response, "FAILpartition does not exist");
-						lcd_printf("ERROR: Partition:'%s' does not exist\n", ptn->name);
+						if (ptn == 0) {
+							printf("Partition:'%s' does not exist\n", ptn->name);
+							sprintf(response, "FAILpartition does not exist");
+							lcd_printf("ERROR: Partition:'%s' does not exist\n", ptn->name);
+						}
+						else if (download_bytes > ptn->length) {
+							printf("Image too large for the partition\n");
+							sprintf(response, "FAILimage too large for partition");
+							lcd_printf("ERROR: image too large for partition\n");
+						}
+						else {
+							write_to_ptn_emmc(ptn, 0, response);
+						} /* Normal Case */
 					}
-					else if (download_bytes > ptn->length) {
-						printf("Image too large for the partition\n");
-						sprintf(response, "FAILimage too large for partition");
-						lcd_printf("ERROR: image too large for partition\n");
-					}
-					else {
-						write_to_ptn_emmc(ptn, 0, response);
-					} /* Normal Case */
 
 				} else {
 					sprintf(response, "FAILno image downloaded");
@@ -729,7 +734,7 @@ int do_fastboot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 				show_fastbootmode();
 
 			if (fastboot_confirmed == 2) {
-				debug("*** ENTER FULL FASTBOOT MODE ***");
+				debug("*** ENTER FULL FASTBOOT MODE ***\n");
 				while (1)
 				{
 					if (fastboot_poll())
