@@ -459,7 +459,7 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 					if (mmc->block_dev.block_erase(
 						mmc->block_dev.dev,
 						ptn->start,
-						ptn->length) == 0)
+						(ptn->length + (mmc->write_bl_len - 1)) / mmc->write_bl_len) == 0)
 					{
 						printf("Erasing '%s' FAILED!\n", ptn->name);
 						lcd_printf("... FAILED!\n");
@@ -513,7 +513,7 @@ static int rx_handler (const unsigned char *buffer, unsigned int buffer_size)
 				if (mmc->block_dev.block_erase(
 					mmc->block_dev.dev,
 					ptn->start,
-					ptn->length) == 0)
+					(ptn->length + (mmc->write_bl_len - 1)) / mmc->write_bl_len) == 0)
 				{
 					printf("Erasing '%s' FAILED!\n", ptn->name);
 					lcd_printf("... FAILED!\n");
