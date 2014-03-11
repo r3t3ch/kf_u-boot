@@ -1040,8 +1040,6 @@ int do_bootsize(const char *cmd)
 	if (!cmd || !*cmd)
 		goto bootsize_cmd_usage;	/* empty command */
 
-	debug("*** %s::cmd = %s\n", __func__, cmd);
-
 	/* Extract arguments */
 	if ((argc = parse_line (cmd, argv)) == 0) {
 		goto bootsize_cmd_usage;	/* empty command */
@@ -1167,7 +1165,6 @@ int board_mmc_ftbtptn_init(void)
 	else {
 		printf("idme load serial failed\n");
 	}
-	debug("*** %s::idme_serialno=[%s]\n", __func__, idme_serial);
 
 	// Load MAC
 	if (!idme_loadvalue(1, buffer, 20)) {
@@ -1178,13 +1175,11 @@ int board_mmc_ftbtptn_init(void)
 	else {
 		printf("idme load macaddr failed\n");
 	}
-	debug("*** %s::idme_wifimac=[%s]\n", __func__, idme_macaddr);
 
 	// Load Settings
 	if (!idme_loadvalue(10, buffer, 2)) {
 		idme_settings = (unsigned int)(buffer[0]-48);
 	}
-	debug("*** %s::idme_settings=[%u]\n", __func__, idme_settings);
 
 	setenv("idme_serialno", idme_serial);
 	setenv("idme_wifimac", idme_macaddr);
@@ -1194,14 +1189,10 @@ int board_mmc_ftbtptn_init(void)
 	ret = load_ptbl();
 
 	// Load partition mode
-	if (fastboot_flash_find_ptn("spacer")) {
-		debug("*** %s::partition_mode=OTTERX\n", __func__);
+	if (fastboot_flash_find_ptn("spacer"))
 		current_partitions = partitions_x;
-	}
-	else {
-		debug("*** %s::partition_mode=AMAZON\n", __func__);
+	else
 		current_partitions = partitions;
-	}
 
 	return ret;
 }

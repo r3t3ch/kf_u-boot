@@ -119,7 +119,6 @@ static int lcdmenu_create(int menuid)
 	char *sep;
 	struct lcdmenu_entry *entry;
 
-	debug("*** %s:: enter\n", __func__);
 	env_menu = lcdmenu_getmenu(menuid);
 	if (!env_menu) {
 		printf("ERROR: menu %d not found\n", menuid);

@@ -734,7 +734,6 @@ int do_fastboot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 				show_fastbootmode();
 
 			if (fastboot_confirmed == 2) {
-				debug("*** ENTER FULL FASTBOOT MODE ***\n");
 				while (1)
 				{
 					if (fastboot_poll())
@@ -749,7 +748,7 @@ int do_fastboot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			countdown_length--;
 #ifdef DEBUG_FASTBOOT_PULSE
 			if ((countdown_length % LOOP_SPEED) == 0)
-				debug("*** %s::PULSE [%d]\n", __func__, countdown_length);
+				printf("*** %s::PULSE [%d]\n", __func__, countdown_length);
 #endif
 
 			keycode = pwrbutton_getc();

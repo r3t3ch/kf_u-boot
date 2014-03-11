@@ -7,7 +7,9 @@
 #include "kc1_debug.h"
 #include "pmic_smb347.h"
 
-#ifdef DEBUG
+//#define REG_DEBUG	1
+
+#ifdef REG_DEBUG
 #define SPACER "                             "
 #define RMEM(x, y) printf("#%2d [0x%8x]=0x%8x\n", y, x, __raw_readl(x));
 #define RMEMA(x) printf("[0x%8x]=0x%8x\n", x, __raw_readl(x));
@@ -24,7 +26,7 @@ extern struct prcm_regs const **prcm;
 
 void dump_gpio(unsigned int base)
 {
-#ifdef DEBUG
+#ifdef REG_DEBUG
 // GPIO1 0x4A310000
 // GPIO2 0x48055000
 // GPIO3 0x48057000
@@ -74,7 +76,7 @@ RMEMB("GPIO_SETDATAOUT", base + 0x194);
 
 void dump_clock_control(void)
 {
-#ifdef DEBUG
+#ifdef REG_DEBUG
 RMEMB("CM_DUCATI_DUCATI_CLKCTRL", (*prcm)->cm_mpu_m3_mpu_m3_clkctrl);
 RMEMB("CM_DUCATI_CLKSTCTRL", (*prcm)->cm_mpu_m3_clkstctrl);
 RMEMB("IVAHD_IVAHD_CLKCTRL", (*prcm)->cm_ivahd_ivahd_clkctrl);
@@ -161,7 +163,7 @@ RMEMB("CM_L3INIT_USBPHY_CLKCTRL", (*prcm)->cm_l3init_usbphy_clkctrl);
 
 void dump_dss(void)
 {
-#ifdef DEBUG
+#ifdef REG_DEBUG
 RMEMC("DSS_REVISION", 0x58000000);
 RMEMC("DSS_SYSSTATUS", 0x58000014);
 RMEMC("DSS_CTRL", 0x58000040);
@@ -670,7 +672,7 @@ RMEMC("DSI2_PLL_SSC_CONFIGURATION2", 0x5800531C);
 
 void dump_musb(void)
 {
-#ifdef DEBUG
+#ifdef REG_DEBUG
 #if 0
 debug("*** DUMP USBTLLHS_config REGS:\n");
 RMEMB("USBTLL_REVISION", 0x4A062000);
@@ -826,7 +828,7 @@ RMEMB("HCOCPSYS", 0x4A0A9210);
 
 void dump_control_general_core(void)
 {
-#ifdef DEBUG
+#ifdef REG_DEBUG
 debug("*** DUMP CONTROL_GENERAL CORE REGS:\n");
 RMEMB("CONTROL_GEN_CORE_REVISION", 0x4A002000);
 RMEMB("CONTROL_GEN_CORE_REVISION", 0x4A002004);
@@ -941,7 +943,7 @@ RMEMB("CONTROL_GEN_CORE_REVISION", 0x4A0024fc);
 
 void dump_control_general_wkup(void)
 {
-#ifdef DEBUG
+#ifdef REG_DEBUG
 debug("*** DUMP CONTROL_GENERAL WKUP REGS:\n");
 RMEMB("CONTROL_GEN_WKUP_REVISION", 0x4A30C000);
 RMEMB("CONTROL_GEN_WKUP_HWINFO", 0x4A30C004);
@@ -990,7 +992,7 @@ RMEMB("CONTROL_WKUP_CONF_DEBUG_SEL_TST_31", 0x4A30C4dc);
 
 void dump_control_padconf_core(void)
 {
-#ifdef DEBUG
+#ifdef REG_DEBUG
 debug("*** DUMP CONTROL_PAD_CONF CORE REGS:\n");
 RMEMB("CONTROL_PADCONF_CORE_REVISION", 0x4A100000);
 RMEMB("CONTROL_PADCONF_CORE_REVISION", 0x4A100004);
@@ -1165,7 +1167,7 @@ RMEMB("CONTROL_PADCONF_CORE_REVISION", 0x4A10070c);
 
 void dump_control_padconf_wkup(void)
 {
-#ifdef DEBUG
+#ifdef REG_DEBUG
 debug("*** DUMP CONTROL_PAD_CONF WKUP REGS:\n");
 RMEMB("CONTROL_PADCONF_WKUP_REVISION", 0x4A31E000);
 RMEMB("CONTROL_PADCONF_WKUP_REVISION", 0x4A31E004);
@@ -1217,7 +1219,7 @@ void dump_mcspi(unsigned int base)
 // MCSPI2 0x4809A000
 // MCSPI3 0x480B8000
 // MCSPI4 0x480BA000
-#ifdef DEBUG
+#ifdef REG_DEBUG
 debug("*** DUMP MCSPI REGS (0x%8x):\n", base);
 RMEMB("MCSPI_HL_REV", base + 0x000);
 RMEMB("MCSPI_HL_HWINFO", base + 0x004);
@@ -1262,7 +1264,7 @@ RMEMB("MCSPI_XFERLEVEL", base + 0x17c);
 
 void dump_i2c_twl6030(void)
 {
-#ifdef DEBUG
+#ifdef REG_DEBUG
 	int index  = 0;
 	u8  value  = 0;
 
@@ -1284,7 +1286,7 @@ void dump_i2c_twl6030(void)
 
 void dump_i2c_smb347(void)
 {
-#ifdef DEBUG
+#ifdef REG_DEBUG
 	int index  = 0;
 	u8  value  = 0;
 
@@ -1303,7 +1305,7 @@ void dump_i2c_smb347(void)
 
 void dump_prcm(void)
 {
-#ifdef DEBUG
+#ifdef REG_DEBUG
 debug("*** DUMP INTRCONN_SOCKET_PRM:\n");
 RMEMB("REVISION_PRM", 0x4A306000);
 RMEMB("PRM_IRQSTATUS_MPU_A9", 0x4A306010);
@@ -1408,7 +1410,7 @@ void dump_gptimer_1_2_10(unsigned int base)
 // GPTIMER1  0x4A318000
 // GPTIMER2  0x48032000
 // GPTIMER10 0x58006000
-#ifdef DEBUG
+#ifdef REG_DEBUG
 debug("*** DUMP TIMER REGS (base=0x%8x):\n", base);
 RMEMB("GPT_TIDR", base + 0x00);
 RMEMB("GPT1MS_TIOCP_CFG", base + 0x10);
@@ -1443,7 +1445,7 @@ void dump_gptimer_3_4_5_6_7_8_9_11(unsigned int base)
 // GPTIMER8  0x4903E000
 // GPTIMER9  0x4803E000
 // GPTIMER11 0x58008000
-#ifdef DEBUG
+#ifdef REG_DEBUG
 debug("*** DUMP TIMER REGS (base=0x%8x):\n", base);
 RMEMB("GPT_TIDR", base + 0x00);
 RMEMB("GPT_TIOCP_CFG", base + 0x10);
@@ -1467,7 +1469,7 @@ RMEMB("GPT_TCAR2", base + 0x58);
 
 void dump_dpll(void)
 {
-#ifdef DEBUG
+#ifdef REG_DEBUG
 RMEMC("CM_CLKMODE_DPLL_CORE", 0x4A004120);
 RMEMC("CM_IDLEST_DPLL_CORE", 0x4A004124);
 RMEMC("CM_AUTOIDLE_DPLL_CORE", 0x4A004128);

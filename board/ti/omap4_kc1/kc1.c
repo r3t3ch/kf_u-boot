@@ -106,7 +106,6 @@ int board_init(void)
 
 int check_init_fastboot(void)
 {
-	debug("*** %s\n", __func__);
 	if (__raw_readl(PRM_RSTST) & PRM_RSTST_RESET_WARM_BIT)
 		if (!strncmp((const char *)PUBLIC_SAR_RAM_1_FREE, "bootloader", REBOOT_REASON_SIZE)) {
 			strncpy((char *)PUBLIC_SAR_RAM_1_FREE, "", REBOOT_REASON_SIZE);
@@ -156,19 +155,19 @@ int check_recovery(void)
 int check_longpress_loop(int countdown_length)
 {
 	int button_press = 0;
-debug("ENTER LONGPRESS CHECK\n");
+	printf("ENTER LONGPRESS CHECK\n");
 	while (countdown_length)
 	{
 		button_press = twl6030_get_power_button_status();
 		if (button_press != 0) {
-debug("EXIT LONGPRESS CHECK: not complete! shutting down.\n");
+			printf("EXIT LONGPRESS CHECK: not complete! shutting down.\n");
 			return 1;
 		}
 		udelay(1000000); /* 1 sec */
 		countdown_length--;
 	}
 	button_press = twl6030_get_power_button_status();
-debug("EXIT LONGPRESS CHECK (%d)\n", button_press);
+	printf("EXIT LONGPRESS CHECK (%d)\n", button_press);
 	return (button_press != 0);
 }
 #endif
@@ -191,10 +190,8 @@ int power_init_board(void)
 	__raw_writel(__raw_readl(0x4805913C) | 0x00000000, 0x4805913C); //GPIO 4 DATAOUT 0x4805913C
 
 	start_condition = twl6030_print_boot_reason();
-	debug("*** %s::start_condition = 0x%2x\n", __func__, start_condition);
 	if ((pre_boot == 0) && (start_condition & 0x1)) { // device started via power button
 		if (check_longpress_loop(CONFIG_LONGPRESS_POWERON)) {
-			debug("*** %s::POWER_BUTTON_ON longpress was not detected, abort!\n", __func__);
 		        twl6030_shutdown();
 			hang();
 		}
@@ -228,7 +225,6 @@ int misc_init_r(void)
 {
 #ifdef CONFIG_CHARGERMODE_ENABLE
 	if ((fastboot_get_setting_bit(0)) && (start_condition & STRT_ON_PLUG_DET)) {
-		debug("*** CHARGER MODE DETECTED ***\n");
 		setenv("chargermode", "androidboot.mode=charger ");
 	}
 	else
