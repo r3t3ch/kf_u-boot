@@ -2107,6 +2107,13 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 	}
 
+	// add boot.img cmdline to dtbootargs
+	if (hdr->cmdline) {
+		char temp[BOOT_ARGS_SIZE];
+		sprintf(temp, "%s %s", getenv("dtbootargs"), hdr->cmdline);
+		setenv("dtbootargs", temp);
+	}
+
 	printf("kernel    @ %08x (%d)\n", hdr->kernel_addr, hdr->kernel_size);
 	printf("ramdisk   @ %08x (%d)\n", hdr->ramdisk_addr, hdr->ramdisk_size);
 	printf("2nd-image @ %08x (%d)\n", hdr->second_addr, hdr->second_size);
