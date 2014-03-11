@@ -211,6 +211,11 @@ static void boot_prep_linux(bootm_headers_t *images)
 {
 	char *commandline = getenv("bootargs");
 
+#ifdef CONFIG_OMAP4KC1
+	if (strstr(commandline, "newbootargs"))
+		commandline = getenv("dtbootargs");
+#endif
+
 	if (IMAGE_ENABLE_OF_LIBFDT && images->ft_len) {
 #ifdef CONFIG_OF_LIBFDT
 		debug("using: FDT\n");
