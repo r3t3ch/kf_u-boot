@@ -194,8 +194,9 @@
 "lcdmenu_6=PARTITION MODE MENU \0" \
 "lcdmenuentry_60=<-- BACK=lcdmenu show 1\0" \
 "lcdmenuentry_61=\e[31m** WARNING!!!!\e[37m =\0" \
-"lcdmenuentry_62=\e[31m** SWITCH ERASES SYSTEM/CACHE/USERDATA!\e[37m =\0" \
-"lcdmenuentry_63=\e[33m[CONFIRM]\e[37m SET MODE: \e[36m#partition_mode_other#\e[37m =kc1_swap_partition_mode; lcdmenu show 1\0" \
+"lcdmenuentry_62=\e[31m** ERASES SYSTEM/CACHE/USERDATA/SDCARD!\e[37m =\0" \
+"lcdmenuentry_63=\e[31m** NEEDS COMPATIBLE RECOVERY AND ROMS!\e[37m =\0" \
+"lcdmenuentry_64=\e[33m[CONFIRM]\e[37m SET MODE: \e[36m#partition_mode_other#\e[37m =kc1_swap_partition_mode; lcdmenu show 1\0" \
 "lcdmenu_7=USB BOOT MODE\0" \
 "lcdmenuentry_70=<-- BACK=lcdmenu show 1\0" \
 "lcdmenuentry_71=\e[36m** USE TO TEST NEW BOOTLOADERS\e[37m =\0" \
