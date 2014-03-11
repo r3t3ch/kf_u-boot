@@ -277,6 +277,8 @@ extern int board_mmc_ftbtptn_init(void);
 
 extern char *get_ptn_size(char *buf, const char *ptn);
 
+extern void show_fastbootmode(void);
+
 __weak int check_fastboot(void);
 
 __weak int check_recovery(void);
