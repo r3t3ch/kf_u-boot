@@ -826,24 +826,85 @@ int do_bootsize_change(struct mmc* mmc, unsigned int bootpart, unsigned int boot
 	return 0;
 }
 
+void * do_backup_partition(struct mmc* mmc, char *part_name)
+{
+	void *backup_data = NULL;
+	unsigned long backup_size = 0;
+	struct fastboot_ptentry *ptn;
+
+	if (!mmc) {
+		lcd_printf("ERROR: MMC uninitialized!\n");
+		return NULL;
+	}
+
+	ptn = fastboot_flash_find_ptn(part_name);
+	if (!ptn) {
+		lcd_printf("ERROR: partition '%s' not found!\n", part_name);
+		return NULL;
+	}
+
+	backup_size = ((ptn->length + (mmc->write_bl_len - 1)) / mmc->write_bl_len) * mmc->write_bl_len;
+	backup_data = malloc(backup_size);
+	if (!backup_data) {
+		lcd_printf("ERROR: No backup data found for '%s'!\n", part_name);
+		return NULL;
+	}
+
+	// backup early partitions
+	if (mmc->block_dev.block_read(mmc->block_dev.dev,
+			ptn->start,
+			((ptn->length + (mmc->write_bl_len - 1)) / mmc->write_bl_len),
+			backup_data) == 0)
+	{
+		free(backup_data);
+		backup_data = NULL;
+	}
+
+	return backup_data;
+}
+
+int do_restore_partition(struct mmc* mmc, char *part_name, void *backup_data)
+{
+	int status = 1;
+	struct fastboot_ptentry *ptn;
+
+	if (!mmc) {
+		lcd_printf("ERROR: MMC uninitialized!\n");
+		return 1;
+	}
+
+	ptn = fastboot_flash_find_ptn(part_name);
+	if (!ptn) {
+		lcd_printf("ERROR: partition '%s' not found!\n", part_name);
+		return 1;
+	}
+
+	if (!backup_data) {
+		lcd_printf("ERROR: No backup data found for '%s'!\n", part_name);
+		return 1;
+	}
+
+
+	if (mmc->block_dev.block_write(mmc->block_dev.dev, ptn->start,
+			(ptn->length + (mmc->write_bl_len - 1)) / mmc->write_bl_len,
+			backup_data) != 0)
+		status = 0;
+
+	free(backup_data);
+	return status;
+}
+
 int do_emmcfix(const char *cmd)
 {
-	void *backup_parts;
+	void *backup_xloader = NULL;
+	void *backup_bootloader = NULL;
 	struct mmc* mmc = NULL;
 	char *dev[3] = { "mmc", "dev", "1" };
-	unsigned int sectors = 0;
-	unsigned int r = 0;
 	int ret = 1;
 
 	show_fastbootmode();
 
 	lcd_printf("Starting EMMC corruption wipe process.\n");
-
-	backup_parts = malloc(SZ_128K + SZ_256K);
-	if (!backup_parts) {
-		lcd_printf("ERROR: can't allocate memory for backups.  ABORT.\n");
-		goto cleanup;
-	}
 
 	mmc = find_mmc_device(MMC_DEVICE);
 	if (mmc == NULL) {
@@ -862,14 +923,26 @@ int do_emmcfix(const char *cmd)
 	}
 
 	// backup early partitions
-	sectors = ((SZ_128K + SZ_256K) + (mmc->read_bl_len - 1)) / mmc->read_bl_len;
-	lcd_printf("Backing up xloader and bootloader ...");
-	r = mmc->block_dev.block_read(mmc->block_dev.dev, 0, sectors, backup_parts);
-	if (r != sectors) {
-		lcd_printf("FAILED!\nNot all sectors were read from MMC(%u instead of %u)!  ABORT\n", r, sectors);
+
+	lcd_printf("Backing up xloader ...");
+	backup_xloader = do_backup_partition(mmc, "xloader");
+	if (!backup_xloader) {
+		lcd_printf("FAILED! ABORT!\n");
 		goto cleanup;
 	}
-	lcd_printf("Done!\n");
+	else
+		lcd_printf("Done!\n");
+
+	lcd_printf("Backing up bootloader ...");
+	backup_bootloader = do_backup_partition(mmc, "bootloader");
+	if (!backup_bootloader) {
+		lcd_printf("FAILED! ABORT!\n");
+		goto cleanup;
+	}
+	else
+		lcd_printf("Done!\n");
+
+	// reset bootsize
 
 	lcd_printf("Clearing EMMC chip: stage 1 ...");
 	ret = do_bootsize_change(mmc, 0, 0);
@@ -913,6 +986,7 @@ int do_emmcfix(const char *cmd)
 	}
 
 	// Write partition layout
+
 	lcd_printf("Writing partition layout ...");
 	if (do_format()) {
 		lcd_printf("ERROR!? CONTINUING.. EMMC IS BLANK AT THIS POINT.\n");
@@ -923,20 +997,29 @@ int do_emmcfix(const char *cmd)
 	udelay(1000000); // pause 1 sec
 
 	// restore boot parts
-	sectors = ((SZ_128K + SZ_256K) + (mmc->read_bl_len - 1)) / mmc->read_bl_len;
-	lcd_printf("Restoring xloader + bootloader [%u sectors] ...", sectors);
-	if (mmc->block_dev.block_write(mmc->block_dev.dev, 0, sectors, backup_parts) == 0) {
-		lcd_printf("FAILED.\nNot all sectors were written back to MMC!\n");
-	}
-	else {
+
+	lcd_printf("Restoring 'xloader' ...");
+	if (do_restore_partition(mmc, "xloader", backup_xloader))
+		lcd_printf("FAILED! Need to re-flash manually!\n");
+	else
 		lcd_printf("Done!\n");
-		lcd_printf("EMMC corruption fix complete.  Use fastboot to flash recovery and then reboot.\n");
-		ret = 0;
-	}
+	backup_xloader = NULL;
+
+	lcd_printf("Restoring 'bootloader' ...");
+	if (do_restore_partition(mmc, "bootloader", backup_bootloader))
+		lcd_printf("FAILED! Need to re-flash manually!\n");
+	else
+		lcd_printf("Done!\n");
+	backup_bootloader = NULL;
+
+	lcd_printf("EMMC corruption fix complete.  Use fastboot to flash recovery and then reboot.\n");
+	ret = 0;
 
 cleanup:
-	if (backup_parts)
-		free(backup_parts);
+	if (backup_xloader)
+		free(backup_xloader);
+	if (backup_bootloader)
+		free(backup_bootloader);
 	return ret;
 }
 
