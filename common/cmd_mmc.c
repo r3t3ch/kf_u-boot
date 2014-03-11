@@ -331,8 +331,13 @@ int do_mmcops(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 		if (0 == mmc_boot_partition_size_change(mmc,
 							bootsize, rpmbsize)) {
+#ifdef CONFIG_OMAP4KC1
+			printf("EMMC boot partition Size %d KB\n", bootsize);
+			printf("EMMC RPMB partition Size %d KB\n", rpmbsize);
+#else
 			printf("EMMC boot partition Size %d MB\n", bootsize);
 			printf("EMMC RPMB partition Size %d MB\n", rpmbsize);
+#endif
 			return 0;
 		} else {
 			printf("EMMC boot partition Size change Failed.\n");
@@ -442,7 +447,11 @@ U_BOOT_CMD(
 	" - Enable boot_part for booting and enable R/W access of boot_part\n"
 	"mmc close <dev> <boot_partition>\n"
 	" - Enable boot_part for booting and disable access to boot_part\n"
+#ifdef CONFIG_OMAP4KC1
+	"mmc bootpart <device num> <boot part size KB> <RPMB part size KB>\n"
+#else
 	"mmc bootpart <device num> <boot part size MB> <RPMB part size MB>\n"
+#endif
 	" - change sizes of boot and RPMB partitions of specified device\n"
 #endif
 	"mmc setdsr - set DSR register value\n"

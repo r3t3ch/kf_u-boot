@@ -15,6 +15,8 @@
 #include <malloc.h>
 #include <linux/list.h>
 #include <div64.h>
+#include <asm/sizes.h>
+
 #include "mmc_private.h"
 
 /* Set block count limit because of 16 bit register limit on some hardware*/
@@ -1039,8 +1041,10 @@ product name = [4d 38473246 41] OR M8G2FA
 			mmc->part_config = ext_csd[EXT_CSD_PART_CONF];
 
 		mmc->capacity_boot = ext_csd[EXT_CSD_BOOT_MULT] << 17;
+		debug("*** %s::capacity_boot == %lu\n", __func__, mmc->capacity_boot);
 
 		mmc->capacity_rpmb = ext_csd[EXT_CSD_RPMB_MULT] << 17;
+		debug("*** %s::capacity_rpmb == %lu\n", __func__, mmc->capacity_rpmb);
 
 		for (i = 0; i < 4; i++) {
 			int idx = EXT_CSD_GP_SIZE_MULT + i * 3;
@@ -1455,7 +1459,12 @@ int mmc_boot_partition_size_change(struct mmc *mmc, unsigned long bootsize,
 		return err;
 	}
 	/* boot partition size is multiple of 128KB */
+#ifdef CONFIG_OMAP4KC1
+	bootsize = (bootsize * 1024) / SZ_128K;
+	debug("*** %s::bootsize = %lu\n", __func__, bootsize);
+#else
 	bootsize = (bootsize * 1024) / 128;
+#endif
 
 	/* Arg: boot partition size */
 	cmd.cmdidx = MMC_CMD_RES_MAN;
@@ -1468,7 +1477,12 @@ int mmc_boot_partition_size_change(struct mmc *mmc, unsigned long bootsize,
 		return err;
 	}
 	/* RPMB partition size is multiple of 128KB */
+#ifdef CONFIG_OMAP4KC1
+	rpmbsize = (rpmbsize * 1024) / SZ_128K;
+	debug("*** %s::rpmbsize = %lu\n", __func__, rpmbsize);
+#else
 	rpmbsize = (rpmbsize * 1024) / 128;
+#endif
 	/* Arg: RPMB partition size */
 	cmd.cmdidx = MMC_CMD_RES_MAN;
 	cmd.resp_type = MMC_RSP_R1b;
