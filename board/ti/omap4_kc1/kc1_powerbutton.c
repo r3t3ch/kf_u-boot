@@ -9,13 +9,11 @@
 // 1200 timer ticks == 1 sec
 #define PWRBTN_DEBOUNCE_TIMER_RATE	(150)
 #define PWRBTN_LONG_PRESS_COUNT		(5)
-#define PWRBTN_LONG_PRESS_DEBOUNCE	(1000)
 
 static struct pwrb {
-//	struct input_config input;	/* The input layer */
 	unsigned int last_poll_ms;	/* Time we should last polled */
 
-	unsigned int debounce_ms;
+	unsigned int sent_event;
 	unsigned int pressed;
 	unsigned int released;
 } config;
@@ -28,10 +26,9 @@ int pwrbutton_getc(void)
 	unsigned int poll = get_timer(config.last_poll_ms);
 
 	// don't poll too often
-	if ((poll < PWRBTN_DEBOUNCE_TIMER_RATE) || (poll < config.debounce_ms))
+	if (poll < PWRBTN_DEBOUNCE_TIMER_RATE)
 		return 0;
 
-	config.debounce_ms = 0;
 	config.last_poll_ms = get_timer(0);
 	button_pressed = twl6030_get_power_button_status();
 	if (button_pressed == 0) {
@@ -47,29 +44,30 @@ int pwrbutton_getc(void)
 #ifdef DEBUG_POWERBUTTON
 			printf("===> RELEASED\n");
 #endif
-			config.pressed = 0;
 			config.released = 1;
 		}
 	}
 
 	if ((config.pressed >= PWRBTN_LONG_PRESS_COUNT) || (config.released > 0)) {
-		if (config.pressed >= PWRBTN_LONG_PRESS_COUNT) {
+		if ((config.pressed >= PWRBTN_LONG_PRESS_COUNT) && (config.sent_event == 0)) {
 			ret = PWRBTN_KEY_LONG_PRESS; // long press
-			config.debounce_ms = PWRBTN_LONG_PRESS_DEBOUNCE;
+			config.sent_event = 1; // keep track of sent_event
 #ifdef DEBUG_POWERBUTTON
 			printf("*** %s:: SEND LONG_PRESS\n", __func__);
 #endif
 		}
-		else {
-			ret = PWRBTN_KEY_PRESS; // single press
+		else if (config.released > 0) { // config.released
+			if (config.sent_event == 0) {
+				ret = PWRBTN_KEY_PRESS; // single press
 #ifdef DEBUG_POWERBUTTON
-			printf("*** %s:: SEND PRESS\n", __func__);
+				printf("*** %s:: SEND PRESS\n", __func__);
 #endif
+			}
+			// reset timing/press stats
+			config.sent_event = 0;
+			config.pressed = 0;
+			config.released = 0;
 		}
-
-		// reset timing/press stats
-		config.pressed = 0;
-		config.released = 0;
 	}
 
 	return ret;
@@ -83,13 +81,10 @@ int pwrbutton_getc(void)
  */
 int drv_twl6030_pwrbutton_init(void)
 {
-#ifdef DEBUG_POWERBUTTON
-	printf("*** %s::driver register\n", __func__);
-#endif
 	config.last_poll_ms = get_timer(0);
 	config.pressed = 0;
 	config.released = 0;
-	config.debounce_ms = 0;
+	config.sent_event = 0;
 	return 0;
 }
 
