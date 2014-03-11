@@ -306,7 +306,6 @@ int do_lcdmenu(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	int menuid = 0;
 	char *command = NULL;
 	struct lcdmenu_entry *iter = config.first;
-	char buffer[255];
 
 	if (argc < 2)
 		return 1;
