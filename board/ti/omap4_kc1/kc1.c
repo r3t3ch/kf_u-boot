@@ -190,12 +190,14 @@ int power_init_board(void)
 	__raw_writel(__raw_readl(0x4805913C) | 0x00000000, 0x4805913C); //GPIO 4 DATAOUT 0x4805913C
 
 	start_condition = twl6030_print_boot_reason();
+#ifdef CONFIG_LONGPRESS_POWERON
 	if ((pre_boot == 0) && (start_condition & 0x1)) { // device started via power button
 		if (check_longpress_loop(CONFIG_LONGPRESS_POWERON)) {
 		        twl6030_shutdown();
 			hang();
 		}
 	}
+#endif
 
 //	i2c_init(CFG_I2C_SPEED, CFG_I2C_SLAVE);
 	if (pre_boot == 0) {

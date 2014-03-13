@@ -334,7 +334,7 @@ void render_image(void)
 	else if (logo_index == LOGO_LOW_BATT)
 		start = (u_int16_t *)_binary_lowbattery_bmp_gz_start;
 	else {
-#ifdef CONFIG_CMD_FASTBOOT
+#ifdef CONFIG_LOAD_SPLASH_FROM_EMMC
 		struct fastboot_ptentry *pte = NULL;
 		struct mmc* mmc = NULL;
 		void *dst = NULL;

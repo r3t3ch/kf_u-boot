@@ -141,6 +141,9 @@
 // charger mode
 #define CONFIG_CHARGERMODE_ENABLE        1
 
+// check "splash" partition for boot logo
+#define CONFIG_LOAD_SPLASH_FROM_EMMC     1
+
 #define MEMORY_BASE                      0x80000000
 #define CONFIG_ADDR_ATAGS                (MEMORY_BASE + 0x100)
 #define CONFIG_ADDR_DOWNLOAD             (MEMORY_BASE + 0x03000000)
