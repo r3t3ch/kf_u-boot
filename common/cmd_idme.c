@@ -762,6 +762,7 @@ int idme_select_boot_image(char **ptn)
                 break;
         case '3':
                 printf("Select Recovery image\n");
+                idme_update_var("bootmode", "1");
                 *ptn = precovery;
                 break;
         default:
@@ -926,7 +927,7 @@ u8 *idme_get_board_serial(void)
 /*
   1 : Normal booting
   2 : Diagnostic
-  3 : Recovery
+  3 : Single-use recovery mode
   4 : Fastboot mode
   5 : software change booting squence
   6 : RMA
