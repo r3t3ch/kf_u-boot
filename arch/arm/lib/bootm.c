@@ -209,11 +209,11 @@ static void do_nonsec_virt_switch(void)
 /* Subcommand: PREP */
 static void boot_prep_linux(bootm_headers_t *images)
 {
-	char *commandline = getenv("bootargs");
+	char *commandline = getenv("dtbootargs");
 
 #ifdef CONFIG_OMAP4KC1
-	if (strstr(commandline, "newbootargs"))
-		commandline = getenv("dtbootargs");
+	if (!strstr(commandline, "newbootargs"))
+		commandline = getenv("bootargs");
 #endif
 
 	if (IMAGE_ENABLE_OF_LIBFDT && images->ft_len) {
