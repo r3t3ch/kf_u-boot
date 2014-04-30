@@ -2112,8 +2112,11 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		char temp[BOOT_ARGS_SIZE];
 		sprintf(temp, "%s %s", getenv("dtbootargs"), hdr->cmdline);
 		setenv("dtbootargs", temp);
+		sprintf(temp, "%s %s", getenv("bootargs"), hdr->cmdline);
+		setenv("bootargs", temp);
 	}
 
+	printf("bootargs  @ %s\n", getenv("bootargs"));
 	printf("kernel    @ %08x (%d)\n", hdr->kernel_addr, hdr->kernel_size);
 	printf("ramdisk   @ %08x (%d)\n", hdr->ramdisk_addr, hdr->ramdisk_size);
 	printf("2nd-image @ %08x (%d)\n", hdr->second_addr, hdr->second_size);
