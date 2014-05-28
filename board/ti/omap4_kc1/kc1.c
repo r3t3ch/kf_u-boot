@@ -251,15 +251,15 @@ int misc_init_r(void)
 #endif
 
 #ifdef CONFIG_FASTBOOT_COUNTDOWN
-	if (fastboot_mode == 0) {
+	if ((fastboot_mode == 0) && ((start_condition & STRT_ON_PLUG_DET) == 0)) {
 		// DO MENU PREP
 		lcd_position_cursor((lcd_get_screen_columns()/2)-(lcd_strlen(CONFIG_WELCOME_MSG)/2), lcd_get_screen_rows()-1);
 		lcd_printf(CONFIG_WELCOME_MSG);
 	}
 #endif
 	run_command("setbacklight 7f", 0);
-	run_command("fastboot", 0);
-
+	if ((start_condition & STRT_ON_PLUG_DET) == 0)
+		run_command("fastboot", 0);
 	return 0;
 }
 
