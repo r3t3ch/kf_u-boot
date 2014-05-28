@@ -472,9 +472,9 @@ static struct _partition partitions_x[] = {
 	{ "backup", 64*1024 },		//p6
 	{ "boot", 10*1024 },		//p7
 	{ "splash", 5*1024 },		//p8
-	{ "system", 512*1024 },		//p9 starts @ sector 609280 (512) align start 606208
+	{ "system", 764*1024 },		//p9 starts @ sector 609280 (512) align start 606208
 	{ "spacer", 1024 },		//p10
-	{ "cache", 256*1024 },		//p11 aligned to 4mb erase barrier
+	{ "cache", 512*1024 },		//p11 aligned to 4mb erase barrier
 	{ "userdata", 0 },		//p12 aligned to 4mb erase barrier
 	{ 0, 0 },
 };
