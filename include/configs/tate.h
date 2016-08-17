@@ -340,7 +340,7 @@ extern unsigned int boot_flash_type;
 /* enable to support : POWER_KEY + VOL_UP to enter FTM mode */
 //#define ENABLE_DIAG_KEY
 #define ENABLE_RECOVERY_KEY
-//#define ENABLE_FASTBOOT_KEY
+#define ENABLE_FASTBOOT_KEY
 /*
  * comment in the following flag to enable the command for checking the image's crc on mmc
  * disabled by default
